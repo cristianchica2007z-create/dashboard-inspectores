@@ -32,34 +32,22 @@ tab1, tab2, tab3 = st.tabs([
 with tab1:
     st.subheader("Control de entrega de papelería e inventario")
 
-    import gspread
-    from google.oauth2.service_account import Credentials
     import datetime
 
-    # ------------------------------------------------------------
-    # ✅ CONEXIÓN A GOOGLE SHEETS
-    # ------------------------------------------------------------
-    scope = [
-        "https://www.googleapis.com/auth/spreadsheets",
-        "https://www.googleapis.com/auth/drive"
-    ]
+    # Archivo local que guarda el inventario
+    archivo_inventario = "inventario.xlsx"
 
-    credentials = Credentials.from_service_account_info(
-        st.secrets["google"],  # ← usa los secrets que ya guardaste
-        scopes=scope,
-    )
+    # ✅ Crear archivo si no existe
+    if not os.path.exists(archivo_inventario):
+        df_init = pd.DataFrame(columns=[
+            "Fecha", "Inspector", "Sede", "Responsable", "Ítems"
+        ])
+        df_init.to_excel(archivo_inventario, index=False, engine="openpyxl")
 
-    gc = gspread.authorize(credentials)
+    # ✅ Cargar inventario existente
+    df_inv = pd.read_excel(archivo_inventario, engine="openpyxl")
 
-    # ✅ TU URL AQUÍ
-    SHEET_URL = "https://docs.google.com/spreadsheets/d/1_UXapYW1SUlWbf6jqI5MgwU5MvVQ_lYGSncSvCHfq7o/edit"
-
-    sh = gc.open_by_url(SHEET_URL)
-    worksheet = sh.sheet1  # usa la primera hoja
-
-    # ------------------------------------------------------------
-    # ✅ LISTA DE INSPECTORES OFICIAL
-    # ------------------------------------------------------------
+    # ✅ Lista de inspectores
     inspectores_lista = [
         "ARIZA MARIN SERGIO","ANDRES ARROYAVE","BEDOYA DIEGO ALEJANDRO",
         "DANNY DE LA CRUZ","CARVAJAL RESTREPO JUAN DAVID","JANIER MARIN",
@@ -113,7 +101,7 @@ with tab1:
     for item in items:
         items[item] = st.checkbox(item)
 
-    # ✅ GUARDAR EN GOOGLE SHEETS
+    # ✅ Guardar en Excel local
     if st.button("Guardar entrega"):
         seleccionados = [i for i,v in items.items() if v]
 
@@ -122,22 +110,21 @@ with tab1:
         elif responsable == "":
             st.warning("⚠️ Debes ingresar responsable.")
         else:
-            worksheet.append_row([
-                fecha.strftime("%Y-%m-%d"),
-                inspector,
-                sede,
-                responsable,
-                ", ".join(seleccionados)
-            ])
-            st.success("✅ Entrega registrada en Google Sheets")
+            nueva_fila = pd.DataFrame({
+                "Fecha": [fecha.strftime("%Y-%m-%d")],
+                "Inspector": [inspector],
+                "Sede": [sede],
+                "Responsable": [responsable],
+                "Ítems": [", ".join(seleccionados)]
+            })
 
-    # ✅ MOSTRAR HISTORIAL DESDE GOOGLE SHEETS
+            df_inv = pd.concat([df_inv, nueva_fila], ignore_index=True)
+            df_inv.to_excel(archivo_inventario, index=False, engine="openpyxl")
+
+            st.success("✅ Entrega registrada")
+
     st.write("### 📋 Historial de entregas")
-
-    data = worksheet.get_all_records()
-    df_hist = pd.DataFrame(data)
-
-    st.dataframe(df_hist, use_container_width=True)
+    st.dataframe(df_inv, use_container_width=True)
 
 # -----------------------------------------------------
 # ✅ PESTAÑA 2: SEGUIMIENTO DIARIO — VERSIÓN FINAL
