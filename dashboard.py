@@ -52,7 +52,7 @@ with tab1:
     gc = gspread.authorize(credentials)
 
     # ✅ TU URL AQUÍ
-    SHEET_URL = "https://docs.google.com/spreadsheets/d/1_UXapYW1SUlWbf6jqI5MgwU5MvVQ_lYGSncSvCHfq7o/edit?gid=0#gid=0"
+    SHEET_URL = "SHEET_URL = "https://docs.google.com/spreadsheets/d/1_UXapYW1SUlWbf6jqI5MgwU5MvVQ_lYGSncSvCHfq7o/edit""
 
     sh = gc.open_by_url(SHEET_URL)
     worksheet = sh.sheet1  # usa la primera hoja
