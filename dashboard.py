@@ -32,101 +32,71 @@ tab1, tab2, tab3 = st.tabs([
 with tab1:
     st.subheader("Control de entrega de papelería e inventario")
 
-    import os
+    import gspread
+    from google.oauth2.service_account import Credentials
     import datetime
 
-    archivo_inventario = "inventario.xlsx"
+    # ------------------------------------------------------------
+    # ✅ CONEXIÓN A GOOGLE SHEETS
+    # ------------------------------------------------------------
+    scope = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive"
+    ]
 
-    # ✅ Crear archivo si no existe
-    if not os.path.exists(archivo_inventario):
-        df_init = pd.DataFrame(columns=[
-            "Fecha", "Inspector", "Sede", "Responsable", "Ítems"
-        ])
-        df_init.to_excel(archivo_inventario, index=False, engine="openpyxl")
+    credentials = Credentials.from_service_account_info(
+        st.secrets["google"],  # ← usa los secrets que ya guardaste
+        scopes=scope,
+    )
 
-    # ✅ Cargar archivo existente
-    df_inv = pd.read_excel(archivo_inventario, engine="openpyxl")
+    gc = gspread.authorize(credentials)
 
-    # -----------------------------------------------------
-    # ✅ LISTA OFICIAL DE INSPECTORES (LOS NOMBRES QUE ME ENVIASTE)
-    # -----------------------------------------------------
+    # ✅ TU URL AQUÍ
+    SHEET_URL = "https://docs.google.com/spreadsheets/d/1_UXapYW1SUlWbf6jqI5MgwU5MvVQ_lYGSncSvCHfq7o/edit?gid=0#gid=0"
+
+    sh = gc.open_by_url(SHEET_URL)
+    worksheet = sh.sheet1  # usa la primera hoja
+
+    # ------------------------------------------------------------
+    # ✅ LISTA DE INSPECTORES OFICIAL
+    # ------------------------------------------------------------
     inspectores_lista = [
-        "ARIZA MARIN SERGIO",
-        "ANDRES ARROYAVE",
-        "BEDOYA DIEGO ALEJANDRO",
-        "DANNY DE LA CRUZ",
-        "CARVAJAL RESTREPO JUAN DAVID",
-        "JANIER MARIN",
-        "CHAVARRIAGA JUAN MANUEL",
-        "CRISTIAN CHICA",
-        "ECHEVERRY CARDONA JHON STIVEN",
-        "GALLEGO CADAVID NORBEY",
-        "GIRALDO GARCIA SIGIFREDO",
-        "LOPEZ PINEDA CESAR AUGUSTO",
-        "NOREÑA GIRALDO GEOVANNY",
-        "OSPINA CASTELLANOS ANDERSON",
-        "OSPINA RODRIGUEZ DANIEL ALBERTO",
-        "RUIZ DILON MARLON ANDREY",
-        "LARGO OSORIO JOSE OMAR",
-        "PULGARIN QUINTERO JULIAN ANDRES",
-        "TAYACK TRUJILLO DEIVER EVELIO",
-        "RUIZ ARENAS JUAN CAMILO",
-        "PATIÑO CIFUENTES RICARDO",
-        "VARGAS FRANCO JHON EDISON",
-        "CARDONA CANO NELSON",
-        "CARDONA OROZCO JULIAN ANDRES",
-        "GRISALES CUERVO JUAN DAVID",
-        "LEON MARIN LEONARDO FABIO",
-        "VELASQUEZ TAPASCO JHON DIEGO",
-        "CARDONA CASTANO DIDIER ORLANDO",
-        "TORRES HERNANDEZ JOHN JAMES",
-        "COBO HOYOS JUAN MANUEL",
-        "OSPINA NARANJO BERNARDO",
-        "COGOLLO FIGUEROA RANDY",
-        "ARIAS TORO YEISON",
-        "MIRANDA FRANCO EFRAIN",
-        "ARDILA MORA GUSTAVO ADOLFO",
-        "LOPEZ VELEZ ESTEBAN",
-        "GALEANO GRISALEZ RICARDO",
-        "CAICEDO ESCOBAR JUNIOR SANTIAGO",
-        "OTERO CAICEDO ANYEMBER",
-        "BUITRAGO RAMIREZ LEONARD",
-        "BORJAS WILLY ALEXANDER",
-        "MARIN LEON JAISSON JOAQUIN",
-        "AMAYA HINCAPIE JUAN CARLOS",
-        "BEDOYA SANCHEZ CRISTIAN DAVID",
-        "RAMIREZ WILSON ENRIQUE",
-        "CANO MORALES JIMY ALFREDO",
-        "CASTRO CASTAÑO JUAN DAVID",
-        "LOAIZA GAMBA JHON ALEXANDER",
-        "VILLA LOAIZA JHEISON ESTIBEN",
-        "CÁRDENAS GALIANO HAROLD MAURICIO",
-        "VARGAS CORREA VICTOR ALFONSO",
-        "VILLA MERA CHRISTIAN DAVID",
-        "AVENDAÑO GARCIA JUAN NEPOMUCENO",
-        "PELAEZ TATIS GABRIEL ESTEBAN"
+        "ARIZA MARIN SERGIO","ANDRES ARROYAVE","BEDOYA DIEGO ALEJANDRO",
+        "DANNY DE LA CRUZ","CARVAJAL RESTREPO JUAN DAVID","JANIER MARIN",
+        "CHAVARRIAGA JUAN MANUEL","CRISTIAN CHICA","ECHEVERRY CARDONA JHON STIVEN",
+        "GALLEGO CADAVID NORBEY","GIRALDO GARCIA SIGIFREDO","LOPEZ PINEDA CESAR AUGUSTO",
+        "NOREÑA GIRALDO GEOVANNY","OSPINA CASTELLANOS ANDERSON","OSPINA RODRIGUEZ DANIEL ALBERTO",
+        "RUIZ DILON MARLON ANDREY","LARGO OSORIO JOSE OMAR","PULGARIN QUINTERO JULIAN ANDRES",
+        "TAYACK TRUJILLO DEIVER EVELIO","RUIZ ARENAS JUAN CAMILO","PATIÑO CIFUENTES RICARDO",
+        "VARGAS FRANCO JHON EDISON","CARDONA CANO NELSON","CARDONA OROZCO JULIAN ANDRES",
+        "GRISALES CUERVO JUAN DAVID","LEON MARIN LEONARDO FABIO","VELASQUEZ TAPASCO JHON DIEGO",
+        "CARDONA CASTANO DIDIER ORLANDO","TORRES HERNANDEZ JOHN JAMES","COBO HOYOS JUAN MANUEL",
+        "OSPINA NARANJO BERNARDO","COGOLLO FIGUEROA RANDY","ARIAS TORO YEISON",
+        "MIRANDA FRANCO EFRAIN","ARDILA MORA GUSTAVO ADOLFO","LOPEZ VELEZ ESTEBAN",
+        "GALEANO GRISALEZ RICARDO","CAICEDO ESCOBAR JUNIOR SANTIAGO","OTERO CAICEDO ANYEMBER",
+        "BUITRAGO RAMIREZ LEONARD","BORJAS WILLY ALEXANDER","MARIN LEON JAISSON JOAQUIN",
+        "AMAYA HINCAPIE JUAN CARLOS","BEDOYA SANCHEZ CRISTIAN DAVID","RAMIREZ WILSON ENRIQUE",
+        "CANO MORALES JIMY ALFREDO","CASTRO CASTAÑO JUAN DAVID","LOAIZA GAMBA JHON ALEXANDER",
+        "VILLA LOAIZA JHEISON ESTIBEN","CÁRDENAS GALIANO HAROLD MAURICIO","VARGAS CORREA VICTOR ALFONSO",
+        "VILLA MERA CHRISTIAN DAVID","AVENDAÑO GARCIA JUAN NEPOMUCENO","PELAEZ TATIS GABRIEL ESTEBAN"
     ]
 
     st.write("### Registrar entrega de papelería e implementos")
 
     col1, col2, col3 = st.columns(3)
 
-    # ✅ Fecha
     with col1:
         fecha = st.date_input("Fecha de entrega")
 
-    # ✅ Inspector con desplegable
     with col2:
         inspector = st.selectbox("Inspector", inspectores_lista)
 
-    # ✅ Sede
     with col3:
         sede = st.selectbox("Sede", ["CALDAS", "RISARALDA"])
 
-    # ✅ Responsable
     responsable = st.text_input("Responsable")
 
-    st.markdown("### Seleccione los ítems (con íconos)")
+    st.markdown("### Ítems entregados")
 
     items = {
         "Stickers 🔵": False,
@@ -140,35 +110,34 @@ with tab1:
         "Papelería general 📦": False,
     }
 
-    # ✅ Mostrar checkboxes
     for item in items:
         items[item] = st.checkbox(item)
 
-    # ✅ Guardar datos
+    # ✅ GUARDAR EN GOOGLE SHEETS
     if st.button("Guardar entrega"):
+        seleccionados = [i for i,v in items.items() if v]
 
-        items_seleccionados = [i for i,v in items.items() if v]
-
-        if len(items_seleccionados) == 0:
+        if len(seleccionados) == 0:
             st.warning("⚠️ Debes seleccionar al menos un ítem.")
         elif responsable == "":
             st.warning("⚠️ Debes ingresar responsable.")
         else:
-            nueva_fila = pd.DataFrame({
-                "Fecha": [fecha.strftime("%Y-%m-%d")],
-                "Inspector": [inspector],
-                "Sede": [sede],
-                "Responsable": [responsable],
-                "Ítems": [", ".join(items_seleccionados)]
-            })
+            worksheet.append_row([
+                fecha.strftime("%Y-%m-%d"),
+                inspector,
+                sede,
+                responsable,
+                ", ".join(seleccionados)
+            ])
+            st.success("✅ Entrega registrada en Google Sheets")
 
-            df_inv = pd.concat([df_inv, nueva_fila], ignore_index=True)
-            df_inv.to_excel(archivo_inventario, index=False, engine="openpyxl")
-
-            st.success("✅ Entrega registrada correctamente")
-
+    # ✅ MOSTRAR HISTORIAL DESDE GOOGLE SHEETS
     st.write("### 📋 Historial de entregas")
-    st.dataframe(df_inv, use_container_width=True)
+
+    data = worksheet.get_all_records()
+    df_hist = pd.DataFrame(data)
+
+    st.dataframe(df_hist, use_container_width=True)
 
 # -----------------------------------------------------
 # ✅ PESTAÑA 2: SEGUIMIENTO DIARIO — VERSIÓN FINAL
