@@ -29,12 +29,59 @@ tab1, tab2, tab3 = st.tabs([
 # ---------------------------------------------------
 # ✅ PESTAÑA 1: INVENTARIO DE PAPELERÍA
 # ---------------------------------------------------
+
+import requests
+import base64
+
+def subir_a_github(ruta_archivo):
+    """Sube el archivo inventario.xlsx al repositorio GitHub automáticamente."""
+    try:
+        token = st.secrets["github"]["token"]
+        repo = st.secrets["github"]["repo"]
+        path = st.secrets["github"]["path"]
+
+        # Leer archivo y convertir a Base64
+        with open(ruta_archivo, "rb") as f:
+            contenido_b64 = base64.b64encode(f.read()).decode()
+
+        # URL para subir archivo
+        url = f"https://api.github.com/repos/{repo}/contents/{path}"
+
+        # Verificar si ya existe un archivo previo para obtener SHA
+        headers = {"Authorization": f"token {token}"}
+        r = requests.get(url, headers=headers)
+
+        if r.status_code == 200:
+            sha = r.json()["sha"]  # archivo existente
+        else:
+            sha = None  # archivo nuevo
+
+        data = {
+            "message": "Actualización automática del inventario",
+            "content": contenido_b64,
+            "branch": "main"
+        }
+
+        if sha:
+            data["sha"] = sha  # actualizar archivo existente
+
+        # Subir archivo
+        r = requests.put(url, headers=headers, json=data)
+
+        if r.status_code in [200, 201]:
+            st.success("✅ Inventario subido a GitHub correctamente")
+        else:
+            st.error(f"❌ Error subiendo archivo: {r.text}")
+
+    except Exception as e:
+        st.error(f"❌ Error inesperado al subir a GitHub: {e}")
+
 with tab1:
     st.subheader("Control de entrega de papelería e inventario")
 
     import datetime
 
-    # Archivo local que guarda el inventario
+    # Archivo local
     archivo_inventario = "inventario.xlsx"
 
     # ✅ Crear archivo si no existe
@@ -47,7 +94,7 @@ with tab1:
     # ✅ Cargar inventario existente
     df_inv = pd.read_excel(archivo_inventario, engine="openpyxl")
 
-    # ✅ Lista de inspectores
+    # ✅ Lista oficial de inspectores
     inspectores_lista = [
         "ARIZA MARIN SERGIO","ANDRES ARROYAVE","BEDOYA DIEGO ALEJANDRO",
         "DANNY DE LA CRUZ","CARVAJAL RESTREPO JUAN DAVID","JANIER MARIN",
@@ -101,7 +148,7 @@ with tab1:
     for item in items:
         items[item] = st.checkbox(item)
 
-    # ✅ Guardar en Excel local
+    # ✅ Guardar y subir a GitHub
     if st.button("Guardar entrega"):
         seleccionados = [i for i,v in items.items() if v]
 
@@ -121,10 +168,12 @@ with tab1:
             df_inv = pd.concat([df_inv, nueva_fila], ignore_index=True)
             df_inv.to_excel(archivo_inventario, index=False, engine="openpyxl")
 
-            st.success("✅ Entrega registrada")
+            # ✅ SUBIR AUTOMÁTICAMENTE A GITHUB
+            subir_a_github(archivo_inventario)
 
     st.write("### 📋 Historial de entregas")
     st.dataframe(df_inv, use_container_width=True)
+
 
 # -----------------------------------------------------
 # ✅ PESTAÑA 2: SEGUIMIENTO DIARIO — VERSIÓN FINAL
