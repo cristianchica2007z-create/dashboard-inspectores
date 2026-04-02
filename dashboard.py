@@ -308,17 +308,21 @@ else:
     st.dataframe(df_totales, use_container_width=True)
 
     # ---------------------------------------------
+# ---------------------------------------------
 # 📊 CONSUMO MENSUAL CONSOLIDADO (TODOS LOS MESES)
 # ---------------------------------------------
 st.markdown("## 📊 Consumo mensual consolidado por ítem")
 
+# Copia del historial
 df_cons = df_inv.copy()
 df_cons["Fecha"] = pd.to_datetime(df_cons["Fecha"], errors="coerce")
 
 # Crear columna Año-Mes (ej: 2026-03)
 df_cons["AñoMes"] = df_cons["Fecha"].dt.to_period("M").astype(str)
 
-# Procesar ítems de forma robusta
+# -------------------------------
+# Procesar ítems y cantidades (ROBUSTO)
+# -------------------------------
 filas = []
 
 for _, row in df_cons.iterrows():
@@ -329,6 +333,7 @@ for _, row in df_cons.iterrows():
     for item in items:
         item = item.strip()
 
+        # Caso con cantidad explícita
         if " x" in item:
             try:
                 nombre, cantidad = item.rsplit(" x", 1)
@@ -336,49 +341,59 @@ for _, row in df_cons.iterrows():
             except:
                 continue
         else:
+            # Caso sin cantidad → asumir 1
             nombre = item
             cantidad = 1
 
         filas.append({
-            "AñoMes": row["AñoMes"],
+            "Mes": row["AñoMes"],   # texto categórico
             "Ítem": nombre,
             "Cantidad": cantidad
         })
 
-# DataFrame consolidado
 df_plot = pd.DataFrame(filas)
 
 if df_plot.empty:
     st.info("ℹ️ No hay datos suficientes para generar el consolidado.")
 else:
-    # Agrupar por mes e ítem
+    # Agrupar por Mes e Ítem
     df_plot = (
         df_plot
-        .groupby(["AñoMes", "Ítem"], as_index=False)
+        .groupby(["Mes", "Ítem"], as_index=False)
         .sum()
-        .sort_values("AñoMes")
+        .sort_values("Mes")
     )
 
     st.markdown(
         "**Eje X:** Mes | **Eje Y:** Cantidad entregada | **Color:** Ítem"
     )
 
+    # -------------------------------
+    # Gráfica (forzar eje categórico)
+    # -------------------------------
+    df_plot["Mes"] = df_plot["Mes"].astype(str)
+
     fig = px.bar(
         df_plot,
-        x="AñoMes",
+        x="Mes",
         y="Cantidad",
         color="Ítem",
         barmode="group",
         text="Cantidad",
-        title="Consumo mensual consolidado por ítem",
+        title="Consumo mensual consolidado por ítem"
     )
 
     fig.update_traces(textposition="outside")
+
     fig.update_layout(
         xaxis_title="Mes",
         yaxis_title="Cantidad entregada",
         legend_title="Ítem",
-        bargap=0.2
+        xaxis=dict(
+            type="category",                 # 🔑 CLAVE: NO fechas
+            categoryorder="category ascending"
+        ),
+        bargap=0.25
     )
 
     st.plotly_chart(fig, use_container_width=True)
