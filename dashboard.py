@@ -213,7 +213,7 @@ with tab1:
     # -------------------------------
     st.markdown("### 📋 Historial de entregas")
     st.dataframe(df_inv, use_container_width=True)
-``
+
 
 
 # -----------------------------------------------------
