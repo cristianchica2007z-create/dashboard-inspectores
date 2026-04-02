@@ -81,116 +81,67 @@ with tab1:
 
     archivo_inventario = "inventario.xlsx"
 
-    # -------------------------------
-    # Crear archivo si no existe
-    # -------------------------------
     if not os.path.exists(archivo_inventario):
         df_init = pd.DataFrame(columns=[
-            "Fecha", "Sede", "Inspector", "Responsable",
-            "Observación", "Ítems"
+            "Fecha", "Sede", "Inspector", "Responsable", "Observación", "Ítems"
         ])
         df_init.to_excel(archivo_inventario, index=False, engine="openpyxl")
 
     df_inv = pd.read_excel(archivo_inventario, engine="openpyxl")
 
-    # -------------------------------
-    # Listas fijas
-    # -------------------------------
-    sedes = ["CALDAS", "RISARALDA"]
-
-    inspectores_lista = [
-        "ARIZA MARIN SERGIO","ANDRES ARROYAVE","BEDOYA DIEGO ALEJANDRO",
-        "DANNY DE LA CRUZ","CARVAJAL RESTREPO JUAN DAVID","JANIER MARIN",
-        "CHAVARRIAGA JUAN MANUEL","CRISTIAN CHICA","ECHEVERRY CARDONA JHON STIVEN",
-        "GALLEGO CADAVID NORBEY","GIRALDO GARCIA SIGIFREDO","LOPEZ PINEDA CESAR AUGUSTO",
-        "NOREÑA GIRALDO GEOVANNY","OSPINA CASTELLANOS ANDERSON",
-        "OSPINA RODRIGUEZ DANIEL ALBERTO","RUIZ DILON MARLON ANDREY",
-        "LARGO OSORIO JOSE OMAR","PULGARIN QUINTERO JULIAN ANDRES",
-        "TAYACK TRUJILLO DEIVER EVELIO","RUIZ ARENAS JUAN CAMILO",
-        "PATIÑO CIFUENTES RICARDO","VARGAS FRANCO JHON EDISON",
-        "CARDONA CANO NELSON","CARDONA OROZCO JULIAN ANDRES",
-        "GRISALES CUERVO JUAN DAVID","LEON MARIN LEONARDO FABIO",
-        "VELASQUEZ TAPASCO JHON DIEGO","CARDONA CASTANO DIDIER ORLANDO",
-        "TORRES HERNANDEZ JOHN JAMES","COBO HOYOS JUAN MANUEL",
-        "OSPINA NARANJO BERNARDO","COGOLLO FIGUEROA RANDY",
-        "ARIAS TORO YEISON","MIRANDA FRANCO EFRAIN",
-        "ARDILA MORA GUSTAVO ADOLFO","LOPEZ VELEZ ESTEBAN",
-        "GALEANO GRISALEZ RICARDO","CAICEDO ESCOBAR JUNIOR SANTIAGO",
-        "OTERO CAICEDO ANYEMBER","BUITRAGO RAMIREZ LEONARD",
-        "BORJAS WILLY ALEXANDER","MARIN LEON JAISSON JOAQUIN",
-        "AMAYA HINCAPIE JUAN CARLOS","BEDOYA SANCHEZ CRISTIAN DAVID",
-        "RAMIREZ WILSON ENRIQUE","CANO MORALES JIMY ALFREDO",
-        "CASTRO CASTAÑO JUAN DAVID","LOAIZA GAMBA JHON ALEXANDER",
-        "VILLA LOAIZA JHEISON ESTIBEN","CÁRDENAS GALIANO HAROLD MAURICIO",
-        "VARGAS CORREA VICTOR ALFONSO","VILLA MERA CHRISTIAN DAVID",
-        "AVENDAÑO GARCIA JUAN NEPOMUCENO","PELAEZ TATIS GABRIEL ESTEBAN"
-    ]
-
-    responsables_lista = [
-        "JUAN DIEGO SANCHEZ",
-        "CRISTIAN CHICA",
-        "ANDRES ARROYAVE",
-        "MARIA CAMILA",
-        "JANIER",
-        "DANNY DE LA CRUZ"
-    ]
-
-    # -------------------------------
-    # Formulario – orden correcto
-    # -------------------------------
-    st.markdown("### Datos de la entrega")
-
+    # -------------------------
+    # Datos generales
+    # -------------------------
     col1, col2, col3 = st.columns(3)
-
     with col1:
-        sede = st.selectbox("Sede", sedes)
-
+        sede = st.selectbox("Sede", ["CALDAS", "RISARALDA"])
     with col2:
         inspector = st.selectbox("Inspector", inspectores_lista)
-
     with col3:
-        fecha = st.date_input("Fecha de entrega")
+        fecha = st.date_input("Fecha")
 
     col4, col5 = st.columns([1, 2])
-
     with col4:
-        responsable = st.selectbox("Responsable", responsables_lista)
-
+        responsable = st.selectbox(
+            "Responsable",
+            ["JUAN DIEGO SANCHEZ", "CRISTIAN CHICA", "ANDRES ARROYAVE",
+             "MARIA CAMILA", "JANIER", "DANNY DE LA CRUZ"]
+        )
     with col5:
         observacion = st.text_input("Observación (opcional)")
 
-    # -------------------------------
-    # Ítems organizados en GRILLA
-    # -------------------------------
+    # -------------------------
+    # Ítems (compacto)
+    # -------------------------
     st.markdown("### Ítems entregados")
 
     items_def = [
         "Stickers 🔵", "Cepo 🔒", "Guantes 🧤", "Piernera 🦿",
-        "Monogafas 🥽", "Llaves de cepo 🗝️", "Formatos 📄", "Sellos 🕹️",
-        "Papelería general 📦"
+        "Monogafas 🥽", "Llaves de cepo 🗝️", "Formatos 📄", "Sellos 🕹️"
     ]
 
     items_seleccionados = []
-
     cols = st.columns(4)
-    for idx, item in enumerate(items_def):
-        with cols[idx % 4]:
-            marcar = st.checkbox(item)
+
+    for i, item in enumerate(items_def):
+        with cols[i % 4]:
+            marcar = st.checkbox(item, key=f"chk_{item}")
             cantidad = st.number_input(
-                f"Cantidad ({item})",
+                "",
                 min_value=0,
                 step=1,
-                key=item
+                key=f"qty_{item}",
+                label_visibility="collapsed"
             )
             if marcar and cantidad > 0:
                 items_seleccionados.append(f"{item} x{cantidad}")
 
-    # -------------------------------
-    # Guardar inventario
-    # -------------------------------
+    # -------------------------
+    # Guardar entrega
+    # -------------------------
     if st.button("Guardar entrega"):
-        if len(items_seleccionados) == 0:
-            st.warning("⚠️ Debes seleccionar al menos un ítem con cantidad.")
+        if not items_seleccionados:
+            st.warning("⚠️ Debes seleccionar al menos un ítem con cantidad")
         else:
             nueva_fila = pd.DataFrame({
                 "Fecha": [fecha.strftime("%Y-%m-%d")],
@@ -203,18 +154,33 @@ with tab1:
 
             df_inv = pd.concat([df_inv, nueva_fila], ignore_index=True)
             df_inv.to_excel(archivo_inventario, index=False, engine="openpyxl")
-
             subir_a_github(archivo_inventario)
+            st.success("✅ Entrega registrada")
 
-            st.success("✅ Entrega registrada y respaldada en GitHub")
-
-    # -------------------------------
-    # Historial
-    # -------------------------------
+    # -------------------------
+    # Historial con filtro + edición
+    # -------------------------
     st.markdown("### 📋 Historial de entregas")
-    st.dataframe(df_inv, use_container_width=True)
 
+    filtro_inspector = st.selectbox(
+        "Filtrar por inspector",
+        ["TODOS"] + inspectores_lista
+    )
 
+    df_hist = df_inv.copy()
+    if filtro_inspector != "TODOS":
+        df_hist = df_hist[df_hist["Inspector"] == filtro_inspector]
+
+    df_editado = st.data_editor(
+        df_hist,
+        num_rows="dynamic",
+        use_container_width=True
+    )
+
+    if st.button("Guardar cambios del historial"):
+        df_editado.to_excel(archivo_inventario, index=False, engine="openpyxl")
+        subir_a_github(archivo_inventario)
+        st.success("✅ Cambios guardados correctamente")
 
 # -----------------------------------------------------
 # ✅ PESTAÑA 2: SEGUIMIENTO DIARIO — VERSIÓN FINAL
