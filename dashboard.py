@@ -79,100 +79,141 @@ def subir_a_github(ruta_archivo):
 with tab1:
     st.subheader("Control de entrega de papelería e inventario")
 
-    import datetime
-
-    # Archivo local
     archivo_inventario = "inventario.xlsx"
 
-    # ✅ Crear archivo si no existe
+    # -------------------------------
+    # Crear archivo si no existe
+    # -------------------------------
     if not os.path.exists(archivo_inventario):
         df_init = pd.DataFrame(columns=[
-            "Fecha", "Inspector", "Sede", "Responsable", "Ítems"
+            "Fecha", "Sede", "Inspector", "Responsable",
+            "Observación", "Ítems"
         ])
         df_init.to_excel(archivo_inventario, index=False, engine="openpyxl")
 
-    # ✅ Cargar inventario existente
     df_inv = pd.read_excel(archivo_inventario, engine="openpyxl")
 
-    # ✅ Lista oficial de inspectores
+    # -------------------------------
+    # Listas fijas
+    # -------------------------------
+    sedes = ["CALDAS", "RISARALDA"]
+
     inspectores_lista = [
         "ARIZA MARIN SERGIO","ANDRES ARROYAVE","BEDOYA DIEGO ALEJANDRO",
         "DANNY DE LA CRUZ","CARVAJAL RESTREPO JUAN DAVID","JANIER MARIN",
         "CHAVARRIAGA JUAN MANUEL","CRISTIAN CHICA","ECHEVERRY CARDONA JHON STIVEN",
         "GALLEGO CADAVID NORBEY","GIRALDO GARCIA SIGIFREDO","LOPEZ PINEDA CESAR AUGUSTO",
-        "NOREÑA GIRALDO GEOVANNY","OSPINA CASTELLANOS ANDERSON","OSPINA RODRIGUEZ DANIEL ALBERTO",
-        "RUIZ DILON MARLON ANDREY","LARGO OSORIO JOSE OMAR","PULGARIN QUINTERO JULIAN ANDRES",
-        "TAYACK TRUJILLO DEIVER EVELIO","RUIZ ARENAS JUAN CAMILO","PATIÑO CIFUENTES RICARDO",
-        "VARGAS FRANCO JHON EDISON","CARDONA CANO NELSON","CARDONA OROZCO JULIAN ANDRES",
-        "GRISALES CUERVO JUAN DAVID","LEON MARIN LEONARDO FABIO","VELASQUEZ TAPASCO JHON DIEGO",
-        "CARDONA CASTANO DIDIER ORLANDO","TORRES HERNANDEZ JOHN JAMES","COBO HOYOS JUAN MANUEL",
-        "OSPINA NARANJO BERNARDO","COGOLLO FIGUEROA RANDY","ARIAS TORO YEISON",
-        "MIRANDA FRANCO EFRAIN","ARDILA MORA GUSTAVO ADOLFO","LOPEZ VELEZ ESTEBAN",
-        "GALEANO GRISALEZ RICARDO","CAICEDO ESCOBAR JUNIOR SANTIAGO","OTERO CAICEDO ANYEMBER",
-        "BUITRAGO RAMIREZ LEONARD","BORJAS WILLY ALEXANDER","MARIN LEON JAISSON JOAQUIN",
-        "AMAYA HINCAPIE JUAN CARLOS","BEDOYA SANCHEZ CRISTIAN DAVID","RAMIREZ WILSON ENRIQUE",
-        "CANO MORALES JIMY ALFREDO","CASTRO CASTAÑO JUAN DAVID","LOAIZA GAMBA JHON ALEXANDER",
-        "VILLA LOAIZA JHEISON ESTIBEN","CÁRDENAS GALIANO HAROLD MAURICIO","VARGAS CORREA VICTOR ALFONSO",
-        "VILLA MERA CHRISTIAN DAVID","AVENDAÑO GARCIA JUAN NEPOMUCENO","PELAEZ TATIS GABRIEL ESTEBAN"
+        "NOREÑA GIRALDO GEOVANNY","OSPINA CASTELLANOS ANDERSON",
+        "OSPINA RODRIGUEZ DANIEL ALBERTO","RUIZ DILON MARLON ANDREY",
+        "LARGO OSORIO JOSE OMAR","PULGARIN QUINTERO JULIAN ANDRES",
+        "TAYACK TRUJILLO DEIVER EVELIO","RUIZ ARENAS JUAN CAMILO",
+        "PATIÑO CIFUENTES RICARDO","VARGAS FRANCO JHON EDISON",
+        "CARDONA CANO NELSON","CARDONA OROZCO JULIAN ANDRES",
+        "GRISALES CUERVO JUAN DAVID","LEON MARIN LEONARDO FABIO",
+        "VELASQUEZ TAPASCO JHON DIEGO","CARDONA CASTANO DIDIER ORLANDO",
+        "TORRES HERNANDEZ JOHN JAMES","COBO HOYOS JUAN MANUEL",
+        "OSPINA NARANJO BERNARDO","COGOLLO FIGUEROA RANDY",
+        "ARIAS TORO YEISON","MIRANDA FRANCO EFRAIN",
+        "ARDILA MORA GUSTAVO ADOLFO","LOPEZ VELEZ ESTEBAN",
+        "GALEANO GRISALEZ RICARDO","CAICEDO ESCOBAR JUNIOR SANTIAGO",
+        "OTERO CAICEDO ANYEMBER","BUITRAGO RAMIREZ LEONARD",
+        "BORJAS WILLY ALEXANDER","MARIN LEON JAISSON JOAQUIN",
+        "AMAYA HINCAPIE JUAN CARLOS","BEDOYA SANCHEZ CRISTIAN DAVID",
+        "RAMIREZ WILSON ENRIQUE","CANO MORALES JIMY ALFREDO",
+        "CASTRO CASTAÑO JUAN DAVID","LOAIZA GAMBA JHON ALEXANDER",
+        "VILLA LOAIZA JHEISON ESTIBEN","CÁRDENAS GALIANO HAROLD MAURICIO",
+        "VARGAS CORREA VICTOR ALFONSO","VILLA MERA CHRISTIAN DAVID",
+        "AVENDAÑO GARCIA JUAN NEPOMUCENO","PELAEZ TATIS GABRIEL ESTEBAN"
     ]
 
-    st.write("### Registrar entrega de papelería e implementos")
+    responsables_lista = [
+        "JUAN DIEGO SANCHEZ",
+        "CRISTIAN CHICA",
+        "ANDRES ARROYAVE",
+        "MARIA CAMILA",
+        "JANIER",
+        "DANNY DE LA CRUZ"
+    ]
+
+    # -------------------------------
+    # Formulario – orden correcto
+    # -------------------------------
+    st.markdown("### Datos de la entrega")
 
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        fecha = st.date_input("Fecha de entrega")
+        sede = st.selectbox("Sede", sedes)
 
     with col2:
         inspector = st.selectbox("Inspector", inspectores_lista)
 
     with col3:
-        sede = st.selectbox("Sede", ["CALDAS", "RISARALDA"])
+        fecha = st.date_input("Fecha de entrega")
 
-    responsable = st.text_input("Responsable")
+    col4, col5 = st.columns([1, 2])
 
+    with col4:
+        responsable = st.selectbox("Responsable", responsables_lista)
+
+    with col5:
+        observacion = st.text_input("Observación (opcional)")
+
+    # -------------------------------
+    # Ítems organizados en GRILLA
+    # -------------------------------
     st.markdown("### Ítems entregados")
 
-    items = {
-        "Stickers 🔵": False,
-        "Cepo 🔒": False,
-        "Guantes 🧤": False,
-        "Piernera 🦿": False,
-        "Monogafas 🥽": False,
-        "Llaves de cepo 🗝️": False,
-        "Formatos 📄": False,
-        "Sellos 🕹️": False,
-        "Papelería general 📦": False,
-    }
+    items_def = [
+        "Stickers 🔵", "Cepo 🔒", "Guantes 🧤", "Piernera 🦿",
+        "Monogafas 🥽", "Llaves de cepo 🗝️", "Formatos 📄", "Sellos 🕹️",
+        "Papelería general 📦"
+    ]
 
-    for item in items:
-        items[item] = st.checkbox(item)
+    items_seleccionados = []
 
-    # ✅ Guardar y subir a GitHub
+    cols = st.columns(4)
+    for idx, item in enumerate(items_def):
+        with cols[idx % 4]:
+            marcar = st.checkbox(item)
+            cantidad = st.number_input(
+                f"Cantidad ({item})",
+                min_value=0,
+                step=1,
+                key=item
+            )
+            if marcar and cantidad > 0:
+                items_seleccionados.append(f"{item} x{cantidad}")
+
+    # -------------------------------
+    # Guardar inventario
+    # -------------------------------
     if st.button("Guardar entrega"):
-        seleccionados = [i for i,v in items.items() if v]
-
-        if len(seleccionados) == 0:
-            st.warning("⚠️ Debes seleccionar al menos un ítem.")
-        elif responsable == "":
-            st.warning("⚠️ Debes ingresar responsable.")
+        if len(items_seleccionados) == 0:
+            st.warning("⚠️ Debes seleccionar al menos un ítem con cantidad.")
         else:
             nueva_fila = pd.DataFrame({
                 "Fecha": [fecha.strftime("%Y-%m-%d")],
-                "Inspector": [inspector],
                 "Sede": [sede],
+                "Inspector": [inspector],
                 "Responsable": [responsable],
-                "Ítems": [", ".join(seleccionados)]
+                "Observación": [observacion],
+                "Ítems": [", ".join(items_seleccionados)]
             })
 
             df_inv = pd.concat([df_inv, nueva_fila], ignore_index=True)
             df_inv.to_excel(archivo_inventario, index=False, engine="openpyxl")
 
-            # ✅ SUBIR AUTOMÁTICAMENTE A GITHUB
             subir_a_github(archivo_inventario)
 
-    st.write("### 📋 Historial de entregas")
+            st.success("✅ Entrega registrada y respaldada en GitHub")
+
+    # -------------------------------
+    # Historial
+    # -------------------------------
+    st.markdown("### 📋 Historial de entregas")
     st.dataframe(df_inv, use_container_width=True)
+``
 
 
 # -----------------------------------------------------
