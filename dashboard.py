@@ -111,6 +111,9 @@ inspectores_lista = [
 # ---------------------------------------------------
 # ✅ TAB 1 — INVENTARIO DE PAPELERÍA (FINAL DEFINITIVO)
 # ---------------------------------------------------
+# ---------------------------------------------------
+# ✅ TAB 1 — INVENTARIO DE PAPELERÍA (FINAL)
+# ---------------------------------------------------
 with tab1:
     st.subheader("📦 Control de entrega de papelería e inventario")
 
@@ -126,72 +129,79 @@ with tab1:
 
     df_inv = pd.read_excel(archivo_inventario, engine="openpyxl")
 
-    # -------------------------------
-    # DATOS GENERALES
-    # -------------------------------
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        sede = st.selectbox("Sede", ["CALDAS", "RISARALDA"], key="sede_tab1")
-    with col2:
-        inspector = st.selectbox("Inspector", inspectores_lista, key="inspector_tab1")
-    with col3:
-        fecha = st.date_input("Fecha", key="fecha_tab1")
+    # =================================================
+    # ✅ FORMULARIO (SE LIMPIA AL GUARDAR)
+    # =================================================
+    with st.form("form_entrega", clear_on_submit=True):
 
-    col4, col5 = st.columns([1, 2])
-    with col4:
-        responsable = st.selectbox(
-            "Responsable",
-            [
-                "JUAN DIEGO SANCHEZ",
-                "CRISTIAN CHICA",
-                "ANDRES ARROYAVE",
-                "MARIA CAMILA",
-                "JANIER",
-                "DANNY DE LA CRUZ"
-            ],
-            key="responsable_tab1"
-        )
-    with col5:
-        observacion = st.text_input(
-            "Observación (opcional)",
-            key="obs_tab1"
-        )
+        # -------------------------
+        # DATOS GENERALES
+        # -------------------------
+        col1, col2, col3 = st.columns(3)
 
-    # -------------------------------
-    # ÍTEMS (DISEÑO CORREGIDO)
-    # -------------------------------
-    st.markdown("### Ítems entregados")
+        with col1:
+            sede = st.selectbox("Sede", ["CALDAS", "RISARALDA"])
 
-    items_def = [
-        "Stickers 🔵", "Cepo 🔒", "Guantes 🧤", "Piernera 🦿",
-        "Monogafas 🥽", "Llaves de cepo 🗝️", "Formatos 📄", "Sellos 🕹️"
-    ]
+        with col2:
+            inspector = st.selectbox("Inspector", inspectores_lista)
 
-    items_seleccionados = []
+        with col3:
+            fecha = st.date_input("Fecha")
 
-    filas = [items_def[i:i+4] for i in range(0, len(items_def), 4)]
+        col4, col5 = st.columns([1, 2])
 
-    for fila in filas:
-        cols = st.columns(4)
-        for col, item in zip(cols, fila):
-            with col:
-                marcar = st.checkbox(item, key=f"chk_{item}")
+        with col4:
+            responsable = st.selectbox(
+                "Responsable",
+                [
+                    "JUAN DIEGO SANCHEZ",
+                    "CRISTIAN CHICA",
+                    "ANDRES ARROYAVE",
+                    "MARIA CAMILA",
+                    "JANIER",
+                    "DANNY DE LA CRUZ"
+                ]
+            )
 
-                cantidad = st.number_input(
-                    "Cantidad",
-                    min_value=0,
-                    step=1,
-                    key=f"qty_{item}",
-                    label_visibility="collapsed"
-                )
+        with col5:
+            observacion = st.text_input("Observación (opcional)")
 
-                if marcar and cantidad > 0:
-                    items_seleccionados.append(f"{item} x{cantidad}")
+        # -------------------------
+        # ÍTEMS ENTREGADOS
+        # -------------------------
+        st.markdown("### Ítems entregados")
 
-    # -------------------------------
-    # GUARDAR ENTREGA (KEY ÚNICO)
-    # -------------------------------
-    if st.button("✅ Guardar entrega", key="btn_guardar_entrega"):
+        items_def = [
+            "Stickers 🔵", "Cepo 🔒", "Guantes 🧤", "Piernera 🦿",
+            "Monogafas 🥽", "Llaves de cepo 🗝️", "Formatos 📄", "Sellos 🕹️",
+            "Papelería general 📦"
+        ]
+
+        items_seleccionados = []
+
+        filas = [items_def[i:i+4] for i in range(0, len(items_def), 4)]
+
+        for fila in filas:
+            cols = st.columns(4)
+            for col, item in zip(cols, fila):
+                with col:
+                    marcar = st.checkbox(item)
+                    cantidad = st.number_input(
+                        "Cantidad",
+                        min_value=0,
+                        step=1,
+                        label_visibility="collapsed"
+                    )
+
+                    if marcar and cantidad > 0:
+                        items_seleccionados.append(f"{item} x{cantidad}")
+
+        submitted = st.form_submit_button("✅ Guardar entrega")
+
+    # =================================================
+    # ✅ GUARDAR ENTREGA
+    # =================================================
+    if submitted:
         if not items_seleccionados:
             st.warning("⚠️ Debes seleccionar al menos un ítem con cantidad.")
         else:
@@ -206,20 +216,18 @@ with tab1:
 
             df_inv = pd.concat([df_inv, nueva_fila], ignore_index=True)
             df_inv.to_excel(archivo_inventario, index=False, engine="openpyxl")
-
             subir_a_github(archivo_inventario)
 
-            st.success("✅ Entrega registrada y respaldada en GitHub")
+            st.success("✅ Entrega registrada correctamente")
 
-    # -------------------------------
-    # HISTORIAL + FILTRO + EDICIÓN
-    # -------------------------------
+    # =================================================
+    # ✅ HISTORIAL + FILTRO + EDICIÓN
+    # =================================================
     st.markdown("### 📋 Historial de entregas")
 
     filtro_inspector = st.selectbox(
-        "Filtrar historial por inspector",
-        ["TODOS"] + inspectores_lista,
-        key="filtro_hist_tab1"
+        "Filtrar por inspector",
+        ["TODOS"] + inspectores_lista
     )
 
     df_hist = df_inv.copy()
@@ -228,176 +236,132 @@ with tab1:
 
     df_editado = st.data_editor(
         df_hist,
-        use_container_width=True,
         num_rows="dynamic",
-        key="editor_historial_tab1"
+        use_container_width=True
     )
 
-    if st.button("💾 Guardar cambios del historial", key="btn_guardar_historial"):
+    if st.button("💾 Guardar cambios del historial"):
         df_editado.to_excel(archivo_inventario, index=False, engine="openpyxl")
         subir_a_github(archivo_inventario)
-        st.success("✅ Cambios del historial guardados correctamente")
+        st.success("✅ Cambios guardados correctamente")
 
+    # =================================================
+    # ✅ RESUMEN MENSUAL (POR MES SELECCIONADO)
+    # =================================================
+    st.markdown("## 📊 Resumen mensual de inventario")
 
-# -------------------------------
-# ✅ RESUMEN MENSUAL DE ENTREGAS
-# -------------------------------
-st.markdown("## 📊 Resumen mensual de inventario")
+    df_res = df_inv.copy()
+    df_res["Fecha"] = pd.to_datetime(df_res["Fecha"], errors="coerce")
 
-# Convertir fecha a datetime
-df_resumen = df_inv.copy()
-df_resumen["Fecha"] = pd.to_datetime(df_resumen["Fecha"], errors="coerce")
+    col_a, col_b = st.columns(2)
+    with col_a:
+        anio_sel = st.selectbox(
+            "Año",
+            sorted(df_res["Fecha"].dt.year.dropna().unique(), reverse=True)
+        )
+    with col_b:
+        mes_sel = st.selectbox(
+            "Mes",
+            [
+                (1,"Enero"),(2,"Febrero"),(3,"Marzo"),(4,"Abril"),
+                (5,"Mayo"),(6,"Junio"),(7,"Julio"),(8,"Agosto"),
+                (9,"Septiembre"),(10,"Octubre"),(11,"Noviembre"),(12,"Diciembre")
+            ],
+            format_func=lambda x: x[1]
+        )[0]
 
-# Selector de año y mes
-col_a, col_b = st.columns(2)
-
-with col_a:
-    anios = sorted(df_resumen["Fecha"].dt.year.dropna().unique(), reverse=True)
-    anio_sel = st.selectbox("Año", anios, key="aniores_tab1")
-
-with col_b:
-    meses = [
-        (1, "Enero"), (2, "Febrero"), (3, "Marzo"),
-        (4, "Abril"), (5, "Mayo"), (6, "Junio"),
-        (7, "Julio"), (8, "Agosto"), (9, "Septiembre"),
-        (10, "Octubre"), (11, "Noviembre"), (12, "Diciembre")
+    df_res = df_res[
+        (df_res["Fecha"].dt.year == anio_sel) &
+        (df_res["Fecha"].dt.month == mes_sel)
     ]
-    mes_sel = st.selectbox(
-        "Mes",
-        meses,
-        format_func=lambda x: x[1],
-        key="mesres_tab1"
-    )[0]
 
-# Filtrar por año y mes
-df_resumen = df_resumen[
-    (df_resumen["Fecha"].dt.year == anio_sel) &
-    (df_resumen["Fecha"].dt.month == mes_sel)
-]
+    resumen = {}
 
-# -------------------------------
-# Procesar ítems y cantidades
-# -------------------------------
-resumen_items = {}
+    for items in df_res["Ítems"].dropna():
+        for item in items.split(","):
+            item = item.strip()
+            if " x" in item:
+                nombre, cant = item.rsplit(" x",1)
+                cant = int(cant)
+            else:
+                nombre = item
+                cant = 1
 
-for items_str in df_resumen["Ítems"].dropna():
-    items = items_str.split(",")
-    for item in items:
-        try:
-            nombre, cantidad = item.strip().rsplit(" x", 1)
-            cantidad = int(cantidad)
+            resumen[nombre] = resumen.get(nombre, 0) + cant
 
-            if nombre not in resumen_items:
-                resumen_items[nombre] = 0
-            resumen_items[nombre] += cantidad
+    df_tot = pd.DataFrame(resumen.items(), columns=["Ítem","Cantidad"]).sort_values("Cantidad", ascending=False)
 
-        except:
+    if df_tot.empty:
+        st.info("ℹ️ No hay entregas en este mes.")
+    else:
+        st.dataframe(df_tot, use_container_width=True)
+
+        fig = px.bar(
+            df_tot,
+            x="Ítem",
+            y="Cantidad",
+            text="Cantidad",
+            title="Consumo del mes",
+            color="Cantidad",
+            color_continuous_scale="Blues"
+        )
+        fig.update_traces(textposition="outside")
+        st.plotly_chart(fig, use_container_width=True)
+
+    # =================================================
+    # ✅ CONSUMO CONSOLIDADO (TODOS LOS MESES)
+    # =================================================
+    st.markdown("## 📊 Consumo mensual consolidado por ítem")
+
+    df_cons = df_inv.copy()
+    df_cons["Fecha"] = pd.to_datetime(df_cons["Fecha"], errors="coerce")
+    df_cons["Mes"] = df_cons["Fecha"].dt.to_period("M").astype(str)
+
+    filas = []
+
+    for _, row in df_cons.iterrows():
+        if pd.isna(row["Ítems"]):
             continue
+        for item in row["Ítems"].split(","):
+            item = item.strip()
+            if " x" in item:
+                nombre, cant = item.rsplit(" x",1)
+                cant = int(cant)
+            else:
+                nombre = item
+                cant = 1
 
-# Crear DataFrame resumen
-df_totales = pd.DataFrame(
-    resumen_items.items(),
-    columns=["Ítem", "Cantidad entregada"]
-).sort_values("Cantidad entregada", ascending=False)
+            filas.append({
+                "Mes": row["Mes"],
+                "Ítem": nombre,
+                "Cantidad": cant
+            })
 
-# Mostrar resultados
-if df_totales.empty:
-    st.info("ℹ️ No hay entregas registradas para este mes.")
-else:
-    st.markdown("### 📋 Totales por ítem")
-    st.dataframe(df_totales, use_container_width=True)
+    df_plot = pd.DataFrame(filas)
 
-    # ---------------------------------------------
-# ---------------------------------------------
-# 📊 CONSUMO MENSUAL CONSOLIDADO (TODOS LOS MESES)
-# ---------------------------------------------
-st.markdown("## 📊 Consumo mensual consolidado por ítem")
+    if not df_plot.empty:
+        df_plot = df_plot.groupby(["Mes","Ítem"], as_index=False).sum()
+        df_plot["Mes"] = df_plot["Mes"].astype(str)
 
-# Copia del historial
-df_cons = df_inv.copy()
-df_cons["Fecha"] = pd.to_datetime(df_cons["Fecha"], errors="coerce")
+        fig2 = px.bar(
+            df_plot,
+            x="Mes",
+            y="Cantidad",
+            color="Ítem",
+            barmode="group",
+            text="Cantidad",
+            title="Consumo mensual consolidado por ítem"
+        )
 
-# Crear columna Año-Mes (ej: 2026-03)
-df_cons["AñoMes"] = df_cons["Fecha"].dt.to_period("M").astype(str)
+        fig2.update_traces(textposition="outside")
+        fig2.update_layout(
+            xaxis=dict(type="category"),
+            xaxis_title="Mes",
+            yaxis_title="Cantidad entregada",
+            legend_title="Ítem"
+        )
 
-# -------------------------------
-# Procesar ítems y cantidades (ROBUSTO)
-# -------------------------------
-filas = []
-
-for _, row in df_cons.iterrows():
-    if pd.isna(row["Ítems"]):
-        continue
-
-    items = row["Ítems"].split(",")
-    for item in items:
-        item = item.strip()
-
-        # Caso con cantidad explícita
-        if " x" in item:
-            try:
-                nombre, cantidad = item.rsplit(" x", 1)
-                cantidad = int(cantidad.strip())
-            except:
-                continue
-        else:
-            # Caso sin cantidad → asumir 1
-            nombre = item
-            cantidad = 1
-
-        filas.append({
-            "Mes": row["AñoMes"],   # texto categórico
-            "Ítem": nombre,
-            "Cantidad": cantidad
-        })
-
-df_plot = pd.DataFrame(filas)
-
-if df_plot.empty:
-    st.info("ℹ️ No hay datos suficientes para generar el consolidado.")
-else:
-    # Agrupar por Mes e Ítem
-    df_plot = (
-        df_plot
-        .groupby(["Mes", "Ítem"], as_index=False)
-        .sum()
-        .sort_values("Mes")
-    )
-
-    st.markdown(
-        "**Eje X:** Mes | **Eje Y:** Cantidad entregada | **Color:** Ítem"
-    )
-
-    # -------------------------------
-    # Gráfica (forzar eje categórico)
-    # -------------------------------
-    df_plot["Mes"] = df_plot["Mes"].astype(str)
-
-    fig = px.bar(
-        df_plot,
-        x="Mes",
-        y="Cantidad",
-        color="Ítem",
-        barmode="group",
-        text="Cantidad",
-        title="Consumo mensual consolidado por ítem"
-    )
-
-    fig.update_traces(textposition="outside")
-
-    fig.update_layout(
-        xaxis_title="Mes",
-        yaxis_title="Cantidad entregada",
-        legend_title="Ítem",
-        xaxis=dict(
-            type="category",                 # 🔑 CLAVE: NO fechas
-            categoryorder="category ascending"
-        ),
-        bargap=0.25
-    )
-
-    st.plotly_chart(fig, use_container_width=True)
-
+        st.plotly_chart(fig2, use_container_width=True)
 # -----------------------------------------------------
 # ✅ PESTAÑA 2: SEGUIMIENTO DIARIO — VERSIÓN FINAL
 # -----------------------------------------------------
