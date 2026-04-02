@@ -239,6 +239,86 @@ with tab1:
         st.success("✅ Cambios del historial guardados correctamente")
 
 
+# -------------------------------
+# ✅ RESUMEN MENSUAL DE ENTREGAS
+# -------------------------------
+st.markdown("## 📊 Resumen mensual de inventario")
+
+# Convertir fecha a datetime
+df_resumen = df_inv.copy()
+df_resumen["Fecha"] = pd.to_datetime(df_resumen["Fecha"], errors="coerce")
+
+# Selector de año y mes
+col_a, col_b = st.columns(2)
+
+with col_a:
+    anios = sorted(df_resumen["Fecha"].dt.year.dropna().unique(), reverse=True)
+    anio_sel = st.selectbox("Año", anios, key="aniores_tab1")
+
+with col_b:
+    meses = [
+        (1, "Enero"), (2, "Febrero"), (3, "Marzo"),
+        (4, "Abril"), (5, "Mayo"), (6, "Junio"),
+        (7, "Julio"), (8, "Agosto"), (9, "Septiembre"),
+        (10, "Octubre"), (11, "Noviembre"), (12, "Diciembre")
+    ]
+    mes_sel = st.selectbox(
+        "Mes",
+        meses,
+        format_func=lambda x: x[1],
+        key="mesres_tab1"
+    )[0]
+
+# Filtrar por año y mes
+df_resumen = df_resumen[
+    (df_resumen["Fecha"].dt.year == anio_sel) &
+    (df_resumen["Fecha"].dt.month == mes_sel)
+]
+
+# -------------------------------
+# Procesar ítems y cantidades
+# -------------------------------
+resumen_items = {}
+
+for items_str in df_resumen["Ítems"].dropna():
+    items = items_str.split(",")
+    for item in items:
+        try:
+            nombre, cantidad = item.strip().rsplit(" x", 1)
+            cantidad = int(cantidad)
+
+            if nombre not in resumen_items:
+                resumen_items[nombre] = 0
+            resumen_items[nombre] += cantidad
+
+        except:
+            continue
+
+# Crear DataFrame resumen
+df_totales = pd.DataFrame(
+    resumen_items.items(),
+    columns=["Ítem", "Cantidad entregada"]
+).sort_values("Cantidad entregada", ascending=False)
+
+# Mostrar resultados
+if df_totales.empty:
+    st.info("ℹ️ No hay entregas registradas para este mes.")
+else:
+    st.markdown("### 📋 Totales por ítem")
+    st.dataframe(df_totales, use_container_width=True)
+
+    st.markdown("### 📈 Gráfica de consumo mensual")
+    fig = px.bar(
+        df_totales,
+        x="Ítem",
+        y="Cantidad entregada",
+        text="Cantidad entregada",
+        color="Cantidad entregada",
+        color_continuous_scale="Blues"
+    )
+    fig.update_traces(textposition="outside")
+    st.plotly_chart(fig, use_container_width=True)
+
 # -----------------------------------------------------
 # ✅ PESTAÑA 2: SEGUIMIENTO DIARIO — VERSIÓN FINAL
 # -----------------------------------------------------
