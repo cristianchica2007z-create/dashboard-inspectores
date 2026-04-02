@@ -146,40 +146,37 @@ with tab1:
     # Ítems (compacto)
     # -------------------------
  # -------------------------
-    # Ítems entregados (compacto)
-    # -------------------------
-    st.markdown("### Ítems entregados")
+  # -------------------------
+# Ítems entregados (compacto y alineado)
+# -------------------------
+st.markdown("### Ítems entregados")
 
-    items_def = [
-        "Stickers 🔵", "Cepo 🔒", "Guantes 🧤", "Piernera 🦿",
-        "Monogafas 🥽", "Llaves de cepo 🗝️", "Formatos 📄", "Sellos 🕹️"
-    ]
+items_def = [
+    "Stickers 🔵", "Cepo 🔒", "Guantes 🧤", "Piernera 🦿",
+    "Monogafas 🥽", "Llaves de cepo 🗝️", "Formatos 📄", "Sellos 🕹️"
+]
 
-    items_seleccionados = []
+items_seleccionados = []
 
-    # 4 ítems por fila
-    filas = [items_def[i:i+4] for i in range(0, len(items_def), 4)]
+# 4 ítems por fila
+filas = [items_def[i:i+4] for i in range(0, len(items_def), 4)]
 
-    for fila in filas:
-        cols = st.columns(4)
-        for col, item in zip(cols, fila):
-            with col:
-                c1, c2 = st.columns([3, 1])
+for fila in filas:
+    cols = st.columns(4)
+    for col, item in zip(cols, fila):
+        with col:
+            marcar = st.checkbox(item, key=f"chk_{item}")
 
-                with c1:
-                    marcar = st.checkbox(item, key=f"chk_{item}")
+            cantidad = st.number_input(
+                "Cantidad",
+                min_value=0,
+                step=1,
+                key=f"qty_{item}",
+                label_visibility="collapsed"
+            )
 
-                with c2:
-                    cantidad = st.number_input(
-                        "",
-                        min_value=0,
-                        step=1,
-                        key=f"qty_{item}",
-                        label_visibility="collapsed"
-                    )
-
-                if marcar and cantidad > 0:
-                    items_seleccionados.append(f"{item} x{cantidad}")
+            if marcar and cantidad > 0:
+                items_seleccionados.append(f"{item} x{cantidad}")
 
     # -------------------------
     # Guardar entrega
