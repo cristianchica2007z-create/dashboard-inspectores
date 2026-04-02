@@ -307,16 +307,80 @@ else:
     st.markdown("### 📋 Totales por ítem")
     st.dataframe(df_totales, use_container_width=True)
 
-    st.markdown("### 📈 Gráfica de consumo mensual")
-    fig = px.bar(
-        df_totales,
-        x="Ítem",
-        y="Cantidad entregada",
-        text="Cantidad entregada",
-        color="Cantidad entregada",
-        color_continuous_scale="Blues"
+    # ---------------------------------------------
+# 📊 CONSUMO MENSUAL CONSOLIDADO (TODOS LOS MESES)
+# ---------------------------------------------
+st.markdown("## 📊 Consumo mensual consolidado por ítem")
+
+df_cons = df_inv.copy()
+df_cons["Fecha"] = pd.to_datetime(df_cons["Fecha"], errors="coerce")
+
+# Crear columna Año-Mes (ej: 2026-03)
+df_cons["AñoMes"] = df_cons["Fecha"].dt.to_period("M").astype(str)
+
+# Procesar ítems de forma robusta
+filas = []
+
+for _, row in df_cons.iterrows():
+    if pd.isna(row["Ítems"]):
+        continue
+
+    items = row["Ítems"].split(",")
+    for item in items:
+        item = item.strip()
+
+        if " x" in item:
+            try:
+                nombre, cantidad = item.rsplit(" x", 1)
+                cantidad = int(cantidad.strip())
+            except:
+                continue
+        else:
+            nombre = item
+            cantidad = 1
+
+        filas.append({
+            "AñoMes": row["AñoMes"],
+            "Ítem": nombre,
+            "Cantidad": cantidad
+        })
+
+# DataFrame consolidado
+df_plot = pd.DataFrame(filas)
+
+if df_plot.empty:
+    st.info("ℹ️ No hay datos suficientes para generar el consolidado.")
+else:
+    # Agrupar por mes e ítem
+    df_plot = (
+        df_plot
+        .groupby(["AñoMes", "Ítem"], as_index=False)
+        .sum()
+        .sort_values("AñoMes")
     )
+
+    st.markdown(
+        "**Eje X:** Mes | **Eje Y:** Cantidad entregada | **Color:** Ítem"
+    )
+
+    fig = px.bar(
+        df_plot,
+        x="AñoMes",
+        y="Cantidad",
+        color="Ítem",
+        barmode="group",
+        text="Cantidad",
+        title="Consumo mensual consolidado por ítem",
+    )
+
     fig.update_traces(textposition="outside")
+    fig.update_layout(
+        xaxis_title="Mes",
+        yaxis_title="Cantidad entregada",
+        legend_title="Ítem",
+        bargap=0.2
+    )
+
     st.plotly_chart(fig, use_container_width=True)
 
 # -----------------------------------------------------
