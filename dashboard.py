@@ -114,6 +114,9 @@ inspectores_lista = [
 # ---------------------------------------------------
 # ✅ TAB 1 — INVENTARIO DE PAPELERÍA (FINAL)
 # ---------------------------------------------------
+# ---------------------------------------------------
+# ✅ TAB 1 — INVENTARIO DE PAPELERÍA (FINAL ESTABLE)
+# ---------------------------------------------------
 with tab1:
     st.subheader("📦 Control de entrega de papelería e inventario")
 
@@ -134,22 +137,20 @@ with tab1:
     # =================================================
     with st.form("form_entrega", clear_on_submit=True):
 
-        # -------------------------
-        # DATOS GENERALES
-        # -------------------------
+        # -------- DATOS GENERALES --------
         col1, col2, col3 = st.columns(3)
-
         with col1:
-            sede = st.selectbox("Sede", ["CALDAS", "RISARALDA"])
+            sede = st.selectbox("Sede", ["CALDAS", "RISARALDA"], key="form_sede")
 
         with col2:
-            inspector = st.selectbox("Inspector", inspectores_lista)
+            inspector = st.selectbox(
+                "Inspector", inspectores_lista, key="form_inspector"
+            )
 
         with col3:
-            fecha = st.date_input("Fecha")
+            fecha = st.date_input("Fecha", key="form_fecha")
 
         col4, col5 = st.columns([1, 2])
-
         with col4:
             responsable = st.selectbox(
                 "Responsable",
@@ -160,37 +161,41 @@ with tab1:
                     "MARIA CAMILA",
                     "JANIER",
                     "DANNY DE LA CRUZ"
-                ]
+                ],
+                key="form_responsable"
             )
 
         with col5:
-            observacion = st.text_input("Observación (opcional)")
+            observacion = st.text_input(
+                "Observación (opcional)", key="form_obs"
+            )
 
-        # -------------------------
-        # ÍTEMS ENTREGADOS
-        # -------------------------
+        # -------- ÍTEMS --------
         st.markdown("### Ítems entregados")
 
         items_def = [
             "Stickers 🔵", "Cepo 🔒", "Guantes 🧤", "Piernera 🦿",
-            "Monogafas 🥽", "Llaves de cepo 🗝️", "Formatos 📄", "Sellos 🕹️",
-            "Papelería general 📦"
+            "Monogafas 🥽", "Llaves de cepo 🗝️", "Formatos 📄",
+            "Sellos 🕹️", "Papelería general 📦"
         ]
 
         items_seleccionados = []
 
         filas = [items_def[i:i+4] for i in range(0, len(items_def), 4)]
 
-        for fila in filas:
+        for f_idx, fila in enumerate(filas):
             cols = st.columns(4)
-            for col, item in zip(cols, fila):
-                with col:
-                    marcar = st.checkbox(item)
+            for c_idx, item in enumerate(fila):
+                with cols[c_idx]:
+                    marcar = st.checkbox(
+                        item, key=f"chk_{f_idx}_{c_idx}"
+                    )
                     cantidad = st.number_input(
                         "Cantidad",
                         min_value=0,
                         step=1,
-                        label_visibility="collapsed"
+                        label_visibility="collapsed",
+                        key=f"qty_{f_idx}_{c_idx}"
                     )
 
                     if marcar and cantidad > 0:
@@ -218,7 +223,7 @@ with tab1:
             df_inv.to_excel(archivo_inventario, index=False, engine="openpyxl")
             subir_a_github(archivo_inventario)
 
-            st.success("✅ Entrega registrada correctamente")
+            st.success("✅ Entrega registrada y formulario limpio")
 
     # =================================================
     # ✅ HISTORIAL + FILTRO + EDICIÓN
@@ -227,7 +232,8 @@ with tab1:
 
     filtro_inspector = st.selectbox(
         "Filtrar por inspector",
-        ["TODOS"] + inspectores_lista
+        ["TODOS"] + inspectores_lista,
+        key="filtro_hist"
     )
 
     df_hist = df_inv.copy()
@@ -237,79 +243,17 @@ with tab1:
     df_editado = st.data_editor(
         df_hist,
         num_rows="dynamic",
-        use_container_width=True
+        use_container_width=True,
+        key="editor_hist"
     )
 
-    if st.button("💾 Guardar cambios del historial"):
+    if st.button("💾 Guardar cambios del historial", key="btn_hist"):
         df_editado.to_excel(archivo_inventario, index=False, engine="openpyxl")
         subir_a_github(archivo_inventario)
-        st.success("✅ Cambios guardados correctamente")
+        st.success("✅ Cambios del historial guardados")
 
     # =================================================
-    # ✅ RESUMEN MENSUAL (POR MES SELECCIONADO)
-    # =================================================
-    st.markdown("## 📊 Resumen mensual de inventario")
-
-    df_res = df_inv.copy()
-    df_res["Fecha"] = pd.to_datetime(df_res["Fecha"], errors="coerce")
-
-    col_a, col_b = st.columns(2)
-    with col_a:
-        anio_sel = st.selectbox(
-            "Año",
-            sorted(df_res["Fecha"].dt.year.dropna().unique(), reverse=True)
-        )
-    with col_b:
-        mes_sel = st.selectbox(
-            "Mes",
-            [
-                (1,"Enero"),(2,"Febrero"),(3,"Marzo"),(4,"Abril"),
-                (5,"Mayo"),(6,"Junio"),(7,"Julio"),(8,"Agosto"),
-                (9,"Septiembre"),(10,"Octubre"),(11,"Noviembre"),(12,"Diciembre")
-            ],
-            format_func=lambda x: x[1]
-        )[0]
-
-    df_res = df_res[
-        (df_res["Fecha"].dt.year == anio_sel) &
-        (df_res["Fecha"].dt.month == mes_sel)
-    ]
-
-    resumen = {}
-
-    for items in df_res["Ítems"].dropna():
-        for item in items.split(","):
-            item = item.strip()
-            if " x" in item:
-                nombre, cant = item.rsplit(" x",1)
-                cant = int(cant)
-            else:
-                nombre = item
-                cant = 1
-
-            resumen[nombre] = resumen.get(nombre, 0) + cant
-
-    df_tot = pd.DataFrame(resumen.items(), columns=["Ítem","Cantidad"]).sort_values("Cantidad", ascending=False)
-
-    if df_tot.empty:
-        st.info("ℹ️ No hay entregas en este mes.")
-    else:
-        st.dataframe(df_tot, use_container_width=True)
-
-        fig = px.bar(
-            df_tot,
-            x="Ítem",
-            y="Cantidad",
-            text="Cantidad",
-            title="Consumo del mes",
-            color="Cantidad",
-            color_continuous_scale="Blues"
-        )
-        fig.update_traces(textposition="outside")
-        st.plotly_chart(fig, use_container_width=True)
-
-    # =================================================
-    # ✅ CONSUMO CONSOLIDADO (TODOS LOS MESES)
+    # ✅ RESUMEN MENSUAL CONSOLIDADO
     # =================================================
     st.markdown("## 📊 Consumo mensual consolidado por ítem")
 
@@ -317,33 +261,33 @@ with tab1:
     df_cons["Fecha"] = pd.to_datetime(df_cons["Fecha"], errors="coerce")
     df_cons["Mes"] = df_cons["Fecha"].dt.to_period("M").astype(str)
 
-    filas = []
-
+    registros = []
     for _, row in df_cons.iterrows():
         if pd.isna(row["Ítems"]):
             continue
-        for item in row["Ítems"].split(","):
-            item = item.strip()
-            if " x" in item:
-                nombre, cant = item.rsplit(" x",1)
+        for it in row["Ítems"].split(","):
+            it = it.strip()
+            if " x" in it:
+                nom, cant = it.rsplit(" x", 1)
                 cant = int(cant)
             else:
-                nombre = item
+                nom = it
                 cant = 1
 
-            filas.append({
+            registros.append({
                 "Mes": row["Mes"],
-                "Ítem": nombre,
+                "Ítem": nom,
                 "Cantidad": cant
             })
 
-    df_plot = pd.DataFrame(filas)
+    df_plot = pd.DataFrame(registros)
 
     if not df_plot.empty:
-        df_plot = df_plot.groupby(["Mes","Ítem"], as_index=False).sum()
-        df_plot["Mes"] = df_plot["Mes"].astype(str)
+        df_plot = df_plot.groupby(
+            ["Mes", "Ítem"], as_index=False
+        ).sum()
 
-        fig2 = px.bar(
+        fig = px.bar(
             df_plot,
             x="Mes",
             y="Cantidad",
@@ -353,15 +297,16 @@ with tab1:
             title="Consumo mensual consolidado por ítem"
         )
 
-        fig2.update_traces(textposition="outside")
-        fig2.update_layout(
+        fig.update_traces(textposition="outside")
+        fig.update_layout(
             xaxis=dict(type="category"),
             xaxis_title="Mes",
             yaxis_title="Cantidad entregada",
             legend_title="Ítem"
         )
 
-        st.plotly_chart(fig2, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True)
+
 # -----------------------------------------------------
 # ✅ PESTAÑA 2: SEGUIMIENTO DIARIO — VERSIÓN FINAL
 # -----------------------------------------------------
