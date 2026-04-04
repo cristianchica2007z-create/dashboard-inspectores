@@ -754,14 +754,15 @@ with tab2:
 # ---------------------------------------------------
 # ---------------------------------------------------
 # ---------------------------------------------------
+# ---------------------------------------------------
 # ✅ TAB 3 — SEGUIMIENTO MENSUAL (MULTI‑DÍA)
 # ---------------------------------------------------
 with tab3:
     st.subheader("📅 Seguimiento mensual")
 
     st.info(
-        "Este módulo permite analizar el desempeño de los inspectores "
-        "en un rango de fechas, consolidando y promediando la información diaria."
+        "Análisis consolidado del desempeño de los inspectores "
+        "en un rango de fechas, promediando indicadores diarios."
     )
 
     # ---------------------------------------------------
@@ -775,19 +776,17 @@ with tab3:
 
     if archivo:
 
-        import numpy as np
         import datetime
 
         # ---------------------------------------------------
         # 2️⃣ CARGAR Y NORMALIZAR ARCHIVO
         # ---------------------------------------------------
         df = pd.read_excel(archivo)
-
         df.columns = df.columns.str.strip().str.lower()
 
         columnas_req = [
-            "fecha de ejecucion","hora inicio","hora final",
-            "inspector","localidad","cierre","tiempo de tarea"
+            "fecha de ejecucion", "hora inicio", "hora final",
+            "inspector", "localidad", "cierre", "tiempo de tarea"
         ]
 
         for col in columnas_req:
@@ -795,14 +794,12 @@ with tab3:
                 st.error(f"❌ Falta la columna obligatoria: {col}")
                 st.stop()
 
-        # Normalizar texto
+        # Normalización de texto
         df["inspector"] = (
             df["inspector"].astype(str)
             .str.upper().str.strip()
             .str.replace(r"\s+", " ", regex=True)
         )
-
-        df["localidad"] = df["localidad"].astype(str).str.upper().str.strip()
 
         # Fechas y horas
         df["fecha"] = pd.to_datetime(
@@ -817,7 +814,6 @@ with tab3:
 
         df["hora_inicio"] = df["hora inicio"].apply(parse_hora)
         df["hora_final"] = df["hora final"].apply(parse_hora)
-
         df["tiempo_td"] = pd.to_timedelta(
             df["tiempo de tarea"], errors="coerce"
         )
@@ -845,7 +841,7 @@ with tab3:
         # ---------------------------------------------------
         # 4️⃣ VARIABLES OPERATIVAS
         # ---------------------------------------------------
-        hora_oficial = datetime.time(7,30)
+        hora_oficial = datetime.time(7, 30)
 
         def minutos_tarde(h):
             if h is None:
@@ -867,14 +863,14 @@ with tab3:
         df["efectiva"] = df["cierre"].isin(valores_efectivos)
 
         # ---------------------------------------------------
-        # 5️⃣ KPIs CONSOLIDADOS (PROMEDIOS GENERALES)
+        # 5️⃣ KPIs CONSOLIDADOS
         # ---------------------------------------------------
         c1, c2, c3, c4 = st.columns(4)
 
         c1.metric("📋 Total órdenes", len(df))
         c2.metric(
             "✅ % Efectividad promedio",
-            round(df["efectiva"].mean()*100, 1)
+            round(df["efectiva"].mean() * 100, 1)
         )
         c3.metric(
             "⏰ Minutos tarde promedio",
@@ -903,6 +899,7 @@ with tab3:
                 for h in horas_validas
                 if isinstance(h, datetime.time)
             ]
+
             if not segundos:
                 return None
 
@@ -923,10 +920,20 @@ with tab3:
                 (ordenes_efectivas / total_ordenes) * 100, 1
             ) if total_ordenes else 0
 
-            prom_inicio = hora_promedio(df_ins["hora_inicio"])
-            prom_fin = hora_promedio(df_ins["hora_final"])
+            # ✅ PRIMERA Y ÚLTIMA TAREA POR DÍA
+            por_dia = (
+                df_ins.groupby("fecha")
+                .agg(
+                    inicio_dia=("hora_inicio", "min"),
+                    fin_dia=("hora_final", "max")
+                )
+                .reset_index()
+            )
 
-            # ✅ Solo órdenes efectivas para promedio por inspección
+            prom_inicio = hora_promedio(por_dia["inicio_dia"])
+            prom_fin = hora_promedio(por_dia["fin_dia"])
+
+            # ✅ PROMEDIO SOLO ÓRDENES EFECTIVAS
             df_eff = df_ins[
                 (df_ins["efectiva"] == True) &
                 (df_ins["tiempo_td"].notna())
