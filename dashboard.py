@@ -118,7 +118,7 @@ inspectores_lista = [
 # ✅ TAB 1 — INVENTARIO DE PAPELERÍA (FINAL ESTABLE)
 # ---------------------------------------------------
 with tab1:
-    st.subheader("📦 Control de entrega de papelería e inventario")
+    st.subheader("📦 Control de entrega de inventario")
 
     archivo_inventario = "inventario.xlsx"
 
