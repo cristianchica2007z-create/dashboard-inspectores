@@ -752,6 +752,174 @@ with tab2:
 # ---------------------------------------------------
 # ✅ PESTAÑA 3: GRÁFICAS GENERALES
 # ---------------------------------------------------
+# ---------------------------------------------------
+# ✅ TAB 3 — SEGUIMIENTO MENSUAL (MULTI‑DÍA)
+# ---------------------------------------------------
 with tab3:
-    st.subheader("Gráficas de desempeño general")
-    st.info("Aquí veremos indicadores, tendencias y análisis más avanzados usando Plotly.")
+    st.subheader("📅 Seguimiento mensual")
+
+    st.write(
+        "Este módulo permite analizar el desempeño de los inspectores "
+        "en un rango de fechas, promediando los indicadores diarios."
+    )
+
+    # ---------------------------------------------------
+    # 1️⃣ CARGAR ARCHIVO (MISMO DE TAB 2)
+    # ---------------------------------------------------
+    archivo = st.file_uploader(
+        "Cargar archivo de bitácora (Excel)",
+        type=["xls", "xlsx"],
+        key="archivo_tab3"
+    )
+
+    if archivo:
+
+        import numpy as np
+        import datetime
+
+        # ---------------------------------------------------
+        # 2️⃣ CARGAR Y NORMALIZAR ARCHIVO
+        # ---------------------------------------------------
+        df = pd.read_excel(archivo)
+
+        df.columns = df.columns.str.strip().str.lower()
+
+        columnas_req = [
+            "fecha de ejecucion","hora inicio","hora final",
+            "inspector","localidad","cierre","tiempo de tarea"
+        ]
+
+        for col in columnas_req:
+            if col not in df.columns:
+                st.error(f"❌ Falta la columna obligatoria: {col}")
+                st.stop()
+
+        # Normalizar texto
+        df["inspector"] = (
+            df["inspector"].astype(str)
+            .str.upper().str.strip()
+            .str.replace(r"\s+", " ", regex=True)
+        )
+
+        df["localidad"] = df["localidad"].astype(str).str.upper().str.strip()
+
+        # Fechas y horas
+        df["fecha"] = pd.to_datetime(
+            df["fecha de ejecucion"], errors="coerce"
+        ).dt.date
+
+        def parse_hora(valor):
+            try:
+                return pd.to_datetime(valor).time()
+            except:
+                return None
+
+        df["hora_inicio"] = df["hora inicio"].apply(parse_hora)
+        df["hora_final"] = df["hora final"].apply(parse_hora)
+        df["tiempo_td"] = pd.to_timedelta(
+            df["tiempo de tarea"], errors="coerce"
+        )
+
+        # ---------------------------------------------------
+        # 3️⃣ SELECCIÓN DE RANGO DE FECHAS ✅
+        # ---------------------------------------------------
+        fechas_validas = sorted(df["fecha"].dropna().unique())
+
+        if len(fechas_validas) < 2:
+            st.warning("⚠️ El archivo debe tener al menos dos días de información.")
+            st.stop()
+
+        fecha_inicio, fecha_fin = st.date_input(
+            "Selecciona rango de fechas",
+            value=(fechas_validas[0], fechas_validas[-1])
+        )
+
+        df = df[(df["fecha"] >= fecha_inicio) & (df["fecha"] <= fecha_fin)]
+
+        if df.empty:
+            st.warning("⚠️ No hay datos en el rango seleccionado.")
+            st.stop()
+
+        # ---------------------------------------------------
+        # 4️⃣ KPIs CONSOLIDADOS (PROMEDIOS)
+        # ---------------------------------------------------
+        hora_oficial = datetime.time(7,30)
+
+        def minutos_tarde(h):
+            if h is None:
+                return None
+            h1 = datetime.datetime.combine(datetime.date.today(), h)
+            h2 = datetime.datetime.combine(datetime.date.today(), hora_oficial)
+            return (h1 - h2).total_seconds() / 60
+
+        df["minutos_tarde"] = df["hora_inicio"].apply(minutos_tarde)
+
+        valores_efectivos = [
+            "INSPECCIONADA",
+            "INSPECCIONADA CON DEFECTO NO CRITICO",
+            "INSPECCIONADA CON DEFECTO CRITICO",
+            "CERTIFICADA",
+            "CERTIFICADA CON NOVEDAD"
+        ]
+
+        df["efectiva"] = df["cierre"].isin(valores_efectivos)
+
+        c1, c2, c3, c4 = st.columns(4)
+
+        c1.metric("📋 Total órdenes", len(df))
+        c2.metric("✅ % Efectividad", round(df["efectiva"].mean()*100, 1))
+        c3.metric("⏰ Minutos tarde promedio",
+                  round(df["minutos_tarde"].mean(), 1) if df["minutos_tarde"].notna().any() else "—")
+        c4.metric("🕒 Tiempo promedio tarea",
+                  str(df["tiempo_td"].mean()).split(" ")[-1])
+
+        st.divider()
+
+        # ---------------------------------------------------
+        # 5️⃣ TABLA RESUMEN POR INSPECTOR
+        # ---------------------------------------------------
+        resumen = (
+            df.groupby("inspector")
+              .agg(
+                  ordenes=("efectiva","count"),
+                  efectivas=("efectiva","sum"),
+                  efectividad=("efectiva","mean"),
+                  minutos_tarde_prom=("minutos_tarde","mean"),
+                  tiempo_prom_tarea=("tiempo_td","mean")
+              )
+              .reset_index()
+        )
+
+        resumen["efectividad"] = (resumen["efectividad"]*100).round(1)
+
+        st.markdown("### 📊 Resumen consolidado por inspector")
+        st.dataframe(resumen, use_container_width=True)
+
+        st.divider()
+
+        # ---------------------------------------------------
+        # 6️⃣ GRÁFICA DE TENDENCIA (ORDENES POR DÍA)
+        # ---------------------------------------------------
+        st.markdown("### 📈 Tendencia de órdenes por día")
+
+        df_trend = (
+            df.groupby("fecha")
+              .size()
+              .reset_index(name="ordenes")
+        )
+
+        fig = px.line(
+            df_trend,
+            x="fecha",
+            y="ordenes",
+            markers=True,
+            title="Evolución diaria de órdenes en el periodo"
+        )
+
+        fig.update_layout(
+            xaxis_title="Fecha",
+            yaxis_title="Órdenes",
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+
