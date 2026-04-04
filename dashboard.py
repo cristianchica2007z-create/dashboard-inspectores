@@ -755,6 +755,7 @@ with tab2:
 # ---------------------------------------------------
 # ---------------------------------------------------
 # ---------------------------------------------------
+# ---------------------------------------------------
 # ✅ TAB 3 — SEGUIMIENTO MENSUAL (MULTI‑DÍA)
 # ---------------------------------------------------
 with tab3:
@@ -766,7 +767,7 @@ with tab3:
     )
 
     # ---------------------------------------------------
-    # 1️⃣ CARGA DEL ARCHIVO (MISMO DE TAB 2)
+    # 1️⃣ CARGA DEL ARCHIVO
     # ---------------------------------------------------
     archivo = st.file_uploader(
         "Cargar archivo de bitácora (Excel)",
@@ -794,21 +795,20 @@ with tab3:
                 st.error(f"❌ Falta la columna obligatoria: {col}")
                 st.stop()
 
-        # Normalización de texto
+        # Normalización
         df["inspector"] = (
             df["inspector"].astype(str)
             .str.upper().str.strip()
             .str.replace(r"\s+", " ", regex=True)
         )
 
-        # Fechas y horas
         df["fecha"] = pd.to_datetime(
             df["fecha de ejecucion"], errors="coerce"
         ).dt.date
 
-        def parse_hora(valor):
+        def parse_hora(x):
             try:
-                return pd.to_datetime(valor).time()
+                return pd.to_datetime(x).time()
             except:
                 return None
 
@@ -819,39 +819,19 @@ with tab3:
         )
 
         # ---------------------------------------------------
-        # 3️⃣ SELECCIÓN DE RANGO DE FECHAS ✅
+        # 3️⃣ RANGO DE FECHAS
         # ---------------------------------------------------
-        fechas_validas = sorted(df["fecha"].dropna().unique())
-
-        if len(fechas_validas) < 2:
-            st.warning("⚠️ El archivo debe contener más de un día.")
-            st.stop()
-
+        fechas = sorted(df["fecha"].dropna().unique())
         fecha_inicio, fecha_fin = st.date_input(
             "Selecciona rango de fechas",
-            value=(fechas_validas[0], fechas_validas[-1])
+            value=(fechas[0], fechas[-1])
         )
 
         df = df[(df["fecha"] >= fecha_inicio) & (df["fecha"] <= fecha_fin)]
 
-        if df.empty:
-            st.warning("⚠️ No hay datos en el rango seleccionado.")
-            st.stop()
-
         # ---------------------------------------------------
-        # 4️⃣ VARIABLES OPERATIVAS
+        # 4️⃣ DEFINICIÓN DE EFECTIVIDAD (REGLA MIXTA)
         # ---------------------------------------------------
-        hora_oficial = datetime.time(7, 30)
-
-        def minutos_tarde(h):
-            if h is None:
-                return None
-            h1 = datetime.datetime.combine(datetime.date.today(), h)
-            h2 = datetime.datetime.combine(datetime.date.today(), hora_oficial)
-            return (h1 - h2).total_seconds() / 60
-
-        df["minutos_tarde"] = df["hora_inicio"].apply(minutos_tarde)
-
         valores_efectivos = [
             "INSPECCIONADA",
             "INSPECCIONADA CON DEFECTO NO CRITICO",
@@ -860,130 +840,74 @@ with tab3:
             "CERTIFICADA CON NOVEDAD"
         ]
 
-        df["efectiva"] = df["cierre"].isin(valores_efectivos)
+        df["efectiva"] = df.apply(
+            lambda r: (
+                r["cierre"] == "AGENDAMIENTO 12161"
+                if r["inspector"] == "PELAEZ TATIS GABRIEL ESTEBAN"
+                else r["cierre"] in valores_efectivos
+            ),
+            axis=1
+        )
 
         # ---------------------------------------------------
-        # 5️⃣ KPIs CONSOLIDADOS
+        # 5️⃣ FUNCIÓN PROMEDIO DE HORAS (CORRECTA)
         # ---------------------------------------------------
-        c1, c2, c3, c4 = st.columns(4)
-
-        c1.metric("📋 Total órdenes", len(df))
-        c2.metric(
-            "✅ % Efectividad promedio",
-            round(df["efectiva"].mean() * 100, 1)
-        )
-        c3.metric(
-            "⏰ Minutos tarde promedio",
-            round(df["minutos_tarde"].mean(), 1)
-            if df["minutos_tarde"].notna().any() else "—"
-        )
-        c4.metric(
-            "🕒 Tiempo promedio tarea",
-            str(df["tiempo_td"].mean()).split(" ")[-1]
-        )
-
-        st.divider()
+        def hora_promedio(serie):
+            s = serie.dropna()
+            if s.empty:
+                return None
+            secs = [h.hour*3600 + h.minute*60 + h.second for h in s]
+            prom = int(sum(secs)/len(secs))
+            return datetime.time(prom//3600, (prom%3600)//60)
 
         # ---------------------------------------------------
         # 6️⃣ RESUMEN CONSOLIDADO POR INSPECTOR ✅
         # ---------------------------------------------------
-        st.markdown("### 📊 Resumen consolidado por inspector")
-
-        def hora_promedio(serie_horas):
-            horas_validas = serie_horas.dropna()
-            if horas_validas.empty:
-                return None
-
-            segundos = [
-                h.hour * 3600 + h.minute * 60 + h.second
-                for h in horas_validas
-                if isinstance(h, datetime.time)
-            ]
-
-            if not segundos:
-                return None
-
-            prom = int(sum(segundos) / len(segundos))
-            h = prom // 3600
-            m = (prom % 3600) // 60
-            return datetime.time(h, m)
-
         resumen = []
 
-        for inspector_nombre in df["inspector"].unique():
+        for insp in df["inspector"].unique():
 
-            df_ins = df[df["inspector"] == inspector_nombre]
+            dfi = df[df["inspector"] == insp]
 
-            total_ordenes = df_ins.shape[0]
-            ordenes_efectivas = df_ins["efectiva"].sum()
-            efectividad = round(
-                (ordenes_efectivas / total_ordenes) * 100, 1
-            ) if total_ordenes else 0
+            total = len(dfi)
+            efectivas = dfi["efectiva"].sum()
+            efectividad = round((efectivas/total)*100,1) if total else 0
 
-            # ✅ PRIMERA Y ÚLTIMA TAREA POR DÍA
+            # ⏰ primeras y últimas tareas por día
             por_dia = (
-                df_ins.groupby("fecha")
+                dfi.groupby("fecha")
                 .agg(
-                    inicio_dia=("hora_inicio", "min"),
-                    fin_dia=("hora_final", "max")
+                    inicio=("hora_inicio","min"),
+                    fin=("hora_final","max")
                 )
                 .reset_index()
             )
 
-            prom_inicio = hora_promedio(por_dia["inicio_dia"])
-            prom_fin = hora_promedio(por_dia["fin_dia"])
+            prom_inicio = hora_promedio(por_dia["inicio"])
+            prom_fin = hora_promedio(por_dia["fin"])
 
-            # ✅ PROMEDIO SOLO ÓRDENES EFECTIVAS
-            df_eff = df_ins[
-                (df_ins["efectiva"] == True) &
-                (df_ins["tiempo_td"].notna())
+            # ⏱️ promedio solo efectivas
+            dfi_eff = dfi[
+                (dfi["efectiva"] == True) & 
+                (dfi["tiempo_td"].notna())
             ]
 
-            if not df_eff.empty:
-                prom_tiempo = df_eff["tiempo_td"].mean()
-                prom_tiempo_str = str(prom_tiempo).split(" ")[-1]
+            if not dfi_eff.empty:
+                prom_tarea = str(dfi_eff["tiempo_td"].mean()).split(" ")[-1]
             else:
-                prom_tiempo_str = "—"
+                prom_tarea = "—"
 
             resumen.append({
-                "Inspector": inspector_nombre,
-                "Órdenes": total_ordenes,
-                "Órdenes efectivas": int(ordenes_efectivas),
+                "Inspector": insp,
+                "Órdenes": total,
+                "Órdenes efectivas": int(efectivas),
                 "% Efectividad": efectividad,
                 "Prom. hora inicio": prom_inicio.strftime("%H:%M") if prom_inicio else "—",
                 "Prom. hora fin": prom_fin.strftime("%H:%M") if prom_fin else "—",
-                "Prom. por inspección": prom_tiempo_str
+                "Prom. por inspección": prom_tarea
             })
 
-        df_resumen = pd.DataFrame(resumen)
-        df_resumen = df_resumen.sort_values("% Efectividad", ascending=False)
+        df_resumen = pd.DataFrame(resumen).sort_values("% Efectividad", ascending=False)
 
+        st.markdown("### 📊 Resumen consolidado por inspector")
         st.dataframe(df_resumen, use_container_width=True)
-
-        st.divider()
-
-        # ---------------------------------------------------
-        # 7️⃣ GRÁFICA DE TENDENCIA (ÓRDENES POR DÍA)
-        # ---------------------------------------------------
-        st.markdown("### 📈 Tendencia de órdenes por día")
-
-        df_trend = (
-            df.groupby("fecha")
-              .size()
-              .reset_index(name="órdenes")
-        )
-
-        fig = px.line(
-            df_trend,
-            x="fecha",
-            y="órdenes",
-            markers=True,
-            title="Evolución diaria de órdenes en el periodo"
-        )
-
-        fig.update_layout(
-            xaxis_title="Fecha",
-            yaxis_title="Órdenes"
-        )
-
-        st.plotly_chart(fig, use_container_width=True)
