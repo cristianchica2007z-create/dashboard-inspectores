@@ -758,12 +758,15 @@ with tab2:
 # ---------------------------------------------------
 # ✅ TAB 3 — SEGUIMIENTO MENSUAL (MULTI‑DÍA)
 # ---------------------------------------------------
+# ---------------------------------------------------
+# ✅ TAB 3 — SEGUIMIENTO MENSUAL (MULTI‑DÍA)
+# ---------------------------------------------------
 with tab3:
     st.subheader("📅 Seguimiento mensual")
 
     st.info(
-        "Análisis consolidado del desempeño de los inspectores "
-        "en un rango de fechas, promediando indicadores diarios."
+        "Este módulo permite analizar el desempeño de los inspectores "
+        "en un rango de fechas, consolidando y promediando la información diaria."
     )
 
     # ---------------------------------------------------
@@ -776,11 +779,10 @@ with tab3:
     )
 
     if archivo:
-
         import datetime
 
         # ---------------------------------------------------
-        # 2️⃣ CARGAR Y NORMALIZAR ARCHIVO
+        # 2️⃣ CARGA Y NORMALIZACIÓN
         # ---------------------------------------------------
         df = pd.read_excel(archivo)
         df.columns = df.columns.str.strip().str.lower()
@@ -795,7 +797,6 @@ with tab3:
                 st.error(f"❌ Falta la columna obligatoria: {col}")
                 st.stop()
 
-        # Normalización
         df["inspector"] = (
             df["inspector"].astype(str)
             .str.upper().str.strip()
@@ -828,9 +829,12 @@ with tab3:
         )
 
         df = df[(df["fecha"] >= fecha_inicio) & (df["fecha"] <= fecha_fin)]
+        if df.empty:
+            st.warning("⚠️ No hay datos en el rango seleccionado.")
+            st.stop()
 
         # ---------------------------------------------------
-        # 4️⃣ DEFINICIÓN DE EFECTIVIDAD (REGLA MIXTA)
+        # 4️⃣ DEFINIR EFECTIVIDAD (REGLA MIXTA)
         # ---------------------------------------------------
         valores_efectivos = [
             "INSPECCIONADA",
@@ -850,64 +854,132 @@ with tab3:
         )
 
         # ---------------------------------------------------
-        # 5️⃣ FUNCIÓN PROMEDIO DE HORAS (CORRECTA)
+        # 5️⃣ UTILIDADES
         # ---------------------------------------------------
-        def hora_promedio(serie):
-            s = serie.dropna()
-            if s.empty:
+        hora_oficial = datetime.time(7, 30)
+
+        def minutos_tarde(h):
+            if h is None:
                 return None
-            secs = [h.hour*3600 + h.minute*60 + h.second for h in s]
-            prom = int(sum(secs)/len(secs))
+            h1 = datetime.datetime.combine(datetime.date.today(), h)
+            h2 = datetime.datetime.combine(datetime.date.today(), hora_oficial)
+            return (h1 - h2).total_seconds() / 60
+
+        df["minutos_tarde"] = df["hora_inicio"].apply(minutos_tarde)
+
+        def hora_promedio(serie):
+            serie = serie.dropna()
+            if serie.empty:
+                return None
+            segs = [h.hour*3600 + h.minute*60 for h in serie]
+            prom = int(sum(segs)/len(segs))
             return datetime.time(prom//3600, (prom%3600)//60)
 
+        def formatear_td(td):
+            if pd.isna(td):
+                return "—"
+            mins = int(td.total_seconds() // 60)
+            h = mins // 60
+            m = mins % 60
+            return f"{h:02d}:{m:02d}"
+
         # ---------------------------------------------------
-        # 6️⃣ RESUMEN CONSOLIDADO POR INSPECTOR ✅
+        # 6️⃣ FILTRO POR INSPECTOR ✅
         # ---------------------------------------------------
-        resumen = []
+        inspector_sel = st.selectbox(
+            "Filtrar por inspector",
+            ["TODOS"] + sorted(df["inspector"].unique())
+        )
 
-        for insp in df["inspector"].unique():
+        # ---------------------------------------------------
+        # ✅ CASO TODOS: RESUMEN CONSOLIDADO
+        # ---------------------------------------------------
+        if inspector_sel == "TODOS":
+            st.markdown("### 📊 Resumen consolidado por inspector")
 
-            dfi = df[df["inspector"] == insp]
+            resumen = []
 
-            total = len(dfi)
-            efectivas = dfi["efectiva"].sum()
-            efectividad = round((efectivas/total)*100,1) if total else 0
+            for insp in df["inspector"].unique():
+                dfi = df[df["inspector"] == insp]
 
-            # ⏰ primeras y últimas tareas por día
-            por_dia = (
+                total = len(dfi)
+                efectivas = dfi["efectiva"].sum()
+                efectividad = round((efectivas / total) * 100, 1) if total else 0
+
+                por_dia = (
+                    dfi.groupby("fecha")
+                    .agg(
+                        inicio=("hora_inicio", "min"),
+                        fin=("hora_final", "max")
+                    )
+                    .reset_index()
+                )
+
+                prom_inicio = hora_promedio(por_dia["inicio"])
+                prom_fin = hora_promedio(por_dia["fin"])
+
+                dfi_eff = dfi[
+                    (dfi["efectiva"] == True) &
+                    (dfi["tiempo_td"].notna())
+                ]
+
+                prom_tarea = (
+                    formatear_td(dfi_eff["tiempo_td"].mean())
+                    if not dfi_eff.empty else "—"
+                )
+
+                resumen.append({
+                    "Inspector": insp,
+                    "Órdenes": total,
+                    "Órdenes efectivas": int(efectivas),
+                    "% Efectividad": efectividad,
+                    "Prom. hora inicio": prom_inicio.strftime("%H:%M") if prom_inicio else "—",
+                    "Prom. hora fin": prom_fin.strftime("%H:%M") if prom_fin else "—",
+                    "Prom. por inspección": prom_tarea
+                })
+
+            df_resumen = pd.DataFrame(resumen).sort_values("% Efectividad", ascending=False)
+            st.dataframe(df_resumen, use_container_width=True)
+
+        # ---------------------------------------------------
+        # ✅ CASO INSPECTOR ÚNICO: DETALLE DIARIO
+        # ---------------------------------------------------
+        else:
+            st.markdown(f"### 👤 Detalle diario — {inspector_sel}")
+
+            dfi = df[df["inspector"] == inspector_sel]
+
+            detalle = (
                 dfi.groupby("fecha")
                 .agg(
-                    inicio=("hora_inicio","min"),
-                    fin=("hora_final","max")
+                    inicio=("hora_inicio", "min"),
+                    fin=("hora_final", "max"),
+                    ordenes=("efectiva", "count"),
+                    efectivas=("efectiva", "sum"),
+                    minutos_tarde=("minutos_tarde", "mean"),
+                    tiempo_eff=("tiempo_td",
+                        lambda x: x[dfi.loc[x.index, "efectiva"]].mean())
                 )
                 .reset_index()
             )
 
-            prom_inicio = hora_promedio(por_dia["inicio"])
-            prom_fin = hora_promedio(por_dia["fin"])
+            detalle["Inicio"] = detalle["inicio"].apply(
+                lambda x: x.strftime("%H:%M") if pd.notna(x) else "—"
+            )
+            detalle["Fin"] = detalle["fin"].apply(
+                lambda x: x.strftime("%H:%M") if pd.notna(x) else "—"
+            )
+            detalle["Min. tarde"] = detalle["minutos_tarde"].round(1)
+            detalle["Tiempo efectivo"] = detalle["tiempo_eff"].apply(formatear_td)
 
-            # ⏱️ promedio solo efectivas
-            dfi_eff = dfi[
-                (dfi["efectiva"] == True) & 
-                (dfi["tiempo_td"].notna())
-            ]
-
-            if not dfi_eff.empty:
-                prom_tarea = str(dfi_eff["tiempo_td"].mean()).split(" ")[-1]
-            else:
-                prom_tarea = "—"
-
-            resumen.append({
-                "Inspector": insp,
-                "Órdenes": total,
-                "Órdenes efectivas": int(efectivas),
-                "% Efectividad": efectividad,
-                "Prom. hora inicio": prom_inicio.strftime("%H:%M") if prom_inicio else "—",
-                "Prom. hora fin": prom_fin.strftime("%H:%M") if prom_fin else "—",
-                "Prom. por inspección": prom_tarea
+            detalle_final = detalle[[
+                "fecha", "Inicio", "Fin",
+                "ordenes", "efectivas",
+                "Min. tarde", "Tiempo efectivo"
+            ]].rename(columns={
+                "fecha": "Fecha",
+                "ordenes": "Órdenes",
+                "efectivas": "Órdenes efectivas"
             })
 
-        df_resumen = pd.DataFrame(resumen).sort_values("% Efectividad", ascending=False)
-
-        st.markdown("### 📊 Resumen consolidado por inspector")
-        st.dataframe(df_resumen, use_container_width=True)
+            st.dataframe(detalle_final, use_container_width=True)
