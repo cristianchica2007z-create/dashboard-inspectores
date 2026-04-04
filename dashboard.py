@@ -13,8 +13,17 @@ st.set_page_config(
     layout="wide"
 )
 
+# ---------------------------------------------------
+# ✅ CABECERA CON LOGO (ARRIBA A LA DERECHA)
+# ---------------------------------------------------
+col1, col2 = st.columns([6, 2])
+
+with col2:
+    st.image("logo.png", width=180)
+
+
 st.title("📊 Dashboard Inspectores eyc")
-st.title("⏰ Contro Operación")
+st.title("⏰ Control Operación")
 
 # ---------------------------------------------------
 # ✅ CREAR PESTAÑAS
