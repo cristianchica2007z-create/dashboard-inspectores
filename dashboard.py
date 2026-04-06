@@ -2,9 +2,6 @@
 
 
 import streamlit as st
-
-st.session_state.clear()
-
 import pandas as pd
 import os
 import plotly.express as px
