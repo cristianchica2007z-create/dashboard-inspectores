@@ -88,70 +88,92 @@ with tab1:
         df_init.to_excel(archivo_inventario, index=False, engine="openpyxl")
     df_inv = pd.read_excel(archivo_inventario, engine="openpyxl")
     # =================================================
-    # ✅ FORMULARIO (SE LIMPIA AL GUARDAR)
-    # =================================================
-    with st.form("form_entrega", clear_on_submit=True):
-        # -------- DATOS GENERALES --------
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            sede = st.selectbox("Sede", ["CALDAS", "RISARALDA"], key="form_sede")
-        with col2:
-            inspector = st.selectbox(
-                "Inspector", inspectores_lista, key="form_inspector"
-            )
-        with col3:
-            fecha = st.date_input("Fecha", key="form_fecha")
-        col4, col5 = st.columns([1, 2])
-        with col4:
-            responsable = st.selectbox(
-                "Responsable",
-                [
-                    "JUAN DIEGO SANCHEZ",
-                    "CRISTIAN CHICA",
-                    "ANDRES ARROYAVE",
-                    "MARIA CAMILA",
-                    "JANIER",
-                    "DANNY DE LA CRUZ"
-                ],
-                key="form_responsable"
-            )
-        with col5:
-            observacion = st.text_input(
-                "Observación (opcional)", key="form_obs"
-            )
+   # =================================================
+# ✅ FORMULARIO (SE LIMPIA AL GUARDAR)
+# =================================================
+with st.form("form_entrega", clear_on_submit=True):
+
+    # -------- DATOS GENERALES --------
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        sede = st.selectbox(
+            "Sede",
+            ["CALDAS", "RISARALDA"],
+            key="form_sede"
+        )
+
+    with col2:
+        inspector = st.selectbox(
+            "Inspector",
+            inspectores_lista,
+            key="form_inspector"
+        )
+
+    with col3:
+        fecha = st.date_input(
+            "Fecha",
+            key="form_fecha"
+        )
+
+    col4, col5 = st.columns([1, 2])
+
+    with col4:
+        responsable = st.selectbox(
+            "Responsable",
+            [
+                "JUAN DIEGO SANCHEZ",
+                "CRISTIAN CHICA",
+                "ANDRES ARROYAVE",
+                "MARIA CAMILA",
+                "JANIER",
+                "DANNY DE LA CRUZ"
+            ],
+            key="form_responsable"
+        )
+
+    with col5:
+        observacion = st.text_input(
+            "Observación (opcional)",
+            key="form_obs"
+        )
+
     # -------- ÍTEMS --------
-st.markdown("### Ítems entregados")
+    st.markdown("### Ítems entregados")
 
-items_def = [
-    "Stickers 🔵", "Cepo 🔒", "Guantes 🧤", "Piernera 🦿",
-    "Monogafas 🥽", "Llaves de cepo 🗝️", "Formatos 📄",
-    "Sellos 🕹️", "Papelería general 📦"
-]
+    items_def = [
+        "Stickers 🔵", "Cepo 🔒", "Guantes 🧤", "Piernera 🦿",
+        "Monogafas 🥽", "Llaves de cepo 🗝️", "Formatos 📄",
+        "Sellos 🕹️", "Papelería general 📦"
+    ]
 
-items_seleccionados = []
+    items_seleccionados = []
 
-filas = [items_def[i:i+4] for i in range(0, len(items_def), 4)]
+    filas = [items_def[i:i+4] for i in range(0, len(items_def), 4)]
 
-for f_idx, fila in enumerate(filas):
-    cols = st.columns(4)
-    for c_idx, item in enumerate(fila):
+    for f_idx, fila in enumerate(filas):
+        cols = st.columns(4)
+        for c_idx, item in enumerate(fila):
 
-        marcar = cols[c_idx].checkbox(
-            item,
-            key=f"chk_{f_idx}_{c_idx}"
-        )
+            marcar = cols[c_idx].checkbox(
+                item,
+                key=f"chk_{f_idx}_{c_idx}"
+            )
 
-        cantidad = cols[c_idx].number_input(
-            "Cantidad",
-            min_value=0,
-            step=1,
-            label_visibility="collapsed",
-            key=f"qty_{f_idx}_{c_idx}"
-        )
+            cantidad = cols[c_idx].number_input(
+                "Cantidad",
+                min_value=0,
+                step=1,
+                label_visibility="collapsed",
+                key=f"qty_{f_idx}_{c_idx}"
+            )
 
-        if marcar and cantidad > 0:
-            items_seleccionados.append(f"{item} x{cantidad}")
-        submitted = st.form_submit_button("✅ Guardar entrega")
+            if marcar and cantidad > 0:
+                items_seleccionados.append(f"{item} x{cantidad}")
+
+    # ✅ BOTÓN *DENTRO* DEL FORMULARIO (OBLIGATORIO)
+    submitted = st.form_submit_button("✅ Guardar entrega")
+
     # =================================================
     # ✅ GUARDAR ENTREGA
     # =================================================
