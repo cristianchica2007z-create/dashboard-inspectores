@@ -427,58 +427,67 @@ def estado(m):
 
 df_agrupado["estado"] = df_agrupado["minutos_tarde"].apply(estado)
 
-    # -----------------------------------------------------
-    # 8. Producción
-    # -----------------------------------------------------
-    valores_efectivos = [
-        "INSPECCIONADA",
-        "INSPECCIONADA CON DEFECTO NO CRITICO",
-        "INSPECCIONADA CON DEFECTO CRITICO",
-        "CERTIFICADA",
-        "CERTIFICADA CON NOVEDAD"
-    ]
+   # -----------------------------------------------------
+# 8. Producción
+# -----------------------------------------------------
+valores_efectivos = [
+    "INSPECCIONADA",
+    "INSPECCIONADA CON DEFECTO NO CRITICO",
+    "INSPECCIONADA CON DEFECTO CRITICO",
+    "CERTIFICADA",
+    "CERTIFICADA CON NOVEDAD"
+]
 
-    df["efectiva"] = df["cierre"].isin(valores_efectivos)
-    df_agrupado["efectiva"] = df["efectiva"]
+# Marcar efectivas en bitácora
+df_bitacora["efectiva"] = (
+    df_bitacora["cierre"].isin(valores_efectivos)
+)
 
-    total_ordenes = df.shape[0]
-    total_efectivas = df[df["efectiva"]].shape[0]
-    porcentaje_efectividad = (
-        round((total_efectivas / total_ordenes) * 100, 1)
-        if total_ordenes > 0 else 0
+# Pasar efectividad al resumen diario
+df_agrupado["efectiva"] = df_agrupado["inspector"].map(
+    df_bitacora.groupby("inspector")["efectiva"].any()
+)
+
+total_ordenes = df_bitacora.shape[0]
+total_efectivas = df_bitacora[df_bitacora["efectiva"]].shape[0]
+
+porcentaje_efectividad = (
+    round((total_efectivas / total_ordenes) * 100, 1)
+    if total_ordenes > 0 else 0
+)
+
+# -----------------------------------------------------
+# 8-B. Tiempo promedio por tarea efectiva
+# -----------------------------------------------------
+def parse_tiempo_tarea(valor):
+    try:
+        return pd.to_timedelta(str(valor))
+    except:
+        return pd.NaT
+
+df_bitacora["tiempo_tarea_td"] = (
+    df_bitacora["tiempo de tarea"].apply(parse_tiempo_tarea)
+)
+
+df_efectivas = df_bitacora[
+    (df_bitacora["efectiva"] == True) &
+    (df_bitacora["tiempo_tarea_td"].notna())
+]
+
+if df_efectivas.shape[0] > 0:
+    promedio_td = df_efectivas["tiempo_tarea_td"].mean()
+
+    prom_seg = int(promedio_td.total_seconds())
+    prom_h = prom_seg // 3600
+    prom_m = (prom_seg % 3600) // 60
+    prom_s = prom_seg % 60
+
+    tiempo_promedio_tarea_str = (
+        f"{prom_h}h {prom_m}m {prom_s}s"
+        if prom_h > 0 else f"{prom_m}m {prom_s}s"
     )
-
-    # -----------------------------------------------------
-    # 8-B. Tiempo promedio por tarea efectiva
-    # -----------------------------------------------------
-    def parse_tiempo_tarea(valor):
-        try:
-            return pd.to_timedelta(str(valor))
-        except:
-            return pd.NaT
-
-    df["tiempo_tarea_td"] = df["tiempo de tarea"].apply(parse_tiempo_tarea)
-
-    df_efectivas = df[
-        (df["efectiva"] == True) &
-        (df["tiempo_tarea_td"].notna())
-    ]
-
-    if df_efectivas.shape[0] > 0:
-        promedio_td = df_efectivas["tiempo_tarea_td"].mean()
-
-        prom_seg = int(promedio_td.total_seconds())
-        prom_h = prom_seg // 3600
-        prom_m = (prom_seg % 3600) // 60
-        prom_s = prom_seg % 60
-
-        tiempo_promedio_tarea_str = (
-            f"{prom_h}h {prom_m}m {prom_s}s"
-            if prom_h > 0 else f"{prom_m}m {prom_s}s"
-        )
-    else:
-        tiempo_promedio_tarea_str = "No disponible"
-        # -----------------------------------------------------
+else:
+    tiempo_promedio_tarea_str = "No disponible"
      # -----------------------------------------------------
     # 9. KPIs Premium
     # -----------------------------------------------------
