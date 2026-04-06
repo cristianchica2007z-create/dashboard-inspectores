@@ -318,6 +318,7 @@ with tab1:
 
 # -----------------------------------------------------
 # -----------------------------------------------------
+# -----------------------------------------------------
 # ✅ PESTAÑA 2: SEGUIMIENTO DIARIO — ARCHIVO COMPARTIDO
 # -----------------------------------------------------
 with tab2:
@@ -331,7 +332,7 @@ with tab2:
     )
 
     # -----------------------------------------------------
-    # ✅ CARGA Y REEMPLAZO DEL ARCHIVO COMPARTIDO
+    # ✅ CARGA / REEMPLAZO DEL ARCHIVO COMPARTIDO
     # -----------------------------------------------------
     archivo = st.file_uploader(
         "Cargar archivo de bitácora diaria (reemplaza el anterior)",
@@ -339,7 +340,7 @@ with tab2:
         key="bitacora_tab2"
     )
 
-    # Si alguien sube archivo → guardar y subir a GitHub
+    # Si se carga archivo → guardar y subir a GitHub
     if archivo is not None:
         with open(ARCHIVO_BITACORA, "wb") as f:
             f.write(archivo.read())
@@ -358,13 +359,12 @@ with tab2:
     df = pd.read_excel(ARCHIVO_BITACORA)
     st.caption("📁 Usando archivo compartido actual: BITACORA.xlsx")
 
-    # -----------------------------------------------------
-    # A PARTIR DE AQUÍ, TU CÓDIGO ORIGINAL SIGUE IGUAL
-    # -----------------------------------------------------
     import numpy as np
     import datetime
 
-    # Funciones utilitarias
+    # -----------------------------------------------------
+    # FUNCIONES UTILITARIAS
+    # -----------------------------------------------------
     def hora_to_decimal(hora):
         if hora == "SIN HORA" or hora is None:
             return None
@@ -385,12 +385,9 @@ with tab2:
 
     def parse_hora(valor):
         try:
-            return pd.to_datetime(valor, format="%H:%M").time()
+            return pd.to_datetime(valor).time()
         except:
-            try:
-                return pd.to_datetime(str(valor)).time()
-            except:
-                return None
+            return None
 
     def parse_tiempo_tarea(valor):
         try:
@@ -442,7 +439,10 @@ with tab2:
     # -----------------------------------------------------
     # CONVERTIR FECHAS Y HORAS
     # -----------------------------------------------------
-    df["fecha"] = pd.to_datetime(df["fecha de ejecucion"], errors="coerce").dt.date
+    df["fecha"] = pd.to_datetime(
+        df["fecha de ejecucion"], errors="coerce"
+    ).dt.date
+
     df["hora_inicio"] = df["hora inicio"].apply(parse_hora)
     df["hora_final"] = df["hora final"].apply(parse_hora)
     df["tiempo_tarea_td"] = df["tiempo de tarea"].apply(parse_tiempo_tarea)
@@ -452,9 +452,78 @@ with tab2:
     )
 
     # -----------------------------------------------------
-    # ⏱️ AQUÍ CONTINÚA TODO TU TAB2 ORIGINAL
-    # (filtros, KPIs, tablas, gráficas… sin cambios)
+    # FILTRO FECHA
     # -----------------------------------------------------
+    fechas_validas = sorted(df["fecha"].dropna().unique())
+    fecha_sel = st.selectbox("Selecciona fecha:", fechas_validas)
+    df2 = df[df["fecha"] == fecha_sel]
+
+    # -----------------------------------------------------
+    # FILTRO SUPERVISOR
+    # -----------------------------------------------------
+    supervisores_dict = {k.upper(): v for k, v in {
+        "ARIZA MARIN SERGIO": "ANDRES ARROYAVE",
+        "ANDRES ARROYAVE": "ANDRES ARROYAVE",
+        "BEDOYA DIEGO ALEJANDRO": "DANNY DE LA CRUZ",
+        "DANNY DE LA CRUZ": "DANNY DE LA CRUZ",
+        "PELAEZ TATIS GABRIEL ESTEBAN": "CRISTIAN CHICA",
+    }.items()}
+
+    df2["supervisor"] = df2["inspector"].map(supervisores_dict).fillna("SIN SUPERVISOR")
+
+    supervisor_sel = st.selectbox(
+        "Selecciona supervisor:",
+        sorted(df2["supervisor"].unique())
+    )
+    df2 = df2[df2["supervisor"] == supervisor_sel]
+
+    # -----------------------------------------------------
+    # KPIs DEL DÍA
+    # -----------------------------------------------------
+    hora_oficial = datetime.time(7, 30)
+
+    primeras = (
+        df2.sort_values("hora_inicio")
+        .groupby(["inspector", "fecha"], as_index=False)
+        .first()[["inspector", "fecha", "hora_inicio"]]
+    )
+
+    ultimas = (
+        df2.sort_values("hora_final")
+        .groupby(["inspector", "fecha"], as_index=False)
+        .last()[["inspector", "fecha", "hora_final"]]
+    )
+
+    df_agrupado = primeras.merge(ultimas, on=["inspector", "fecha"], how="left")
+
+    df_agrupado["ini_dec"] = df_agrupado["hora_inicio"].apply(
+        lambda x: hora_to_decimal(x) if x != "SIN HORA" else None
+    )
+    df_agrupado["fin_dec"] = df_agrupado["hora_final"].apply(
+        lambda x: hora_to_decimal(x) if pd.notna(x) else None
+    )
+
+    df_agrupado["dur_dec"] = df_agrupado["fin_dec"] - df_agrupado["ini_dec"]
+
+    c1, c2, c3 = st.columns(3)
+    c1.metric(
+        "⏰ Promedio inicio",
+        hora_to_string(decimal_to_hora(df_agrupado["ini_dec"].mean()))
+    )
+    c2.metric(
+        "🕒 Promedio fin",
+        hora_to_string(decimal_to_hora(df_agrupado["fin_dec"].mean()))
+    )
+    c3.metric(
+        "💼 Duración prom.",
+        f"{round(df_agrupado['dur_dec'].mean(),2)}h"
+    )
+
+    # -----------------------------------------------------
+    # TABLA FINAL
+    # -----------------------------------------------------
+    st.markdown("### 📋 Tabla de inspecciones del día")
+    st.dataframe(df2, use_container_width=True)
 
 # ---------------------------------------------------
 # ✅ PESTAÑA 3: GRÁFICAS GENERALES
