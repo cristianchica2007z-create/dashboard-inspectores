@@ -264,8 +264,9 @@ if not df_plot.empty:
 
 # ---------------------------------------------------
 
-# ✅ PESTAÑA 2: SEGUIMIENTO DIARIO (BITÁCORA COMPARTIDA)
-# ---------------------------------------------------
+# ===================================================
+# ✅ PESTAÑA 2: SEGUIMIENTO DIARIO (BITÁCORA)
+# ===================================================
 with tab2:
     st.subheader("Control de horario de inspectores")
 
@@ -275,7 +276,7 @@ with tab2:
     import datetime
 
     # ---------------------------------------------------
-    # CARGA DE BITÁCORA (GUARDADO Y COMPARTIDO)
+    # CARGA DE BITÁCORA
     # ---------------------------------------------------
     st.write("### Cargar archivo de bitácora (formato XLSX recomendado)")
     archivo = st.file_uploader(
@@ -293,16 +294,16 @@ with tab2:
         st.stop()
 
     # ---------------------------------------------------
-    # LECTURA DEL ARCHIVO DE BITÁCORA
-    # ✅ NOMBRE DE DF AISLADO (NO USAR df)
+    # LECTURA Y NORMALIZACIÓN
     # ---------------------------------------------------
     df_bitacora = pd.read_excel(ARCHIVO_BITACORA)
+    df_bitacora.columns = df_bitacora.columns.str.strip().str.lower()
 
     st.write("📄 Vista previa de la bitácora cargada:")
     st.dataframe(df_bitacora.head(), use_container_width=True)
 
     # ---------------------------------------------------
-    # FUNCIONES UTILITARIAS (SOLO BITÁCORA)
+    # FUNCIONES UTILITARIAS
     # ---------------------------------------------------
     def hora_to_decimal(hora):
         if hora is None or pd.isna(hora):
@@ -340,19 +341,21 @@ with tab2:
         s = total_sec % 60
         return f"{h}h {m}m {s}s" if h > 0 else f"{m}m {s}s"
 
-
-    # -----------------------------------------------------
-    # NORMALIZAR COLUMNAS
-    # -----------------------------------------------------
-   
-
+    # ---------------------------------------------------
+    # VALIDAR COLUMNAS NECESARIAS (BITÁCORA)
+    # ---------------------------------------------------
     columnas_necesarias = [
-        "fecha de ejecucion","hora inicio","hora final",
-        "inspector","localidad","cierre","tiempo de tarea"
+        "fecha de ejecucion",
+        "hora inicio",
+        "hora final",
+        "inspector",
+        "localidad",
+        "cierre",
+        "tiempo de tarea"
     ]
 
     for col in columnas_necesarias:
-        if col not in df.columns:
+        if col not in df_bitacora.columns:
             st.error(f"❌ Falta la columna: {col}")
             st.stop()
     # -----------------------------------------------------
