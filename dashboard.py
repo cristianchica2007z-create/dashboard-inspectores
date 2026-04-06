@@ -200,30 +200,33 @@ if submitted:
 
         st.success("✅ Entrega registrada correctamente")
     # =================================================
-    # ✅ HISTORIAL + FILTRO + EDICIÓN
-    # =================================================
-    st.markdown("### 📋 Historial de entregas")
-    filtro_inspector = st.selectbox(
-        "Filtrar por inspector",
-        ["TODOS"] + inspectores_lista,
-        key="filtro_hist"
-    )
-    df_hist = df_inv.copy()
-    if filtro_inspector != "TODOS":
-        df_hist = df_hist[df_hist["Inspector"] == filtro_inspector]
-  # Mostrar historial (solo lectura o edición)
-df_editado = st.data_editor(
-    df_hist,
-    num_rows="dynamic",
-    use_container_width=True,
-    key="editor_hist"
+ # =================================================
+# ✅ HISTORIAL DE ENTREGAS
+# =================================================
+st.markdown("### 📋 Historial de entregas")
+
+filtro_inspector = st.selectbox(
+    "Filtrar por inspector",
+    ["TODOS"] + inspectores_lista
 )
 
-# ✅ BOTÓN FUERA DE st.form
-guardar_historial = st.button("💾 Guardar cambios del historial", key="btn_hist")
+# ✅ df_hist SIEMPRE se crea aquí
+df_hist = df_inv.copy()
 
-if guardar_historial:
-    df_editado.to_excel(
+if filtro_inspector != "TODOS":
+    df_hist = df_hist[df_hist["Inspector"] == filtro_inspector]
+
+st.dataframe(
+    df_hist,
+    use_container_width=True
+)
+
+# =================================================
+# ✅ GUARDAR CAMBIOS DEL HISTORIAL
+# (GUARDA EL INVENTARIO COMPLETO)
+# =================================================
+if st.button("💾 Guardar cambios del historial"):
+    df_inv.to_excel(
         archivo_inventario,
         index=False,
         engine="openpyxl"
