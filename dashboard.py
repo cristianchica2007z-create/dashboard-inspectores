@@ -172,7 +172,7 @@ with tab2:
     df["hora_final"] = df["hora final"].apply(parse_hora)
     df["inspector"] = df["inspector"].astype(str).str.strip()
     df["localidad"] = df["localidad"].astype(str)
-        df = df.dropna(subset=["hora_inicio", "hora_final"])
+    df = df.dropna(subset=["hora_inicio", "hora_final"])
 
         # -----------------------------------------------------
         # 4. Mapeo de supervisores actualizado
