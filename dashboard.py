@@ -70,12 +70,6 @@ tab1, tab2, tab3 = st.tabs([
 # ---------------------------------------------------
 # ✅ PESTAÑA 1: INVENTARIO DE PAPELERÍA
 # ---------------------------------------------------
-# ---------------------------------------------------
-# ✅ PESTAÑA 1: INVENTARIO DE PAPELERÍA
-# ---------------------------------------------------
-# ---------------------------------------------------
-# ✅ PESTAÑA 1: INVENTARIO DE PAPELERÍA
-# ---------------------------------------------------
 with tab1:
     st.subheader("📦 Control de entrega de papelería e inventario")
 
@@ -98,16 +92,13 @@ with tab1:
     # ---------------------------------------------------
     # LEER INVENTARIO (SOLO TAB 1)
     # ---------------------------------------------------
-    df_inv = pd.read_excel(
-        archivo_inventario,
-        engine="openpyxl"
-    )
+    df_inv = pd.read_excel(archivo_inventario, engine="openpyxl")
 
-    # Normalizar nombres de columnas
+    # Normalizar columnas (blindaje)
     df_inv.columns = df_inv.columns.str.strip().str.lower()
 
     # ---------------------------------------------------
-    # LISTA DE INSPECTORES (MAESTRA)
+    # LISTA DE INSPECTORES DESDE INVENTARIO
     # ---------------------------------------------------
     inspectores_lista = sorted(
         df_inv["inspector"].dropna().unique().tolist()
@@ -191,7 +182,7 @@ with tab1:
         submitted = st.form_submit_button("✅ Guardar entrega")
 
     # ===================================================
-    # ✅ GUARDAR ENTREGA (INVENTARIO)
+    # ✅ GUARDAR ENTREGA (SOLO INVENTARIO)
     # ===================================================
     if submitted:
         if not items_seleccionados:
@@ -211,6 +202,7 @@ with tab1:
                 ignore_index=True
             )
 
+            # ✅ SOLO GUARDA EN inventario.xlsx
             df_inv.to_excel(
                 archivo_inventario,
                 index=False,
@@ -258,10 +250,12 @@ with tab1:
     st.markdown("## 📊 Consumo mensual consolidado por ítem")
 
     df_cons = df_inv.copy()
+
     df_cons["fecha"] = pd.to_datetime(
         df_cons["fecha"],
         errors="coerce"
     )
+
     df_cons["mes"] = (
         df_cons["fecha"]
         .dt.to_period("M")
@@ -297,24 +291,7 @@ with tab1:
             as_index=False
         ).sum()
 
-        fig = px.bar(
-            df_plot,
-            x="mes",
-            y="cantidad",
-            color="ítem",
-            barmode="group",
-            text="cantidad",
-            title="Consumo mensual consolidado por ítem"
-        )
 
-        fig.update_traces(textposition="outside")
-        fig.update_layout(
-            xaxis_title="Mes",
-            yaxis_title="Cantidad",
-            legend_title="Ítem"
-        )
-
-        st.plotly_chart(fig, use_container_width=True)
 
 # ---------------------------------------------------
 # ---------------------------------------------------
