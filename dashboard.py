@@ -363,7 +363,7 @@ with tab2:
     # -----------------------------------------------------
     # NORMALIZAR COLUMNAS
     # -----------------------------------------------------
-    df.columns = df.columns.str.strip().str.lower()
+   
 
     columnas_necesarias = [
         "fecha de ejecucion","hora inicio","hora final",
