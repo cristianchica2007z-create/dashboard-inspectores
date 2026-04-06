@@ -455,7 +455,7 @@ with tab2:
     # ⏱️ AQUÍ CONTINÚA TODO TU TAB2 ORIGINAL
     # (filtros, KPIs, tablas, gráficas… sin cambios)
     # -----------------------------------------------------
-``
+
 # ---------------------------------------------------
 # ✅ PESTAÑA 3: GRÁFICAS GENERALES
 # ---------------------------------------------------
