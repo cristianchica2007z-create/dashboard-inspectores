@@ -229,9 +229,9 @@ with tab1:
 
 # ---------------------------------------------------
 # ---------------------------------------------------
+
 # ✅ PESTAÑA 2: SEGUIMIENTO DIARIO (BITÁCORA COMPARTIDA)
 # ---------------------------------------------------
-
 with tab2:
     st.subheader("Control de horario de inspectores")
 
@@ -241,12 +241,11 @@ with tab2:
     import datetime
 
     # ---------------------------------------------------
-  # ---------------------------------------------------
     # CARGA DE BITÁCORA (GUARDADO Y COMPARTIDO)
     # ---------------------------------------------------
     st.write("### Cargar archivo de bitácora (formato XLSX recomendado)")
     archivo = st.file_uploader(
-        "Sube el archivo de bitácora (se guarda y comparte)",
+        "Sube SOLO el archivo de bitácora diaria",
         type=["xls", "xlsx"]
     )
 
@@ -260,18 +259,19 @@ with tab2:
         st.stop()
 
     # ---------------------------------------------------
-    # LECTURA DEL ARCHIVO
+    # LECTURA DEL ARCHIVO DE BITÁCORA
+    # ✅ NOMBRE DE DF AISLADO (NO USAR df)
     # ---------------------------------------------------
-    df = pd.read_excel(ARCHIVO_BITACORA)
+    df_bitacora = pd.read_excel(ARCHIVO_BITACORA)
 
     st.write("📄 Vista previa de la bitácora cargada:")
-    st.dataframe(df.head(), use_container_width=True)
+    st.dataframe(df_bitacora.head(), use_container_width=True)
 
     # ---------------------------------------------------
-    # FUNCIONES UTILITARIAS
+    # FUNCIONES UTILITARIAS (SOLO BITÁCORA)
     # ---------------------------------------------------
     def hora_to_decimal(hora):
-        if hora is None:
+        if hora is None or pd.isna(hora):
             return None
         return hora.hour + hora.minute / 60 + hora.second / 3600
 
@@ -284,7 +284,7 @@ with tab2:
         return datetime.time(h, m, s)
 
     def hora_to_string(hora):
-        if hora is None:
+        if hora is None or pd.isna(hora):
             return "—"
         return hora.strftime("%I:%M %p")
 
@@ -297,7 +297,6 @@ with tab2:
             except:
                 return None
 
-    # ✅ ESTA ES LA FUNCIÓN QUE FALTABA
     def td_to_str(td):
         if pd.isna(td):
             return "—"
@@ -306,6 +305,7 @@ with tab2:
         m = (total_sec % 3600) // 60
         s = total_sec % 60
         return f"{h}h {m}m {s}s" if h > 0 else f"{m}m {s}s"
+
 
     # -----------------------------------------------------
     # NORMALIZAR COLUMNAS
