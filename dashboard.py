@@ -99,24 +99,20 @@ with tab2:
         type=["xls", "xlsx"]
     )
 
-    # Si alguien carga archivo → se guarda como BITACORA.xlsx
     if archivo is not None:
         with open(ARCHIVO_BITACORA, "wb") as f:
             f.write(archivo.read())
-
         st.success("✅ Bitácora actualizada y compartida")
 
-    # Si NO existe BITACORA.xlsx y nadie ha cargado archivo → parar
     if not os.path.exists(ARCHIVO_BITACORA):
         st.info("ℹ️ Carga un archivo de bitácora para iniciar el análisis.")
         st.stop()
 
     # ---------------------------------------------------
-    # LECTURA DEL ARCHIVO (PUNTO CLAVE)
+    # LECTURA DEL ARCHIVO
     # ---------------------------------------------------
     df = pd.read_excel(ARCHIVO_BITACORA)
 
-    # ✅ COMPROBACIÓN VISUAL (PUEDES QUITARLA DESPUÉS)
     st.write("📄 Vista previa de la bitácora cargada:")
     st.dataframe(df.head(), use_container_width=True)
 
@@ -150,40 +146,32 @@ with tab2:
             except:
                 return None
 
-        
+    # -----------------------------------------------------
+    # NORMALIZAR COLUMNAS
+    # -----------------------------------------------------
+    df.columns = df.columns.str.strip().str.lower()
 
-        # -----------------------------------------------------
-        # 1. Leer archivo
-        # -----------------------------------------------------
-        try:
-            df = pd.read_excel(archivo)
-        except:
-            st.error("❌ Error leyendo archivo. Convierte a XLSX.")
+    columnas_necesarias = [
+        "fecha de ejecucion","hora inicio","hora final",
+        "inspector","localidad","cierre","tiempo de tarea"
+    ]
+
+    for col in columnas_necesarias:
+        if col not in df.columns:
+            st.error(f"❌ Falta la columna: {col}")
             st.stop()
 
-        # -----------------------------------------------------
-        # 2. Normalizar columnas
-        # -----------------------------------------------------
-        df.columns = df.columns.str.strip().str.lower()
+    # -----------------------------------------------------
+    # CONVERTIR COLUMNAS CLAVE
+    # -----------------------------------------------------
+    df["fecha"] = pd.to_datetime(
+        df["fecha de ejecucion"], errors="coerce"
+    ).dt.date
 
-        columnas_necesarias = [
-            "fecha de ejecucion","hora inicio","hora final",
-            "inspector","localidad","cierre","tiempo de tarea"
-        ]
-
-        for col in columnas_necesarias:
-            if col not in df.columns:
-                st.error(f"❌ Falta la columna: {col}")
-                st.stop()
-
-        # -----------------------------------------------------
-        # 3. Convertir columnas clave
-        # -----------------------------------------------------
-        df["fecha"] = pd.to_datetime(df["fecha de ejecucion"], errors="coerce").dt.date
-        df["hora_inicio"] = df["hora inicio"].apply(parse_hora)
-        df["hora_final"] = df["hora final"].apply(parse_hora)
-        df["inspector"] = df["inspector"].str.strip()
-        df["localidad"] = df["localidad"].astype(str)
+    df["hora_inicio"] = df["hora inicio"].apply(parse_hora)
+    df["hora_final"] = df["hora final"].apply(parse_hora)
+    df["inspector"] = df["inspector"].astype(str).str.strip()
+    df["localidad"] = df["localidad"].astype(str)
         df = df.dropna(subset=["hora_inicio", "hora_final"])
 
         # -----------------------------------------------------
