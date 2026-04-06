@@ -267,12 +267,14 @@ if not df_plot.empty:
 # ===================================================
 # ===================================================
 # ===================================================
-# ✅ TAB 2 — SEGUIMIENTO DIARIO (VERSIÓN COMPLETA)
+# ===================================================
+# ✅ TAB 2 — SEGUIMIENTO DIARIO (PARTE 1/4)
+# Carga + funciones + normalización
 # ===================================================
 with tab2:
     st.subheader("🕒 Control de horario de inspectores")
-
     st.write("### Cargar archivo de bitácora (formato XLSX recomendado)")
+
     archivo = st.file_uploader(
         "Sube el archivo de bitácora",
         type=["xls", "xlsx"]
@@ -284,9 +286,9 @@ with tab2:
 
     import datetime
 
-    # ===================================================
-    # FUNCIONES UTILITARIAS
-    # ===================================================
+    # -----------------------------
+    # Funciones utilitarias
+    # -----------------------------
     def parse_hora(valor):
         try:
             return pd.to_datetime(valor, format="%H:%M").time()
@@ -302,47 +304,51 @@ with tab2:
         except:
             return pd.NaT
 
-    def hora_to_decimal(hora):
-        if hora is None:
+    def hora_to_decimal(h):
+        if h is None or h == "SIN HORA":
             return None
-        return hora.hour + hora.minute / 60 + hora.second / 3600
+        return h.hour + h.minute/60 + h.second/3600
 
-    def decimal_to_hora(decimal):
-        if decimal is None or pd.isna(decimal):
+    def decimal_to_hora(d):
+        if d is None or pd.isna(d):
             return None
-        h = int(decimal)
-        m = int((decimal - h) * 60)
+        h = int(d)
+        m = int((d-h)*60)
         return datetime.time(h, m)
 
-    def hora_to_string(hora):
-        return hora.strftime("%I:%M %p") if hora else "—"
+    def hora_to_string(h):
+        return h.strftime("%I:%M %p") if h else "—"
 
     def td_to_str(td):
         if pd.isna(td):
             return "—"
         s = int(td.total_seconds())
-        h, m = divmod(s // 60, 60)
-        return f"{h}h {m}m" if h > 0 else f"{m}m"
+        h = s // 3600
+        m = (s % 3600) // 60
+        s2 = s % 60
+        return f"{h}h {m}m {s2}s" if h > 0 else f"{m}m {s2}s"
 
-    # ===================================================
-    # CARGA Y NORMALIZACIÓN
-    # ===================================================
+    # -----------------------------
+    # Cargar bitácora
+    # -----------------------------
     df_bitacora = pd.read_excel(archivo)
     df_bitacora.columns = df_bitacora.columns.str.strip().str.lower()
 
-    columnas_requeridas = [
+    columnas_necesarias = [
         "fecha de ejecucion","hora inicio","hora final",
         "inspector","localidad","cierre","tiempo de tarea"
     ]
 
-    for col in columnas_requeridas:
+    for col in columnas_necesarias:
         if col not in df_bitacora.columns:
             st.error(f"❌ Falta la columna: {col}")
             st.stop()
 
+    # Normalizar texto
     df_bitacora["inspector"] = (
         df_bitacora["inspector"]
         .astype(str).str.upper().str.strip()
+        .str.replace(r"\s+", " ", regex=True)
     )
 
     df_bitacora["localidad"] = (
@@ -350,6 +356,7 @@ with tab2:
         .astype(str).str.upper().str.strip()
     )
 
+    # Convertir fechas y horas
     df_bitacora["fecha"] = pd.to_datetime(
         df_bitacora["fecha de ejecucion"], errors="coerce"
     ).dt.date
@@ -361,53 +368,67 @@ with tab2:
     )
 
     df_bitacora["hora_inicio"] = (
-        df_bitacora["hora_inicio"].apply(lambda x: x if x else "SIN HORA")
+        df_bitacora["hora_inicio"].apply(
+            lambda x: x if pd.notna(x) else "SIN HORA"
+        )
     )
 
-    # ===================================================
-    # SUPERVISORES
-    # ===================================================
+# ===================================================
+# ✅ TAB 2 — PARTE 2/4
+# Supervisores y filtros
+# ===================================================
+
     supervisores_dict = {
         "ARIZA MARIN SERGIO": "ANDRES ARROYAVE",
+        "ANDRES ARROYAVE": "ANDRES ARROYAVE",
         "BEDOYA DIEGO ALEJANDRO": "DANNY DE LA CRUZ",
+        "DANNY DE LA CRUZ": "DANNY DE LA CRUZ",
         "CHAVARRIAGA JUAN MANUEL": "CRISTIAN CHICA",
+        "CRISTIAN CHICA": "CRISTIAN CHICA",
         "PATIÑO CIFUENTES RICARDO": "JANIER MARIN",
+        "JANIER MARIN": "JANIER MARIN",
         "VARGAS FRANCO JHON EDISON": "CRISTIAN CHICA",
     }
 
+    supervisores_dict = {k.upper(): v for k, v in supervisores_dict.items()}
     df_bitacora["supervisor"] = (
         df_bitacora["inspector"]
         .map(supervisores_dict)
         .fillna("SIN SUPERVISOR")
     )
 
-    # ===================================================
-    # FILTROS
-    # ===================================================
-    fechas = sorted(df_bitacora["fecha"].dropna().unique())
-    fecha_sel = st.selectbox("Selecciona fecha", fechas)
-
+    # -----------------------------
+    # Filtro por fecha
+    # -----------------------------
+    fechas_validas = sorted(df_bitacora["fecha"].dropna().unique())
+    fecha_sel = st.selectbox("Selecciona fecha:", fechas_validas)
     df2 = df_bitacora[df_bitacora["fecha"] == fecha_sel]
 
+    # -----------------------------
+    # Filtro por supervisor
+    # -----------------------------
     supervisor_sel = st.selectbox(
-        "Selecciona supervisor",
+        "Selecciona supervisor:",
         sorted(df2["supervisor"].unique())
     )
-
     df2 = df2[df2["supervisor"] == supervisor_sel]
 
-    inspectores_disponibles = sorted(df2["inspector"].unique())
+    # -----------------------------
+    # Filtro por inspector
+    # -----------------------------
+    inspectores_disp = sorted(df2["inspector"].unique())
     inspectores_sel = st.multiselect(
-        "Selecciona inspectores",
-        inspectores_disponibles,
-        default=inspectores_disponibles
+        "Selecciona inspectores:",
+        inspectores_disp,
+        default=inspectores_disp
     )
-
     df2 = df2[df2["inspector"].isin(inspectores_sel)]
 
-    # ===================================================
-    # AGRUPACIÓN DIARIA
-    # ===================================================
+# ===================================================
+# ✅ TAB 2 — PARTE 3/4
+# Agrupación + KPIs
+# ===================================================
+
     primeras = (
         df2.sort_values("hora_inicio")
            .groupby(["inspector","fecha"], as_index=False)
@@ -421,14 +442,9 @@ with tab2:
     )
 
     df_agrupado = primeras.merge(
-        ultimas,
-        on=["inspector","fecha"],
-        how="left"
+        ultimas, on=["inspector","fecha"], how="left"
     )
 
-    # ===================================================
-    # PUNTUALIDAD
-    # ===================================================
     hora_oficial = datetime.time(7, 30)
 
     def mins_tarde(h):
@@ -451,9 +467,6 @@ with tab2:
 
     df_agrupado["estado"] = df_agrupado["minutos_tarde"].apply(estado)
 
-    # ===================================================
-    # PRODUCCIÓN
-    # ===================================================
     valores_efectivos = [
         "INSPECCIONADA",
         "INSPECCIONADA CON DEFECTO NO CRITICO",
@@ -468,36 +481,74 @@ with tab2:
     total_efectivas = df2[df2["efectiva"]].shape[0]
     porcentaje = round((total_efectivas / total_ordenes) * 100, 1) if total_ordenes else 0
 
-    # ===================================================
-    # TIEMPO PROMEDIO EFECTIVAS
-    # ===================================================
-    df_eff = df2[
-        (df2["efectiva"]) &
-        (df2["tiempo_tarea_td"].notna())
-    ]
-
-    tiempo_promedio = (
+    df_eff = df2[(df2["efectiva"]) & (df2["tiempo_tarea_td"].notna())]
+    tiempo_prom_str = (
         td_to_str(df_eff["tiempo_tarea_td"].mean())
         if not df_eff.empty else "—"
     )
 
-    # ===================================================
-    # KPIs
-    # ===================================================
     st.markdown("## ⭐ KPIs del día")
-
-    c1, c2, c3 = st.columns(3)
+    c1, c2, c3, c4 = st.columns(4)
     c1.metric("📋 Tareas", total_ordenes)
     c2.metric("✅ Efectivas", total_efectivas)
     c3.metric("📈 % Efectividad", f"{porcentaje}%")
+    c4.metric("🕓 Prom. tarea efectiva", tiempo_prom_str)
+# ===================================================
+# ✅ TAB 2 — PARTE 4/4
+# Tablas y gráficas finales
+# ===================================================
 
-    st.metric("🕓 Tiempo prom. tarea efectiva", tiempo_promedio)
+    resumen = (
+        df2.groupby("inspector")
+           .apply(lambda x: pd.Series({
+               "total_ordenes": x.shape[0],
+               "ordenes_efectivas": x["efectiva"].sum(),
+               "porcentaje_efectividad":
+                   round((x["efectiva"].sum()/x.shape[0])*100,1) if x.shape[0] else 0,
+               "promedio_tiempo_tarea":
+                   td_to_str(x.loc[x["efectiva"], "tiempo_tarea_td"].mean())
+           }))
+           .reset_index()
+    )
 
-    # ===================================================
-    # TABLA FINAL
-    # ===================================================
-    st.markdown("### Tabla de inspecciones del día")
-    st.dataframe(df_agrupado, use_container_width=True)
+    df_tabla = df_agrupado.merge(resumen, on="inspector", how="left")
+
+    st.markdown("### 📋 Tabla de inspecciones del día")
+    st.dataframe(df_tabla, use_container_width=True)
+
+    st.markdown("## 🏆 TOP 5 Efectividad")
+    df_rank = resumen.sort_values(
+        "porcentaje_efectividad", ascending=False
+    ).head(5)
+
+    fig_rank = px.bar(
+        df_rank,
+        x="porcentaje_efectividad",
+        y="inspector",
+        orientation="h",
+        text="porcentaje_efectividad"
+    )
+    fig_rank.update_traces(texttemplate="%{x}%")
+    st.plotly_chart(fig_rank, use_container_width=True)
+
+    st.markdown("## Productividad por hora")
+    df_horas = df2[df2["efectiva"]]
+
+    if df_horas.empty:
+        st.info("No hay tareas efectivas.")
+    else:
+        df_horas["hora_str"] = df_horas["hora_inicio"].astype(str)
+        horas_prod = df_horas.groupby("hora_str").size().reset_index(name="cantidad")
+
+        fig_horas = px.bar(
+            horas_prod,
+            x="hora_str",
+            y="cantidad",
+            text="cantidad"
+        )
+        st.plotly_chart(fig_horas, use_container_width=True)
+
+
 
 
 # ---------------------------------------------------
