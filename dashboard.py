@@ -129,7 +129,7 @@ with tab1:
     # Crear archivo si no existe
     if not os.path.exists(archivo_inventario):
         df_init = pd.DataFrame(columns=[
-            "fecha", "Sede", "Inspector",
+            "Fecha", "Sede", "Inspector",
             "Responsable", "Observación", "Ítems"
         ])
         df_init.to_excel(archivo_inventario, index=False, engine="openpyxl")
@@ -152,7 +152,7 @@ with tab1:
             )
 
         with col3:
-            fecha = st.date_input("fecha", key="form_fecha")
+            Fecha = st.date_input("Fecha", key="form_Fecha")
 
         col4, col5 = st.columns([1, 2])
         with col4:
@@ -215,7 +215,7 @@ with tab1:
             st.warning("⚠️ Debes seleccionar al menos un ítem con cantidad.")
         else:
             nueva_fila = pd.DataFrame({
-                "fecha": [fecha.strftime("%Y-%m-%d")],
+                "Fecha": [Fecha.strftime("%Y-%m-%d")],
                 "Sede": [sede],
                 "Inspector": [inspector],
                 "Responsable": [responsable],
@@ -262,8 +262,8 @@ with tab1:
     st.markdown("## 📊 Consumo mensual consolidado por ítem")
 
     df_cons = df_inv.copy()
-    df_cons["fecha"] = pd.to_datetime(df_cons["fecha"], errors="coerce")
-    df_cons["Mes"] = df_cons["fecha"].dt.to_period("M").astype(str)
+    df_cons["Fecha"] = pd.to_datetime(df_cons["Fecha"], errors="coerce")
+    df_cons["Mes"] = df_cons["Fecha"].dt.to_period("M").astype(str)
 
     registros = []
     for _, row in df_cons.iterrows():
@@ -390,7 +390,7 @@ with tab2:
     df.columns = df.columns.str.strip().str.lower()
 
     columnas = [
-        "fecha de ejecucion","hora inicio","hora final",
+        "Fecha de ejecucion","hora inicio","hora final",
         "inspector","localidad","cierre","tiempo de tarea"
     ]
     for col in columnas:
@@ -417,9 +417,9 @@ with tab2:
     )
 
     # -----------------------------------------------------
-    # Convertir fechas y horas
+    # Convertir Fechas y horas
     # -----------------------------------------------------
-    df["fecha"] = pd.to_datetime(df["fecha de ejecucion"], errors="coerce").dt.date
+    df["Fecha"] = pd.to_datetime(df["Fecha de ejecucion"], errors="coerce").dt.date
     df["hora_inicio"] = df["hora inicio"].apply(parse_hora)
     df["hora_final"] = df["hora final"].apply(parse_hora)
     df["tiempo_tarea_td"] = df["tiempo de tarea"].apply(parse_tiempo_tarea)
@@ -492,11 +492,11 @@ with tab2:
     df["supervisor"] = df["inspector"].map(supervisores_dict).fillna("SIN SUPERVISOR")
     #----------------------------------------------
     # -----------------------------------------------------
-    # FILTRO fecha
+    # FILTRO Fecha
     # -----------------------------------------------------
-    fechas_validas = sorted(df["fecha"].dropna().unique())
-    fecha_sel = st.selectbox("Selecciona fecha:", fechas_validas)
-    df2 = df[df["fecha"] == fecha_sel]
+    Fechas_validas = sorted(df["Fecha"].dropna().unique())
+    Fecha_sel = st.selectbox("Selecciona Fecha:", Fechas_validas)
+    df2 = df[df["Fecha"] == Fecha_sel]
 
     # -----------------------------------------------------
     # FILTRO SUPERVISOR
@@ -530,23 +530,23 @@ with tab2:
     # -----------------------------------------------------
     primeras = (
         df2.sort_values("hora_inicio")
-           .groupby(["inspector", "fecha"], as_index=False)
+           .groupby(["inspector", "Fecha"], as_index=False)
            .first()[
-               ["inspector", "supervisor", "fecha", "hora_inicio", "localidad"]
+               ["inspector", "supervisor", "Fecha", "hora_inicio", "localidad"]
            ]
     )
 
     ultimas = (
         df2.sort_values("hora_final")
-           .groupby(["inspector", "fecha"], as_index=False)
+           .groupby(["inspector", "Fecha"], as_index=False)
            .last()[
-               ["inspector", "fecha", "hora_final"]
+               ["inspector", "Fecha", "hora_final"]
            ]
     )
 
     df_agrupado = primeras.merge(
         ultimas,
-        on=["inspector", "fecha"],
+        on=["inspector", "Fecha"],
         how="left"
     )
 
@@ -721,7 +721,7 @@ with tab2:
     st.dataframe(
         df_tabla[
             [
-                "inspector", "supervisor", "fecha",
+                "inspector", "supervisor", "Fecha",
                 "hora_inicio", "hora_final", "localidad",
                 "estado", "total_ordenes",
                 "ordenes_efectivas",
@@ -808,7 +808,7 @@ with tab2:
     df_horas = df2[df2["efectiva"] == True]
 
     if df_horas.shape[0] == 0:
-        st.info("⚠️ No hay tareas efectivas para esta fecha.")
+        st.info("⚠️ No hay tareas efectivas para esta Fecha.")
     else:
         df_horas["hora_bloque"] = df_horas["hora_inicio"].apply(
             lambda x: x if isinstance(x, datetime.time)
@@ -843,7 +843,7 @@ with tab3:
 
     st.info(
         "Este módulo permite analizar el desempeño de los inspectores "
-        "en un rango de fechas, consolidando y promediando la información diaria."
+        "en un rango de Fechas, consolidando y promediando la información diaria."
     )
 
     # ---------------------------------------------------
@@ -865,7 +865,7 @@ with tab3:
         df.columns = df.columns.str.strip().str.lower()
 
         columnas_req = [
-            "fecha de ejecucion", "hora inicio", "hora final",
+            "Fecha de ejecucion", "hora inicio", "hora final",
             "inspector", "localidad", "cierre", "tiempo de tarea"
         ]
 
@@ -880,8 +880,8 @@ with tab3:
             .str.replace(r"\s+", " ", regex=True)
         )
 
-        df["fecha"] = pd.to_datetime(
-            df["fecha de ejecucion"], errors="coerce"
+        df["Fecha"] = pd.to_datetime(
+            df["Fecha de ejecucion"], errors="coerce"
         ).dt.date
 
         def parse_hora(x):
@@ -897,15 +897,15 @@ with tab3:
         )
 
         # ---------------------------------------------------
-        # 3️⃣ RANGO DE fechaS
+        # 3️⃣ RANGO DE FechaS
         # ---------------------------------------------------
-        fechas = sorted(df["fecha"].dropna().unique())
-        fecha_inicio, fecha_fin = st.date_input(
-            "Selecciona rango de fechas",
-            value=(fechas[0], fechas[-1])
+        Fechas = sorted(df["Fecha"].dropna().unique())
+        Fecha_inicio, Fecha_fin = st.date_input(
+            "Selecciona rango de Fechas",
+            value=(Fechas[0], Fechas[-1])
         )
 
-        df = df[(df["fecha"] >= fecha_inicio) & (df["fecha"] <= fecha_fin)]
+        df = df[(df["Fecha"] >= Fecha_inicio) & (df["Fecha"] <= Fecha_fin)]
         if df.empty:
             st.warning("⚠️ No hay datos en el rango seleccionado.")
             st.stop()
@@ -984,7 +984,7 @@ with tab3:
                 efectividad = round((efectivas / total) * 100, 1) if total else 0
 
                 por_dia = (
-                    dfi.groupby("fecha")
+                    dfi.groupby("Fecha")
                     .agg(
                         inicio=("hora_inicio", "min"),
                         fin=("hora_final", "max")
@@ -1027,7 +1027,7 @@ with tab3:
             dfi = df[df["inspector"] == inspector_sel]
 
             detalle = (
-                dfi.groupby("fecha")
+                dfi.groupby("Fecha")
                 .agg(
                     inicio=("hora_inicio", "min"),
                     fin=("hora_final", "max"),
@@ -1050,11 +1050,11 @@ with tab3:
             detalle["Tiempo efectivo"] = detalle["tiempo_eff"].apply(formatear_td)
 
             detalle_final = detalle[[
-                "fecha", "Inicio", "Fin",
+                "Fecha", "Inicio", "Fin",
                 "ordenes", "efectivas",
                 "Min. tarde", "Tiempo efectivo"
             ]].rename(columns={
-                "fecha": "fecha",
+                "Fecha": "Fecha",
                 "ordenes": "Órdenes",
                 "efectivas": "Órdenes efectivas"
             })
