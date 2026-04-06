@@ -205,16 +205,24 @@ with st.form("form_entrega", clear_on_submit=True):
     df_hist = df_inv.copy()
     if filtro_inspector != "TODOS":
         df_hist = df_hist[df_hist["Inspector"] == filtro_inspector]
-    df_editado = st.data_editor(
-        df_hist,
-        num_rows="dynamic",
-        use_container_width=True,
-        key="editor_hist"
+  # Mostrar historial (solo lectura o edición)
+df_editado = st.data_editor(
+    df_hist,
+    num_rows="dynamic",
+    use_container_width=True,
+    key="editor_hist"
+)
+
+# ✅ BOTÓN FUERA DE st.form
+guardar_historial = st.button("💾 Guardar cambios del historial", key="btn_hist")
+
+if guardar_historial:
+    df_editado.to_excel(
+        archivo_inventario,
+        index=False,
+        engine="openpyxl"
     )
-    if st.button("💾 Guardar cambios del historial", key="btn_hist"):
-        df_editado.to_excel(archivo_inventario, index=False, engine="openpyxl")
-        subir_a_github(archivo_inventario)
-        st.success("✅ Cambios del historial guardados")
+    st.success("✅ Cambios del historial guardados")
     # =================================================
     # ✅ RESUMEN MENSUAL CONSOLIDADO
     # =================================================
