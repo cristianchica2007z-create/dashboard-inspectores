@@ -138,39 +138,38 @@ with st.form("form_entrega", clear_on_submit=True):
             key="form_obs"
         )
 
-    # -------- ÍTEMS --------
-    st.markdown("### Ítems entregados")
+   # -------- ÍTEMS --------
+st.markdown("### Ítems entregados")
 
-    items_def = [
-        "Stickers 🔵", "Cepo 🔒", "Guantes 🧤", "Piernera 🦿",
-        "Monogafas 🥽", "Llaves de cepo 🗝️", "Formatos 📄",
-        "Sellos 🕹️", "Papelería general 📦"
-    ]
+items_def = [
+    "Stickers 🔵", "Cepo 🔒", "Guantes 🧤", "Piernera 🦿",
+    "Monogafas 🥽", "Llaves de cepo 🗝️", "Formatos 📄",
+    "Sellos 🕹️", "Papelería general 📦"
+]
 
-    items_seleccionados = []
+items_seleccionados = []
 
-    filas = [items_def[i:i+4] for i in range(0, len(items_def), 4)]
+filas = [items_def[i:i+4] for i in range(0, len(items_def), 4)]
 
-    for f_idx, fila in enumerate(filas):
-        cols = st.columns(4)
-        for c_idx, item in enumerate(fila):
+for f_idx, fila in enumerate(filas):
+    cols = st.columns(4)
+    for c_idx, item in enumerate(fila):
 
-            marcar = cols[c_idx].checkbox(
-                item,
-                key=f"chk_{f_idx}_{c_idx}"
-            )
+        marcar = cols[c_idx].checkbox(
+            item,
+            key=f"chk_{f_idx}_{c_idx}"
+        )
 
-            cantidad = cols[c_idx].number_input(
-                "Cantidad",
-                min_value=0,
-                step=1,
-                label_visibility="collapsed",
-                key=f"qty_{f_idx}_{c_idx}"
-            )
+        cantidad = cols[c_idx].number_input(
+            "Cantidad",
+            min_value=0,
+            step=1,
+            label_visibility="collapsed",
+            key=f"qty_{f_idx}_{c_idx}"
+        )
 
-            if marcar and cantidad > 0:
-                items_seleccionados.append(f"{item} x{cantidad}")
-
+        if marcar and cantidad > 0:
+            items_seleccionados.append(f"{item} x{cantidad}")
     # ✅ BOTÓN *DENTRO* DEL FORMULARIO (OBLIGATORIO)
     submitted = st.form_submit_button("✅ Guardar entrega")
 
