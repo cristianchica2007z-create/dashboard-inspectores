@@ -204,51 +204,68 @@ with tab1:
         df_inv.to_excel(archivo_inventario, index=False, engine="openpyxl")
         st.success("✅ Cambios del historial guardados")
     # =================================================
-    # ✅ RESUMEN MENSUAL CONSOLIDADO
-    # =================================================
-    st.markdown("## 📊 Consumo mensual consolidado por ítem")
-    df_cons = df_inv.copy()
-    df_cons["Fecha"] = pd.to_datetime(df_cons["Fecha"], errors="coerce")
-    df_cons["Mes"] = df_cons["Fecha"].dt.to_period("M").astype(str)
-    registros = []
-    for _, row in df_cons.iterrows():
-        if pd.isna(row["Ítems"]):
-            continue
-        for it in row["Ítems"].split(","):
-            it = it.strip()
-            if " x" in it:
-                nom, cant = it.rsplit(" x", 1)
-                cant = int(cant)
-            else:
-                nom = it
-                cant = 1
-            registros.append({
-                "Mes": row["Mes"],
-                "Ítem": nom,
-                "Cantidad": cant
-            })
-    df_plot = pd.DataFrame(registros)
-    if not df_plot.empty:
-        df_plot = df_plot.groupby(
-            ["Mes", "Ítem"], as_index=False
-        ).sum()
-        fig = px.bar(
-            df_plot,
-            x="Mes",
-            y="Cantidad",
-            color="Ítem",
-            barmode="group",
-            text="Cantidad",
-            title="Consumo mensual consolidado por ítem"
-        )
-        fig.update_traces(textposition="outside")
-        fig.update_layout(
-            xaxis=dict(type="category"),
-            xaxis_title="Mes",
-            yaxis_title="Cantidad entregada",
-            legend_title="Ítem"
-        )
-        st.plotly_chart(fig, use_container_width=True)
+# =================================================
+# ✅ RESUMEN MENSUAL CONSOLIDADO POR ÍTEM
+# =================================================
+st.markdown("## 📊 Consumo mensual consolidado por ítem")
+
+df_cons = df_inv.copy()
+
+# Convertir fecha
+df_cons["Fecha"] = pd.to_datetime(df_cons["Fecha"], errors="coerce")
+df_cons["Mes"] = df_cons["Fecha"].dt.to_period("M").astype(str)
+
+registros = []
+
+for _, row in df_cons.iterrows():
+    if pd.isna(row["Ítems"]):
+        continue
+
+    for it in row["Ítems"].split(","):
+        it = it.strip()
+        if " x" in it:
+            nombre, cantidad = it.rsplit(" x", 1)
+            cantidad = int(cantidad)
+        else:
+            nombre = it
+            cantidad = 1
+
+        registros.append({
+            "Mes": row["Mes"],
+            "Ítem": nombre,
+            "Cantidad": cantidad
+        })
+
+df_plot = pd.DataFrame(registros)
+
+if not df_plot.empty:
+    df_plot = (
+        df_plot
+        .groupby(["Mes", "Ítem"], as_index=False)
+        .sum()
+    )
+
+    fig = px.bar(
+        df_plot,
+        x="Mes",
+        y="Cantidad",
+        color="Ítem",
+        barmode="group",
+        text="Cantidad",
+        title="Consumo mensual consolidado por ítem"
+    )
+
+    fig.update_traces(textposition="outside")
+    fig.update_layout(
+        xaxis_title="Mes",
+        yaxis_title="Cantidad entregada",
+        legend_title="Ítem"
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+else:
+    st.info("No hay datos suficientes para mostrar el consumo mensual.")
+
 
 
 
