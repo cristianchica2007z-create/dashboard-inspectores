@@ -68,37 +68,54 @@ tab1, tab2, tab3 = st.tabs([
 
 
 # ---------------------------------------------------
+# ---------------------------------------------------
 # ✅ PESTAÑA 1: INVENTARIO DE PAPELERÍA
 # ---------------------------------------------------
 with tab1:
     st.subheader("📦 Control de entrega de papelería e inventario")
 
-    archivo_inventario = "inventario.xlsx"
+    ARCHIVO_INVENTARIO = "inventario.xlsx"
 
     # ---------------------------------------------------
-    # CREAR ARCHIVO SI NO EXISTE
+    # DEFINICIÓN DE COLUMNAS VÁLIDAS DE INVENTARIO
     # ---------------------------------------------------
-    if not os.path.exists(archivo_inventario):
-        df_init = pd.DataFrame(columns=[
-            "fecha", "sede", "inspector",
-            "responsable", "observación", "ítems"
-        ])
-        df_init.to_excel(
-            archivo_inventario,
+    columnas_inventario = [
+        "fecha", "sede", "inspector",
+        "responsable", "observación", "ítems"
+    ]
+
+    # ---------------------------------------------------
+    # CREAR O RECUPERAR INVENTARIO CORRECTO
+    # ---------------------------------------------------
+    crear_nuevo = False
+
+    if not os.path.exists(ARCHIVO_INVENTARIO):
+        crear_nuevo = True
+    else:
+        try:
+            df_tmp = pd.read_excel(ARCHIVO_INVENTARIO, engine="openpyxl")
+            df_tmp.columns = df_tmp.columns.str.strip().str.lower()
+            if not all(col in df_tmp.columns for col in columnas_inventario):
+                crear_nuevo = True
+        except:
+            crear_nuevo = True
+
+    if crear_nuevo:
+        df_inv = pd.DataFrame(columns=columnas_inventario)
+        df_inv.to_excel(
+            ARCHIVO_INVENTARIO,
             index=False,
             engine="openpyxl"
         )
+    else:
+        df_inv = pd.read_excel(
+            ARCHIVO_INVENTARIO,
+            engine="openpyxl"
+        )
+        df_inv.columns = df_inv.columns.str.strip().str.lower()
 
     # ---------------------------------------------------
-    # LEER INVENTARIO (SOLO TAB 1)
-    # ---------------------------------------------------
-    df_inv = pd.read_excel(archivo_inventario, engine="openpyxl")
-
-    # Normalizar columnas (blindaje)
-    df_inv.columns = df_inv.columns.str.strip().str.lower()
-
-    # ---------------------------------------------------
-    # LISTA DE INSPECTORES DESDE INVENTARIO
+    # LISTA DE INSPECTORES (DESDE INVENTARIO)
     # ---------------------------------------------------
     inspectores_lista = sorted(
         df_inv["inspector"].dropna().unique().tolist()
@@ -113,10 +130,7 @@ with tab1:
         col1, col2, col3 = st.columns(3)
 
         with col1:
-            sede = st.selectbox(
-                "Sede",
-                ["CALDAS", "RISARALDA"]
-            )
+            sede = st.selectbox("Sede", ["CALDAS", "RISARALDA"])
 
         with col2:
             inspector = st.selectbox(
@@ -162,10 +176,8 @@ with tab1:
             cols = st.columns(4)
             for c_idx, item in enumerate(fila):
                 marcar = cols[c_idx].checkbox(
-                    item,
-                    key=f"chk_{f_idx}_{c_idx}"
+                    item, key=f"chk_{f_idx}_{c_idx}"
                 )
-
                 cantidad = cols[c_idx].number_input(
                     "Cantidad",
                     min_value=0,
@@ -173,16 +185,13 @@ with tab1:
                     label_visibility="collapsed",
                     key=f"qty_{f_idx}_{c_idx}"
                 )
-
                 if marcar and cantidad > 0:
-                    items_seleccionados.append(
-                        f"{item} x{cantidad}"
-                    )
+                    items_seleccionados.append(f"{item} x{cantidad}")
 
         submitted = st.form_submit_button("✅ Guardar entrega")
 
     # ===================================================
-    # ✅ GUARDAR ENTREGA (SOLO INVENTARIO)
+    # ✅ GUARDAR ENTREGA
     # ===================================================
     if submitted:
         if not items_seleccionados:
@@ -197,14 +206,10 @@ with tab1:
                 "ítems": [", ".join(items_seleccionados)]
             })
 
-            df_inv = pd.concat(
-                [df_inv, nueva_fila],
-                ignore_index=True
-            )
+            df_inv = pd.concat([df_inv, nueva_fila], ignore_index=True)
 
-            # ✅ SOLO GUARDA EN inventario.xlsx
             df_inv.to_excel(
-                archivo_inventario,
+                ARCHIVO_INVENTARIO,
                 index=False,
                 engine="openpyxl"
             )
@@ -229,45 +234,27 @@ with tab1:
             df_hist["inspector"] == filtro_inspector
         ]
 
-    df_editado = st.data_editor(
+    st.data_editor(
         df_hist,
         num_rows="dynamic",
         use_container_width=True,
         key="editor_hist"
     )
 
-    if st.button("💾 Guardar cambios del historial", key="btn_hist"):
-        df_editado.to_excel(
-            archivo_inventario,
-            index=False,
-            engine="openpyxl"
-        )
-        st.success("✅ Cambios del historial guardados")
-
     # ===================================================
-    # ✅ RESUMEN MENSUAL CONSOLIDADO (INVENTARIO)
+    # ✅ RESUMEN MENSUAL CONSOLIDADO
     # ===================================================
     st.markdown("## 📊 Consumo mensual consolidado por ítem")
 
     df_cons = df_inv.copy()
-
-    df_cons["fecha"] = pd.to_datetime(
-        df_cons["fecha"],
-        errors="coerce"
-    )
-
-    df_cons["mes"] = (
-        df_cons["fecha"]
-        .dt.to_period("M")
-        .astype(str)
-    )
+    df_cons["fecha"] = pd.to_datetime(df_cons["fecha"], errors="coerce")
+    df_cons["mes"] = df_cons["fecha"].dt.to_period("M").astype(str)
 
     registros = []
 
     for _, row in df_cons.iterrows():
         if pd.isna(row["ítems"]):
             continue
-
         for it in row["ítems"].split(","):
             it = it.strip()
             if " x" in it:
@@ -276,7 +263,6 @@ with tab1:
             else:
                 nombre = it
                 cant = 1
-
             registros.append({
                 "mes": row["mes"],
                 "ítem": nombre,
@@ -287,11 +273,27 @@ with tab1:
 
     if not df_plot.empty:
         df_plot = df_plot.groupby(
-            ["mes", "ítem"],
-            as_index=False
+            ["mes", "ítem"], as_index=False
         ).sum()
 
+        fig = px.bar(
+            df_plot,
+            x="mes",
+            y="cantidad",
+            color="ítem",
+            barmode="group",
+            text="cantidad",
+            title="Consumo mensual consolidado por ítem"
+        )
 
+        fig.update_traces(textposition="outside")
+        fig.update_layout(
+            xaxis_title="Mes",
+            yaxis_title="Cantidad",
+            legend_title="Ítem"
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
 
 # ---------------------------------------------------
 # ---------------------------------------------------
