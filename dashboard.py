@@ -334,167 +334,118 @@ with tab2:
     else:
         tiempo_promedio_tarea_str = "No disponible"
         # -----------------------------------------------------
-        # 9. KPIs Premium
-        # -----------------------------------------------------
-        st.markdown("## ⭐ KPIs del Día")
+     # -----------------------------------------------------
+    # 9. KPIs Premium
+    # -----------------------------------------------------
+    st.markdown("## ⭐ KPIs del Día")
 
-        df_agrupado["ini_dec"] = df_agrupado["hora_inicio"].apply(hora_to_decimal)
-        df_agrupado["fin_dec"] = df_agrupado["hora_final"].apply(hora_to_decimal)
-        df_agrupado["dur_dec"] = df_agrupado["fin_dec"] - df_agrupado["ini_dec"]
+    df_agrupado["ini_dec"] = df_agrupado["hora_inicio"].apply(hora_to_decimal)
+    df_agrupado["fin_dec"] = df_agrupado["hora_final"].apply(hora_to_decimal)
+    df_agrupado["dur_dec"] = df_agrupado["fin_dec"] - df_agrupado["ini_dec"]
 
-        hora_prom_ini = hora_to_string(decimal_to_hora(df_agrupado["ini_dec"].mean()))
-        hora_prom_fin = hora_to_string(decimal_to_hora(df_agrupado["fin_dec"].mean()))
+    hora_prom_ini = hora_to_string(decimal_to_hora(df_agrupado["ini_dec"].mean()))
+    hora_prom_fin = hora_to_string(decimal_to_hora(df_agrupado["fin_dec"].mean()))
 
-        dur_prom = df_agrupado["dur_dec"].mean()
-        dur_h = int(dur_prom)
-        dur_m = int((dur_prom - dur_h)*60)
-        dur_prom_str = f"{dur_h}h {dur_m}m"
+    dur_prom = df_agrupado["dur_dec"].mean()
+    dur_h = int(dur_prom)
+    dur_m = int((dur_prom - dur_h) * 60)
+    dur_prom_str = f"{dur_h}h {dur_m}m"
 
-        c1, c2, c3 = st.columns(3)
-        c1.metric("⏰ Promedio inicio", hora_prom_ini)
-        c2.metric("🕒 Promedio fin", hora_prom_fin)
-        c3.metric("💼 Duración promedio", dur_prom_str)
+    c1, c2, c3 = st.columns(3)
+    c1.metric("⏰ Promedio inicio", hora_prom_ini)
+    c2.metric("🕒 Promedio fin", hora_prom_fin)
+    c3.metric("💼 Duración promedio", dur_prom_str)
 
-        c4, c5, c6, c7 = st.columns(4)
-        c4.metric("📋 Total tareas", total_ordenes)
-        c5.metric("✅ Tareas efectivas", total_efectivas)
-        c6.metric("📈 % Efectividad", f"{porcentaje_efectividad}%")
-        c7.metric("🕓 Tiempo prom. tarea efectiva", tiempo_promedio_tarea_str)
+    c4, c5, c6, c7 = st.columns(4)
+    c4.metric("📋 Total tareas", total_ordenes)
+    c5.metric("✅ Tareas efectivas", total_efectivas)
+    c6.metric("📈 % Efectividad", f"{porcentaje_efectividad}%")
+    c7.metric("🕓 Tiempo prom. tarea efectiva", tiempo_promedio_tarea_str)
 
-        # -----------------------------------------------------
-  # -----------------------------------------------------
-        # 10-B. Resumen por inspector (solo tareas efectivas)
-        # -----------------------------------------------------
+    # -----------------------------------------------------
+    # 10. Resumen por inspector
+    # -----------------------------------------------------
+    resumen = (
+        df.groupby("inspector")
+          .apply(lambda x: pd.Series({
+              "total_ordenes": x.shape[0],
+              "ordenes_efectivas": x[x["efectiva"]].shape[0],
+              "porcentaje_efectividad": round(
+                  (x[x["efectiva"]].shape[0] / x.shape[0]) * 100, 1
+              ) if x.shape[0] > 0 else 0,
+              "promedio_tiempo_tarea": x.loc[x["efectiva"], "tiempo_tarea_td"].mean()
+          }))
+          .reset_index()
+    )
 
-        # Construir resumen por inspector usando solo efectivas
-        resumen = (
-            df.groupby("inspector")
-              .apply(lambda x: pd.Series({
-                  "total_ordenes": x.shape[0],
-                  "ordenes_efectivas": x[x["efectiva"] == True].shape[0],
-                  "porcentaje_efectividad": round((x[x["efectiva"] == True].shape[0] / x.shape[0]) * 100, 1)
-                                       if x.shape[0] > 0 else 0,
-                  # SOLO promedia tiempos de tareas efectivas
-                  "promedio_tiempo_tarea": x.loc[x["efectiva"] == True, "tiempo_tarea_td"].mean()
-              }))
-              .reset_index()
-        )
+    resumen["promedio_tiempo_tarea"] = resumen["promedio_tiempo_tarea"].apply(td_to_str)
 
-        # Convertir timedelta → string legible
-        def td_to_str(td):
-            if pd.isna(td):
-                return "—"
-            total_sec = int(td.total_seconds())
-            h = total_sec // 3600
-            m = (total_sec % 3600) // 60
-            s = total_sec % 60
-            return f"{h}h {m}m {s}s" if h > 0 else f"{m}m {s}s"
+    df_tabla = df_agrupado.merge(resumen, on="inspector", how="left")
 
-        resumen["promedio_tiempo_tarea"] = resumen["promedio_tiempo_tarea"].apply(td_to_str)
+    st.write("### Tabla de inspecciones del día")
+    st.dataframe(
+        df_tabla[[
+            "inspector","supervisor","fecha",
+            "hora_inicio","hora_final","localidad",
+            "estado","efectiva",
+            "total_ordenes","ordenes_efectivas",
+            "porcentaje_efectividad","promedio_tiempo_tarea"
+        ]],
+        use_container_width=True
+    )
 
-        # Unir resumen con df_agrupado
-        df_tabla = df_agrupado.merge(resumen, on="inspector", how="left")
+    # -----------------------------------------------------
+    # 11. Producción
+    # -----------------------------------------------------
+    df_prod = (
+        df.groupby("inspector")
+          .apply(lambda x: pd.Series({
+              "efectivas": x["efectiva"].sum(),
+              "no_efectivas": (~x["efectiva"]).sum()
+          }))
+          .reset_index()
+    )
 
-        # -----------------------------------------------------
-        # 10-C. Tabla final completa
-        # -----------------------------------------------------
-        st.write("### Tabla de inspecciones del día")
+    fig_prod = px.bar(
+        df_prod,
+        y="inspector",
+        x=["efectivas", "no_efectivas"],
+        orientation="h",
+        barmode="group",
+        color_discrete_map={"efectivas": "green", "no_efectivas": "red"}
+    )
 
-        st.dataframe(
-            df_tabla[[
-                "inspector","supervisor","fecha",
-                "hora_inicio","hora_final","localidad",
-                "estado","efectiva",
-                "total_ordenes","ordenes_efectivas",
-                "porcentaje_efectividad","promedio_tiempo_tarea"
-            ]],
-            use_container_width=True
-        )
+    fig_prod.update_traces(texttemplate="%{x}", textposition="outside")
+    st.plotly_chart(fig_prod, use_container_width=True)
 
-        # -----------------------------------------------------
-        # 11. Gráfica de Producción Horizontal
-        # -----------------------------------------------------
-        df_prod = (
-            df.groupby("inspector")
-              .apply(lambda x: pd.Series({
-                  "efectivas": x["efectiva"].sum(),
-                  "no_efectivas": (~x["efectiva"]).sum()
-              }))
-              .reset_index()
-        )
+    # -----------------------------------------------------
+    # 12. TOP 5
+    # -----------------------------------------------------
+    st.markdown("## 🏆 TOP 5 Inspectores con mejor efectividad")
 
-        fig_prod = px.bar(
-            df_prod,
-            y="inspector",
-            x=["efectivas", "no_efectivas"],
-            orientation="h",
-            barmode="group",
-            title="Producción por Inspector (Efectivas vs No Efectivas)",
-            labels={"value":"Cantidad","variable":"Tipo"},
-            color_discrete_map={"efectivas":"green","no_efectivas":"red"}
-        )
+    df_rank = (
+        df.groupby("inspector")
+          .apply(lambda x: pd.Series({
+              "efectivas": x["efectiva"].sum(),
+              "total": x.shape[0],
+              "efectividad": round((x["efectiva"].sum() / x.shape[0]) * 100, 1)
+          }))
+          .reset_index()
+          .sort_values("efectividad", ascending=False)
+          .head(5)
+    )
 
-        fig_prod.update_traces(texttemplate='%{x}', textposition='outside')
+    fig_rank = px.bar(
+        df_rank,
+        y="inspector",
+        x="efectividad",
+        orientation="h",
+        text="efectividad",
+        color="efectividad"
+    )
 
-        fig_prod.update_layout(
-            xaxis_title="Cantidad",
-            yaxis_title="Inspector",
-            bargap=0.30,
-            height=600
-        )
-
-        st.plotly_chart(fig_prod, use_container_width=True)
-
-        # -----------------------------------------------------
-        # 12. Ranking TOP 5
-        # -----------------------------------------------------
-        st.markdown("## 🏆 TOP 5 Inspectores con mejor efectividad")
-
-        df_rank = (
-            df.groupby("inspector")
-              .apply(lambda x: pd.Series({
-                  "efectivas": x["efectiva"].sum(),
-                  "total": x.shape[0],
-                  "efectividad": round((x["efectiva"].sum() / x.shape[0]) * 100, 1)
-              }))
-              .reset_index()
-        )
-
-        df_rank = df_rank.sort_values("efectividad", ascending=False).head(5)
-
-        fig_rank = px.bar(
-            df_rank,
-            y="inspector",
-            x="efectividad",
-            orientation="h",
-            text="efectividad",
-            title="TOP 5 Inspectores – % de Efectividad",
-            labels={"efectividad": "% Efectividad"},
-            color="efectividad",
-            color_continuous_scale=["red", "yellow", "green"]
-        )
-
-        fig_rank.update_traces(
-            texttemplate='%{x}%',
-            textposition='outside',
-            marker_line_width=1.5,
-            marker_line_color="black"
-        )
-
-        fig_rank.update_layout(
-            xaxis_title="% Efectividad",
-            yaxis_title="Inspector",
-            height=450,
-            coloraxis_showscale=False
-        )
-
-        st.plotly_chart(fig_rank, use_container_width=True)
-
-        st.write("### 📋 Tabla TOP 5")
-        st.dataframe(
-            df_rank[["inspector","efectivas","total","efectividad"]],
-            use_container_width=True
-        )
+    fig_rank.update_traces(texttemplate="%{x}%", textposition="outside")
+    st.plotly_chart(fig_rank, use_container_width=True)
 
 # ---------------------------------------------------
 # ✅ PESTAÑA 3: GRÁFICAS GENERALES
