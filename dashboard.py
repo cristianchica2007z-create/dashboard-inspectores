@@ -834,10 +834,6 @@ with tab2:
         st.plotly_chart(fig_horas, use_container_width=True)
 
 
-
-
-
-
 # ---------------------------------------------------
 # ✅ PESTAÑA 3: GRÁFICAS GENERALES
 # ✅ TAB 3 — SEGUIMIENTO MENSUAL (MULTI‑DÍA)
