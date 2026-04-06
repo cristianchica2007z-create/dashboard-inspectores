@@ -66,6 +66,7 @@ tab1, tab2, tab3 = st.tabs([
 ])
 
 
+
 # ---------------------------------------------------
 # ✅ PESTAÑA 1: INVENTARIO DE PAPELERÍA
 # ---------------------------------------------------
@@ -82,8 +83,8 @@ with tab1:
     # ---------------------------------------------------
     if not os.path.exists(archivo_inventario):
         df_init = pd.DataFrame(columns=[
-            "Fecha", "Sede", "Inspector",
-            "Responsable", "Observación", "Ítems"
+            "fecha", "sede", "inspector",
+            "responsable", "observación", "ítems"
         ])
         df_init.to_excel(
             archivo_inventario,
@@ -92,18 +93,20 @@ with tab1:
         )
 
     # ---------------------------------------------------
-    # LEER INVENTARIO
+    # LEER INVENTARIO Y NORMALIZAR
     # ---------------------------------------------------
     df_inv = pd.read_excel(
         archivo_inventario,
         engine="openpyxl"
     )
 
+    df_inv.columns = df_inv.columns.str.strip().str.lower()
+
     # ---------------------------------------------------
-    # LISTA DE INSPECTORES (PARA SELECTBOX)
+    # LISTA DE INSPECTORES
     # ---------------------------------------------------
     inspectores_lista = sorted(
-        df_inv["Inspector"].dropna().unique().tolist()
+        df_inv["inspector"].dropna().unique().tolist()
     ) if not df_inv.empty else []
 
     # ===================================================
@@ -113,7 +116,6 @@ with tab1:
 
         st.markdown("### Registrar entrega")
 
-        # -------- DATOS GENERALES --------
         col1, col2, col3 = st.columns(3)
 
         with col1:
@@ -147,46 +149,42 @@ with tab1:
             )
 
         with col5:
-            observacion = st.text_input(
-                "Observación (opcional)"
-            )
+            observacion = st.text_input("Observación (opcional)")
 
-    # -------- ÍTEMS --------
-st.markdown("### Ítems entregados")
+        # ---------------- ÍTEMS ----------------
+        st.markdown("### Ítems entregados")
 
-items_def = [
-    "Stickers 🔵", "Cepo 🔒", "Guantes 🧤", "Piernera 🦿",
-    "Monogafas 🥽", "Llaves de cepo 🗝️", "Formatos 📄",
-    "Sellos 🕹️", "Papelería general 📦"
-]
+        items_def = [
+            "Stickers 🔵", "Cepo 🔒", "Guantes 🧤", "Piernera 🦿",
+            "Monogafas 🥽", "Llaves de cepo 🗝️", "Formatos 📄",
+            "Sellos 🕹️", "Papelería general 📦"
+        ]
 
-items_seleccionados = []
+        items_seleccionados = []
 
-filas = [items_def[i:i+4] for i in range(0, len(items_def), 4)]
+        filas = [items_def[i:i+4] for i in range(0, len(items_def), 4)]
 
-for f_idx, fila in enumerate(filas):
-    cols = st.columns(4)
-    for c_idx, item in enumerate(fila):
+        for f_idx, fila in enumerate(filas):
+            cols = st.columns(4)
+            for c_idx, item in enumerate(fila):
+                marcar = cols[c_idx].checkbox(
+                    item,
+                    key=f"chk_{f_idx}_{c_idx}"
+                )
 
-        marcar = cols[c_idx].checkbox(
-            item,
-            key=f"chk_{f_idx}_{c_idx}"
-        )
+                cantidad = cols[c_idx].number_input(
+                    "Cantidad",
+                    min_value=0,
+                    step=1,
+                    label_visibility="collapsed",
+                    key=f"qty_{f_idx}_{c_idx}"
+                )
 
-        cantidad = cols[c_idx].number_input(
-            "Cantidad",
-            min_value=0,
-            step=1,
-            label_visibility="collapsed",
-            key=f"qty_{f_idx}_{c_idx}"
-        )
+                if marcar and cantidad > 0:
+                    items_seleccionados.append(
+                        f"{item} x{cantidad}"
+                    )
 
-        if marcar and cantidad > 0:
-            items_seleccionados.append(
-                f"{item} x{cantidad}"
-            )
-
-        # ✅ BOTÓN OBLIGATORIO DEL FORMULARIO
         submitted = st.form_submit_button("✅ Guardar entrega")
 
     # ===================================================
@@ -194,17 +192,15 @@ for f_idx, fila in enumerate(filas):
     # ===================================================
     if submitted:
         if not items_seleccionados:
-            st.warning(
-                "⚠️ Debes seleccionar al menos un ítem con cantidad."
-            )
+            st.warning("⚠️ Debes seleccionar al menos un ítem con cantidad.")
         else:
             nueva_fila = pd.DataFrame({
-                "Fecha": [fecha.strftime("%Y-%m-%d")],
-                "Sede": [sede],
-                "Inspector": [inspector],
-                "Responsable": [responsable],
-                "Observación": [observacion],
-                "Ítems": [", ".join(items_seleccionados)]
+                "fecha": [fecha],
+                "sede": [sede],
+                "inspector": [inspector],
+                "responsable": [responsable],
+                "observación": [observacion],
+                "ítems": [", ".join(items_seleccionados)]
             })
 
             df_inv = pd.concat(
@@ -220,9 +216,7 @@ for f_idx, fila in enumerate(filas):
 
             subir_a_github(archivo_inventario)
 
-            st.success(
-                "✅ Entrega registrada correctamente"
-            )
+            st.success("✅ Entrega registrada correctamente")
 
     # ===================================================
     # ✅ HISTORIAL DE ENTREGAS
@@ -238,7 +232,7 @@ for f_idx, fila in enumerate(filas):
 
     if filtro_inspector != "TODOS":
         df_hist = df_hist[
-            df_hist["Inspector"] == filtro_inspector
+            df_hist["inspector"] == filtro_inspector
         ]
 
     df_editado = st.data_editor(
@@ -262,14 +256,12 @@ for f_idx, fila in enumerate(filas):
     st.markdown("## 📊 Consumo mensual consolidado por ítem")
 
     df_cons = df_inv.copy()
-
-    df_cons["Fecha"] = pd.to_datetime(
-        df_cons["Fecha"],
+    df_cons["fecha"] = pd.to_datetime(
+        df_cons["fecha"],
         errors="coerce"
     )
-
-    df_cons["Mes"] = (
-        df_cons["Fecha"]
+    df_cons["mes"] = (
+        df_cons["fecha"]
         .dt.to_period("M")
         .astype(str)
     )
@@ -277,10 +269,9 @@ for f_idx, fila in enumerate(filas):
     registros = []
 
     for _, row in df_cons.iterrows():
-        if pd.isna(row["Ítems"]):
+        if pd.isna(row["ítems"]):
             continue
-
-        for it in row["Ítems"].split(","):
+        for it in row["ítems"].split(","):
             it = it.strip()
             if " x" in it:
                 nombre, cant = it.rsplit(" x", 1)
@@ -290,40 +281,37 @@ for f_idx, fila in enumerate(filas):
                 cant = 1
 
             registros.append({
-                "Mes": row["Mes"],
-                "Ítem": nombre,
-                "Cantidad": cant
+                "mes": row["mes"],
+                "ítem": nombre,
+                "cantidad": cant
             })
 
     df_plot = pd.DataFrame(registros)
 
     if not df_plot.empty:
         df_plot = df_plot.groupby(
-            ["Mes", "Ítem"],
+            ["mes", "ítem"],
             as_index=False
         ).sum()
 
         fig = px.bar(
             df_plot,
-            x="Mes",
-            y="Cantidad",
-            color="Ítem",
+            x="mes",
+            y="cantidad",
+            color="ítem",
             barmode="group",
-            text="Cantidad",
+            text="cantidad",
             title="Consumo mensual consolidado por ítem"
         )
 
         fig.update_traces(textposition="outside")
         fig.update_layout(
             xaxis_title="Mes",
-            yaxis_title="Cantidad entregada",
+            yaxis_title="Cantidad",
             legend_title="Ítem"
         )
 
-        st.plotly_chart(
-            fig,
-            use_container_width=True
-        )
+        st.plotly_chart(fig, use_container_width=True)
 # ---------------------------------------------------
 # ---------------------------------------------------
 # ✅ PESTAÑA 2: SEGUIMIENTO DIARIO (BITÁCORA COMPARTIDA)
