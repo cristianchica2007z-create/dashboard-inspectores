@@ -73,6 +73,9 @@ tab1, tab2, tab3 = st.tabs([
 # ---------------------------------------------------
 # ✅ PESTAÑA 1: INVENTARIO DE PAPELERÍA
 # ---------------------------------------------------
+# ---------------------------------------------------
+# ✅ PESTAÑA 1: INVENTARIO DE PAPELERÍA
+# ---------------------------------------------------
 with tab1:
     st.subheader("📦 Control de entrega de papelería e inventario")
 
@@ -93,17 +96,18 @@ with tab1:
         )
 
     # ---------------------------------------------------
-    # LEER INVENTARIO Y NORMALIZAR
+    # LEER INVENTARIO (SOLO TAB 1)
     # ---------------------------------------------------
     df_inv = pd.read_excel(
         archivo_inventario,
         engine="openpyxl"
     )
 
+    # Normalizar nombres de columnas
     df_inv.columns = df_inv.columns.str.strip().str.lower()
 
     # ---------------------------------------------------
-    # LISTA DE INSPECTORES
+    # LISTA DE INSPECTORES (MAESTRA)
     # ---------------------------------------------------
     inspectores_lista = sorted(
         df_inv["inspector"].dropna().unique().tolist()
@@ -113,7 +117,6 @@ with tab1:
     # ✅ FORMULARIO DE ENTREGA
     # ===================================================
     with st.form("form_entrega", clear_on_submit=True):
-
         st.markdown("### Registrar entrega")
 
         col1, col2, col3 = st.columns(3)
@@ -188,7 +191,7 @@ with tab1:
         submitted = st.form_submit_button("✅ Guardar entrega")
 
     # ===================================================
-    # ✅ GUARDAR ENTREGA
+    # ✅ GUARDAR ENTREGA (INVENTARIO)
     # ===================================================
     if submitted:
         if not items_seleccionados:
@@ -214,46 +217,43 @@ with tab1:
                 engine="openpyxl"
             )
 
-            subir_a_github(archivo_inventario)
-
             st.success("✅ Entrega registrada correctamente")
 
     # ===================================================
-  # ===================================================
-# ✅ HISTORIAL + FILTRO + EDICIÓN (SOLO INVENTARIO)
-# ===================================================
-st.markdown("### 📋 Historial de entregas")
+    # ✅ HISTORIAL DE ENTREGAS (SOLO INVENTARIO)
+    # ===================================================
+    st.markdown("### 📋 Historial de entregas")
 
-filtro_inspector = st.selectbox(
-    "Filtrar por inspector",
-    ["TODOS"] + inspectores_lista,
-    key="filtro_hist"
-)
-
-# ⚠️ USAR SIEMPRE df_inv (NO df)
-df_hist = df_inv.copy()
-
-if filtro_inspector != "TODOS":
-    df_hist = df_hist[df_hist["inspector"] == filtro_inspector]
-
-df_editado = st.data_editor(
-    df_hist,
-    num_rows="dynamic",
-    use_container_width=True,
-    key="editor_hist"
-)
-
-if st.button("💾 Guardar cambios del historial", key="btn_hist"):
-    df_editado.to_excel(
-        archivo_inventario,
-        index=False,
-        engine="openpyxl"
+    filtro_inspector = st.selectbox(
+        "Filtrar por inspector",
+        ["TODOS"] + inspectores_lista,
+        key="filtro_hist"
     )
-    subir_a_github(archivo_inventario)
-    st.success("✅ Cambios del historial guardados")
+
+    df_hist = df_inv.copy()
+
+    if filtro_inspector != "TODOS":
+        df_hist = df_hist[
+            df_hist["inspector"] == filtro_inspector
+        ]
+
+    df_editado = st.data_editor(
+        df_hist,
+        num_rows="dynamic",
+        use_container_width=True,
+        key="editor_hist"
+    )
+
+    if st.button("💾 Guardar cambios del historial", key="btn_hist"):
+        df_editado.to_excel(
+            archivo_inventario,
+            index=False,
+            engine="openpyxl"
+        )
+        st.success("✅ Cambios del historial guardados")
 
     # ===================================================
-    # ✅ RESUMEN MENSUAL CONSOLIDADO
+    # ✅ RESUMEN MENSUAL CONSOLIDADO (INVENTARIO)
     # ===================================================
     st.markdown("## 📊 Consumo mensual consolidado por ítem")
 
@@ -273,6 +273,7 @@ if st.button("💾 Guardar cambios del historial", key="btn_hist"):
     for _, row in df_cons.iterrows():
         if pd.isna(row["ítems"]):
             continue
+
         for it in row["ítems"].split(","):
             it = it.strip()
             if " x" in it:
@@ -314,6 +315,7 @@ if st.button("💾 Guardar cambios del historial", key="btn_hist"):
         )
 
         st.plotly_chart(fig, use_container_width=True)
+
 # ---------------------------------------------------
 # ---------------------------------------------------
 # ✅ PESTAÑA 2: SEGUIMIENTO DIARIO (BITÁCORA COMPARTIDA)
