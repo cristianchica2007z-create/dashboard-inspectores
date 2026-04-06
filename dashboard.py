@@ -69,6 +69,7 @@ tab1, tab2, tab3 = st.tabs([
 
 # ---------------------------------------------------
 # ---------------------------------------------------
+# ---------------------------------------------------
 # ✅ PESTAÑA 1: INVENTARIO DE PAPELERÍA
 # ---------------------------------------------------
 with tab1:
@@ -85,7 +86,7 @@ with tab1:
     ]
 
     # ---------------------------------------------------
-    # CREAR O RECUPERAR INVENTARIO CORRECTO
+    # CREAR / RECUPERAR INVENTARIO CORRECTO
     # ---------------------------------------------------
     crear_nuevo = False
 
@@ -97,7 +98,7 @@ with tab1:
             df_tmp.columns = df_tmp.columns.str.strip().str.lower()
             if not all(col in df_tmp.columns for col in columnas_inventario):
                 crear_nuevo = True
-        except:
+        except Exception:
             crear_nuevo = True
 
     if crear_nuevo:
@@ -176,14 +177,14 @@ with tab1:
             cols = st.columns(4)
             for c_idx, item in enumerate(fila):
                 marcar = cols[c_idx].checkbox(
-                    item, key=f"chk_{f_idx}_{c_idx}"
+                    item, key=f"inv_chk_{f_idx}_{c_idx}"
                 )
                 cantidad = cols[c_idx].number_input(
                     "Cantidad",
                     min_value=0,
                     step=1,
                     label_visibility="collapsed",
-                    key=f"qty_{f_idx}_{c_idx}"
+                    key=f"inv_qty_{f_idx}_{c_idx}"
                 )
                 if marcar and cantidad > 0:
                     items_seleccionados.append(f"{item} x{cantidad}")
@@ -191,7 +192,7 @@ with tab1:
         submitted = st.form_submit_button("✅ Guardar entrega")
 
     # ===================================================
-    # ✅ GUARDAR ENTREGA
+    # ✅ GUARDAR ENTREGA (SOLO INVENTARIO)
     # ===================================================
     if submitted:
         if not items_seleccionados:
@@ -207,7 +208,6 @@ with tab1:
             })
 
             df_inv = pd.concat([df_inv, nueva_fila], ignore_index=True)
-
             df_inv.to_excel(
                 ARCHIVO_INVENTARIO,
                 index=False,
@@ -217,28 +217,26 @@ with tab1:
             st.success("✅ Entrega registrada correctamente")
 
     # ===================================================
-    # ✅ HISTORIAL DE ENTREGAS (SOLO INVENTARIO)
+    # ✅ HISTORIAL DE ENTREGAS (KEY ÚNICA 🔑)
     # ===================================================
     st.markdown("### 📋 Historial de entregas")
 
     filtro_inspector = st.selectbox(
         "Filtrar por inspector",
         ["TODOS"] + inspectores_lista,
-        key="filtro_hist"
+        key="filtro_hist_inventario"
     )
 
     df_hist = df_inv.copy()
 
     if filtro_inspector != "TODOS":
-        df_hist = df_hist[
-            df_hist["inspector"] == filtro_inspector
-        ]
+        df_hist = df_hist[df_hist["inspector"] == filtro_inspector]
 
     st.data_editor(
         df_hist,
         num_rows="dynamic",
         use_container_width=True,
-        key="editor_hist"
+        key="editor_hist_inventario"
     )
 
     # ===================================================
