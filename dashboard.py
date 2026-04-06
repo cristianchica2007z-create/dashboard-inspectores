@@ -613,6 +613,4 @@ with tab3:
     st.subheader("Gráficas de desempeño general")
     st.info("Aquí veremos indicadores, tendencias y análisis más avanzados usando Plotly.")
 
-                "efectivas": "Órdenes efectivas"
-            })
-            st.dataframe(detalle_final, use_container_width=True)
+      
