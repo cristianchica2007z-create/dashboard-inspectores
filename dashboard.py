@@ -69,6 +69,7 @@ tab1, tab2, tab3 = st.tabs([
 
 # ---------------------------------------------------
 # ---------------------------------------------------
+# ---------------------------------------------------
 # ✅ PESTAÑA 1: INVENTARIO DE PAPELERÍA
 # ---------------------------------------------------
 with tab1:
@@ -76,10 +77,6 @@ with tab1:
 
     ARCHIVO_INVENTARIO = "inventario.xlsx"
 
-    # ---------------------------------------------------
-    # COLUMNAS VÁLIDAS DEL INVENTARIO
-    # (coinciden con tu Excel real)
-    # ---------------------------------------------------
     columnas_inventario = [
         "fecha",
         "inspector",
@@ -104,10 +101,8 @@ with tab1:
             engine="openpyxl"
         )
 
-    # Normalizar columnas (blindaje)
-
- df_bitacora.columns = (
-        df_bitacora.columns.str.strip().str.lower()
+    # ✅ NORMALIZAR COLUMNAS DEL INVENTARIO (CORRECTO)
+    df_inv.columns = df_inv.columns.str.strip().str.lower()
     
 
 
