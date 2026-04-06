@@ -475,6 +475,31 @@ with tab2:
 # Agrupación + KPIs
 # ===================================================
 
+    
+         st.markdown("## ⭐ KPIs del día")
+        df_agrupado["ini_dec"] = df_agrupado["hora_inicio"].apply(
+            lambda x: hora_to_decimal(x) if x != "SIN HORA" else None
+        )
+        df_agrupado["fin_dec"] = df_agrupado["hora_final"].apply(
+            lambda x: hora_to_decimal(x) if pd.notna(x) else None
+        )
+        df_agrupado["dur_dec"] = df_agrupado["fin_dec"] - df_agrupado["ini_dec"]
+        c1, c2, c3 = st.columns(3)
+        c1.metric("⏰ Promedio inicio", hora_to_string(decimal_to_hora(df_agrupado["ini_dec"].mean())))
+        c2.metric("🕒 Promedio fin", hora_to_string(decimal_to_hora(df_agrupado["fin_dec"].mean())))
+        dur_prom = df_agrupado["dur_dec"].mean()
+        c3.metric("💼 Duración prom.", f"{round(dur_prom,2)}h" if pd.notna(dur_prom) else "—")
+        c4, c5, c6, c7 = st.columns(4)
+        c4.metric("📋 Tareas", total_ordenes)
+        c5.metric("✅ Efectivas", total_efectivas)
+        c6.metric("📈 % Efectividad", f"{porcentaje_efectividad}%")
+        c7.metric("🕓 Prom. tarea efectiva", tiempo_promedio_tarea_str)
+
+
+
+#//////////////////
+    
+    
     primeras = (
         df2.sort_values("hora_inicio")
            .groupby(["inspector","fecha"], as_index=False)
