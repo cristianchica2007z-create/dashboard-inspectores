@@ -376,8 +376,40 @@ df_bitacora = df_bitacora.dropna(
 )
 
 # -----------------------------------------------------
-# 4. Mapeo de supervisores
 # -----------------------------------------------------
+# CONVERTIR COLUMNAS CLAVE
+# -----------------------------------------------------
+df_bitacora["fecha"] = pd.to_datetime(
+    df_bitacora["fecha de ejecucion"], errors="coerce"
+).dt.date
+
+df_bitacora["hora_inicio"] = df_bitacora["hora inicio"].apply(parse_hora)
+df_bitacora["hora_final"] = df_bitacora["hora final"].apply(parse_hora)
+df_bitacora["inspector"] = df_bitacora["inspector"].astype(str).str.strip()
+df_bitacora["localidad"] = df_bitacora["localidad"].astype(str)
+
+df_bitacora = df_bitacora.dropna(
+    subset=["hora_inicio", "hora_final"]
+)
+
+# -----------------------------------------------------
+# 4. MAPEO DE SUPERVISORES (DEFINIDO ANTES DE USARSE ✅)
+# -----------------------------------------------------
+supervisores_dict = {
+    "ARIZA MARIN SERGIO": "ANDRES ARROYAVE",
+    "ANDRES ARROYAVE": "ANDRES ARROYAVE",
+    "BEDOYA DIEGO ALEJANDRO": "DANNY DE LA CRUZ",
+    "DANNY DE LA CRUZ": "DANNY DE LA CRUZ",
+    "CHAVARRIAGA JUAN MANUEL": "CRISTIAN CHICA",
+    "CRISTIAN CHICA": "CRISTIAN CHICA",
+    "PATIÑO CIFUENTES RICARDO": "JANIER MARIN",
+    "JANIER MARIN": "JANIER MARIN",
+    "VARGAS FRANCO JHON EDISON": "CRISTIAN CHICA",
+    "CARDONA CANO NELSON": "CRISTIAN CHICA",
+    "OSPINA RODRIGUEZ DANIEL ALBERTO": "ANDRES ARROYAVE",
+    "RUIZ DILON MARLON ANDREY": "ANDRES ARROYAVE",
+}
+
 df_bitacora["supervisor"] = (
     df_bitacora["inspector"]
     .map(supervisores_dict)
@@ -385,7 +417,7 @@ df_bitacora["supervisor"] = (
 )
 
 # -----------------------------------------------------
-# 6. Primera y última hora del día
+# 5. PRIMERA Y ÚLTIMA HORA DEL DÍA
 # -----------------------------------------------------
 primeras = (
     df_bitacora.sort_values("hora_inicio")
@@ -406,7 +438,7 @@ df_agrupado = primeras.merge(
 )
 
 # -----------------------------------------------------
-# 7. Puntualidad
+# 6. PUNTUALIDAD
 # -----------------------------------------------------
 hora_oficial = pd.to_datetime("07:30", format="%H:%M").time()
 
@@ -426,7 +458,6 @@ def estado(m):
         return "Muy Tarde"
 
 df_agrupado["estado"] = df_agrupado["minutos_tarde"].apply(estado)
-
    # -----------------------------------------------------
 # 8. Producción
 # -----------------------------------------------------
