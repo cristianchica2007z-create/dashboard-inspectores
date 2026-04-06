@@ -1,6 +1,3 @@
-
-
-
 import streamlit as st
 import pandas as pd
 import os
@@ -111,7 +108,7 @@ with tab1:
 
  df_bitacora.columns = (
         df_bitacora.columns.str.strip().str.lower()
-    )
+    
 
 
     # ---------------------------------------------------
