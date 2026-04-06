@@ -69,30 +69,36 @@ with tab1:
             observacion = st.text_input(
                 "Observación (opcional)", key="form_obs"
             )
-        # -------- ÍTEMS --------
-        st.markdown("### Ítems entregados")
-        items_def = [
-            "Stickers 🔵", "Cepo 🔒", "Guantes 🧤", "Piernera 🦿",
-            "Monogafas 🥽", "Llaves de cepo 🗝️", "Formatos 📄",
-            "Sellos 🕹️", "Papelería general 📦"
-        ]
-        items_seleccionados = []
-        filas = [items_def[i:i+4] for i in range(0, len(items_def), 4)]
-        for f_idx, fila in enumerate(filas):
-            cols = st.columns(4)
-            for c_idx, item in enumerate(fila):
-                with colsmarcar = st.checkbox(
-                        item, key=f"chk_{f_idx}_{c_idx}"
-                    )
-                    cantidad = st.number_input(
-                        "Cantidad",
-                        min_value=0,
-                        step=1,
-                        label_visibility="collapsed",
-                        key=f"qty_{f_idx}_{c_idx}"
-                    )
-                    if marcar and cantidad > 0:
-                        items_seleccionados.append(f"{item} x{cantidad}")
+# -------- ÍTEMS --------
+st.markdown("### Ítems entregados")
+
+items_def = [
+    "Stickers 🔵", "Cepo 🔒", "Guantes 🧤", "Piernera 🦿",
+    "Monogafas 🥽", "Llaves de cepo 🗝️", "Formatos 📄",
+    "Sellos 🕹️", "Papelería general 📦"
+]
+
+items_seleccionados = []
+
+filas = [items_def[i:i+4] for i in range(0, len(items_def), 4)]
+
+for f_idx, fila in enumerate(filas):
+    cols = st.columns(4)
+    for c_idx, item in enumerate(fila):
+        with cols[c_idx]:
+            marcar = st.checkbox(
+                item,
+                key=f"chk_{f_idx}_{c_idx}"
+            )
+            cantidad = st.number_input(
+                "Cantidad",
+                min_value=0,
+                step=1,
+                label_visibility="collapsed",
+                key=f"qty_{f_idx}_{c_idx}"
+            )
+            if marcar and cantidad > 0:
+                items_seleccionados.append(f"{item} x{cantidad}")
         submitted = st.form_submit_button("✅ Guardar entrega")
     # =================================================
     # ✅ GUARDAR ENTREGA
