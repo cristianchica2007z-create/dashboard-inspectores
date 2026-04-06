@@ -129,7 +129,7 @@ with tab1:
     # Crear archivo si no existe
     if not os.path.exists(archivo_inventario):
         df_init = pd.DataFrame(columns=[
-            "Fecha", "Sede", "Inspector",
+            "fecha", "Sede", "Inspector",
             "Responsable", "Observación", "Ítems"
         ])
         df_init.to_excel(archivo_inventario, index=False, engine="openpyxl")
@@ -152,7 +152,7 @@ with tab1:
             )
 
         with col3:
-            fecha = st.date_input("Fecha", key="form_fecha")
+            fecha = st.date_input("fecha", key="form_fecha")
 
         col4, col5 = st.columns([1, 2])
         with col4:
@@ -215,7 +215,7 @@ with tab1:
             st.warning("⚠️ Debes seleccionar al menos un ítem con cantidad.")
         else:
             nueva_fila = pd.DataFrame({
-                "Fecha": [fecha.strftime("%Y-%m-%d")],
+                "fecha": [fecha.strftime("%Y-%m-%d")],
                 "Sede": [sede],
                 "Inspector": [inspector],
                 "Responsable": [responsable],
@@ -262,8 +262,8 @@ with tab1:
     st.markdown("## 📊 Consumo mensual consolidado por ítem")
 
     df_cons = df_inv.copy()
-    df_cons["Fecha"] = pd.to_datetime(df_cons["Fecha"], errors="coerce")
-    df_cons["Mes"] = df_cons["Fecha"].dt.to_period("M").astype(str)
+    df_cons["fecha"] = pd.to_datetime(df_cons["fecha"], errors="coerce")
+    df_cons["Mes"] = df_cons["fecha"].dt.to_period("M").astype(str)
 
     registros = []
     for _, row in df_cons.iterrows():
@@ -492,7 +492,7 @@ with tab2:
     df["supervisor"] = df["inspector"].map(supervisores_dict).fillna("SIN SUPERVISOR")
     #----------------------------------------------
     # -----------------------------------------------------
-    # FILTRO FECHA
+    # FILTRO fecha
     # -----------------------------------------------------
     fechas_validas = sorted(df["fecha"].dropna().unique())
     fecha_sel = st.selectbox("Selecciona fecha:", fechas_validas)
@@ -897,7 +897,7 @@ with tab3:
         )
 
         # ---------------------------------------------------
-        # 3️⃣ RANGO DE FECHAS
+        # 3️⃣ RANGO DE fechaS
         # ---------------------------------------------------
         fechas = sorted(df["fecha"].dropna().unique())
         fecha_inicio, fecha_fin = st.date_input(
@@ -1054,7 +1054,7 @@ with tab3:
                 "ordenes", "efectivas",
                 "Min. tarde", "Tiempo efectivo"
             ]].rename(columns={
-                "fecha": "Fecha",
+                "fecha": "fecha",
                 "ordenes": "Órdenes",
                 "efectivas": "Órdenes efectivas"
             })
