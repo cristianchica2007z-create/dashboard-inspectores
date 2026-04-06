@@ -107,28 +107,31 @@ with tab2:
     # ✅ A partir de aquí TODA tu lógica existente sigue EXACTAMENTE igual
     df = pd.read_excel(ARCHIVO_BITACORA)
 
+    # -----------------------------------------------------
+    # FUNCIONES UTILITARIAS (bien alineadas)
+    # -----------------------------------------------------
+    def hora_to_decimal(hora):
+        return hora.hour + hora.minute / 60 + hora.second / 3600
 
+    def decimal_to_hora(decimal):
+        hora = int(decimal)
+        minuto = int((decimal - hora) * 60)
+        segundo = int((((decimal - hora) * 60) - minuto) * 60)
+        return datetime.time(hora, minuto, segundo)
 
-        def hora_to_decimal(hora):
-            return hora.hour + hora.minute/60 + hora.second/3600
+    def hora_to_string(hora):
+        return hora.strftime("%I:%M %p")
 
-        def decimal_to_hora(decimal):
-            hora = int(decimal)
-            minuto = int((decimal - hora) * 60)
-            segundo = int((((decimal - hora) * 60) - minuto) * 60)
-            return datetime.time(hora, minuto, segundo)
-
-        def hora_to_string(hora):
-            return hora.strftime("%I:%M %p")
-
-        def parse_hora(valor):
+    def parse_hora(valor):
+        try:
+            return pd.to_datetime(valor, format="%H:%M").time()
+        except:
             try:
-                return pd.to_datetime(valor, format="%H:%M").time()
+                return pd.to_datetime(str(valor)).time()
             except:
-                try:
-                    return pd.to_datetime(str(valor)).time()
-                except:
-                    return None
+                return None
+
+        
 
         # -----------------------------------------------------
         # 1. Leer archivo
