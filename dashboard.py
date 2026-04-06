@@ -239,85 +239,100 @@ with tab2:
     df["supervisor"] = df["inspector"].map(supervisores_dict).fillna("SIN SUPERVISOR")
 
         # -----------------------------------------------------
-        # 6. Primera y última hora del día
-        # -----------------------------------------------------
-        primeras = (
-            df.sort_values("hora_inicio")
-              .groupby(["inspector","fecha"], as_index=False)
-              .first()[["inspector","supervisor","fecha","hora_inicio","localidad"]]
-        )
+  # -----------------------------------------------------
+    # 6. Primera y última hora del día
+    # -----------------------------------------------------
+    primeras = (
+        df.sort_values("hora_inicio")
+          .groupby(["inspector", "fecha"], as_index=False)
+          .first()[["inspector", "supervisor", "fecha", "hora_inicio", "localidad"]]
+    )
 
-        ultimas = (
-            df.sort_values("hora_final")
-              .groupby(["inspector","fecha"], as_index=False)
-              .last()[["inspector","fecha","hora_final"]]
-        )
+    ultimas = (
+        df.sort_values("hora_final")
+          .groupby(["inspector", "fecha"], as_index=False)
+          .last()[["inspector", "fecha", "hora_final"]]
+    )
 
-        df_agrupado = primeras.merge(ultimas, on=["inspector","fecha"], how="left")
+    df_agrupado = primeras.merge(
+        ultimas,
+        on=["inspector", "fecha"],
+        how="left"
+    )
 
-        # -----------------------------------------------------
-        # 7. Puntualidad
-        # -----------------------------------------------------
-        hora_oficial = pd.to_datetime("07:30", format="%H:%M").time()
+    # -----------------------------------------------------
+    # 7. Puntualidad
+    # -----------------------------------------------------
+    hora_oficial = pd.to_datetime("07:30", format="%H:%M").time()
 
-        def mins_tarde(h):
-            return int((pd.to_datetime(str(h)) - pd.to_datetime(str(hora_oficial))).total_seconds() / 60)
+    def mins_tarde(h):
+        h1 = pd.to_datetime(str(h))
+        h2 = pd.to_datetime(str(hora_oficial))
+        return int((h1 - h2).total_seconds() / 60)
 
-        df_agrupado["minutos_tarde"] = df_agrupado["hora_inicio"].apply(mins_tarde)
+    df_agrupado["minutos_tarde"] = df_agrupado["hora_inicio"].apply(mins_tarde)
 
-        def estado(m):
-            if m <= 0:
-                return "Puntual"
-            elif m <= 15:
-                return "Tarde"
-            else:
-                return "Muy Tarde"
-
-        df_agrupado["estado"] = df_agrupado["minutos_tarde"].apply(estado)
-
-        # -----------------------------------------------------
-        # 8. Producción
-        # -----------------------------------------------------
-        valores_efectivos = [
-            "INSPECCIONADA",
-            "INSPECCIONADA CON DEFECTO NO CRITICO",
-            "INSPECCIONADA CON DEFECTO CRITICO",
-            "CERTIFICADA",
-            "CERTIFICADA CON NOVEDAD"
-        ]
-
-        df["efectiva"] = df["cierre"].isin(valores_efectivos)
-        df_agrupado["efectiva"] = df["efectiva"]
-
-        total_ordenes = df.shape[0]
-        total_efectivas = df[df["efectiva"]].shape[0]
-        porcentaje_efectividad = round((total_efectivas / total_ordenes) * 100, 1) if total_ordenes > 0 else 0
-
-        # -----------------------------------------------------
-        # 8-B. Tiempo promedio por tarea efectiva
-        # -----------------------------------------------------
-        def parse_tiempo_tarea(valor):
-            try:
-                return pd.to_timedelta(str(valor))
-            except:
-                return pd.NaT
-
-        df["tiempo_tarea_td"] = df["tiempo de tarea"].apply(parse_tiempo_tarea)
-
-        df_efectivas = df[(df["efectiva"] == True) & (df["tiempo_tarea_td"].notna())]
-
-        if df_efectivas.shape[0] > 0:
-            promedio_td = df_efectivas["tiempo_tarea_td"].mean()
-
-            prom_seg = int(promedio_td.total_seconds())
-            prom_h = prom_seg // 3600
-            prom_m = (prom_seg % 3600) // 60
-            prom_s = prom_seg % 60
-
-            tiempo_promedio_tarea_str = f"{prom_h}h {prom_m}m {prom_s}s" if prom_h > 0 else f"{prom_m}m {prom_s}s"
+    def estado(m):
+        if m <= 0:
+            return "Puntual"
+        elif m <= 15:
+            return "Tarde"
         else:
-            tiempo_promedio_tarea_str = "No disponible"
+            return "Muy Tarde"
 
+    df_agrupado["estado"] = df_agrupado["minutos_tarde"].apply(estado)
+
+    # -----------------------------------------------------
+    # 8. Producción
+    # -----------------------------------------------------
+    valores_efectivos = [
+        "INSPECCIONADA",
+        "INSPECCIONADA CON DEFECTO NO CRITICO",
+        "INSPECCIONADA CON DEFECTO CRITICO",
+        "CERTIFICADA",
+        "CERTIFICADA CON NOVEDAD"
+    ]
+
+    df["efectiva"] = df["cierre"].isin(valores_efectivos)
+    df_agrupado["efectiva"] = df["efectiva"]
+
+    total_ordenes = df.shape[0]
+    total_efectivas = df[df["efectiva"]].shape[0]
+    porcentaje_efectividad = (
+        round((total_efectivas / total_ordenes) * 100, 1)
+        if total_ordenes > 0 else 0
+    )
+
+    # -----------------------------------------------------
+    # 8-B. Tiempo promedio por tarea efectiva
+    # -----------------------------------------------------
+    def parse_tiempo_tarea(valor):
+        try:
+            return pd.to_timedelta(str(valor))
+        except:
+            return pd.NaT
+
+    df["tiempo_tarea_td"] = df["tiempo de tarea"].apply(parse_tiempo_tarea)
+
+    df_efectivas = df[
+        (df["efectiva"] == True) &
+        (df["tiempo_tarea_td"].notna())
+    ]
+
+    if df_efectivas.shape[0] > 0:
+        promedio_td = df_efectivas["tiempo_tarea_td"].mean()
+
+        prom_seg = int(promedio_td.total_seconds())
+        prom_h = prom_seg // 3600
+        prom_m = (prom_seg % 3600) // 60
+        prom_s = prom_seg % 60
+
+        tiempo_promedio_tarea_str = (
+            f"{prom_h}h {prom_m}m {prom_s}s"
+            if prom_h > 0 else f"{prom_m}m {prom_s}s"
+        )
+    else:
+        tiempo_promedio_tarea_str = "No disponible"
         # -----------------------------------------------------
         # 9. KPIs Premium
         # -----------------------------------------------------
