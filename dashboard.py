@@ -70,6 +70,7 @@ tab1, tab2, tab3 = st.tabs([
 # ---------------------------------------------------
 # ---------------------------------------------------
 # ---------------------------------------------------
+# ---------------------------------------------------
 # ✅ PESTAÑA 1: INVENTARIO DE PAPELERÍA
 # ---------------------------------------------------
 with tab1:
@@ -208,6 +209,7 @@ with tab1:
             })
 
             df_inv = pd.concat([df_inv, nueva_fila], ignore_index=True)
+
             df_inv.to_excel(
                 ARCHIVO_INVENTARIO,
                 index=False,
@@ -217,7 +219,8 @@ with tab1:
             st.success("✅ Entrega registrada correctamente")
 
     # ===================================================
-    # ✅ HISTORIAL DE ENTREGAS (KEY ÚNICA 🔑)
+    # ✅ HISTORIAL DE ENTREGAS (SOLO INVENTARIO)
+    # 🔑 LIMPIEZA EXPLÍCITA DE SESSION_STATE
     # ===================================================
     st.markdown("### 📋 Historial de entregas")
 
@@ -231,6 +234,10 @@ with tab1:
 
     if filtro_inspector != "TODOS":
         df_hist = df_hist[df_hist["inspector"] == filtro_inspector]
+
+    # 🔥 ESTA ES LA LÍNEA CLAVE QUE FALTABA
+    if "editor_hist_inventario" in st.session_state:
+        del st.session_state["editor_hist_inventario"]
 
     st.data_editor(
         df_hist,
