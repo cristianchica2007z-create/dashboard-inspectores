@@ -78,6 +78,10 @@ with tab1:
 # ---------------------------------------------------
 # ✅ PESTAÑA 2: SEGUIMIENTO DIARIO
 # ---------------------------------------------------
+# ---------------------------------------------------
+# ✅ PESTAÑA 2: SEGUIMIENTO DIARIO (BITÁCORA COMPARTIDA)
+# ---------------------------------------------------
+
 with tab2:
     st.subheader("Control de horario de inspectores")
 
@@ -86,6 +90,9 @@ with tab2:
     import numpy as np
     import datetime
 
+    # ---------------------------------------------------
+    # CARGA DE BITÁCORA (GUARDADO Y COMPARTIDO)
+    # ---------------------------------------------------
     st.write("### Cargar archivo de bitácora (formato XLSX recomendado)")
     archivo = st.file_uploader(
         "Sube el archivo de bitácora (se guarda y comparte)",
@@ -99,27 +106,39 @@ with tab2:
 
         st.success("✅ Bitácora actualizada y compartida")
 
-    # ⚠️ Detener SOLO si no hay archivo cargado y no existe BITACORA
-    if archivo is None and not os.path.exists(ARCHIVO_BITACORA):
+    # Si NO existe BITACORA.xlsx y nadie ha cargado archivo → parar
+    if not os.path.exists(ARCHIVO_BITACORA):
         st.info("ℹ️ Carga un archivo de bitácora para iniciar el análisis.")
         st.stop()
 
-    # ✅ A partir de aquí ya es seguro leer
+    # ---------------------------------------------------
+    # LECTURA DEL ARCHIVO (PUNTO CLAVE)
+    # ---------------------------------------------------
     df = pd.read_excel(ARCHIVO_BITACORA)
 
-    # -----------------------------------------------------
+    # ✅ COMPROBACIÓN VISUAL (PUEDES QUITARLA DESPUÉS)
+    st.write("📄 Vista previa de la bitácora cargada:")
+    st.dataframe(df.head(), use_container_width=True)
+
+    # ---------------------------------------------------
     # FUNCIONES UTILITARIAS
-    # -----------------------------------------------------
+    # ---------------------------------------------------
     def hora_to_decimal(hora):
+        if hora is None:
+            return None
         return hora.hour + hora.minute / 60 + hora.second / 3600
 
     def decimal_to_hora(decimal):
-        hora = int(decimal)
-        minuto = int((decimal - hora) * 60)
-        segundo = int((((decimal - hora) * 60) - minuto) * 60)
-        return datetime.time(hora, minuto, segundo)
+        if decimal is None or pd.isna(decimal):
+            return None
+        h = int(decimal)
+        m = int((decimal - h) * 60)
+        s = int((((decimal - h) * 60) - m) * 60)
+        return datetime.time(h, m, s)
 
     def hora_to_string(hora):
+        if hora is None:
+            return "—"
         return hora.strftime("%I:%M %p")
 
     def parse_hora(valor):
