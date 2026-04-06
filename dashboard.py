@@ -266,80 +266,107 @@ if not df_plot.empty:
 
 # ===================================================
 # ===================================================
-# ✅ TAB 2 — SEGUIMIENTO DIARIO (BITÁCORA LIMPIA)
+# ===================================================
+# ✅ TAB 2 — SEGUIMIENTO DIARIO (VERSIÓN COMPLETA)
 # ===================================================
 with tab2:
     st.subheader("🕒 Control de horario de inspectores")
 
-    ARCHIVO_BITACORA = "BITACORA.xlsx"
-
-    # ---------------------------------------------------
-    # CARGA DE BITÁCORA
-    # ---------------------------------------------------
     st.write("### Cargar archivo de bitácora (formato XLSX recomendado)")
     archivo = st.file_uploader(
-        "Sube SOLO el archivo de bitácora diaria",
+        "Sube el archivo de bitácora",
         type=["xls", "xlsx"]
     )
 
-    if archivo:
-        with open(ARCHIVO_BITACORA, "wb") as f:
-            f.write(archivo.read())
-        st.success("✅ Bitácora actualizada y compartida")
-
-    if not os.path.exists(ARCHIVO_BITACORA):
-        st.info("ℹ️ Sube una bitácora para iniciar el análisis.")
+    if archivo is None:
+        st.info("ℹ️ Carga un archivo de bitácora para iniciar el análisis.")
         st.stop()
 
-    # ---------------------------------------------------
-    # LECTURA Y NORMALIZACIÓN
-    # ---------------------------------------------------
-    df_bitacora = pd.read_excel(ARCHIVO_BITACORA)
-    df_bitacora.columns = df_bitacora.columns.str.strip().str.lower()
+    import datetime
 
-    st.write("📄 Vista previa de la bitácora")
-    st.dataframe(df_bitacora.head(), use_container_width=True)
-
-    # ---------------------------------------------------
-    # FUNCIONES
-    # ---------------------------------------------------
+    # ===================================================
+    # FUNCIONES UTILITARIAS
+    # ===================================================
     def parse_hora(valor):
         try:
             return pd.to_datetime(valor, format="%H:%M").time()
         except:
+            try:
+                return pd.to_datetime(str(valor)).time()
+            except:
+                return None
+
+    def parse_tiempo_tarea(valor):
+        try:
+            return pd.to_timedelta(str(valor))
+        except:
             return pd.NaT
 
-    # ---------------------------------------------------
-    # VALIDAR COLUMNAS NECESARIAS
-    # ---------------------------------------------------
-    columnas_necesarias = [
-        "fecha de ejecucion", "hora inicio", "hora final",
-        "inspector", "localidad", "cierre", "tiempo de tarea"
+    def hora_to_decimal(hora):
+        if hora is None:
+            return None
+        return hora.hour + hora.minute / 60 + hora.second / 3600
+
+    def decimal_to_hora(decimal):
+        if decimal is None or pd.isna(decimal):
+            return None
+        h = int(decimal)
+        m = int((decimal - h) * 60)
+        return datetime.time(h, m)
+
+    def hora_to_string(hora):
+        return hora.strftime("%I:%M %p") if hora else "—"
+
+    def td_to_str(td):
+        if pd.isna(td):
+            return "—"
+        s = int(td.total_seconds())
+        h, m = divmod(s // 60, 60)
+        return f"{h}h {m}m" if h > 0 else f"{m}m"
+
+    # ===================================================
+    # CARGA Y NORMALIZACIÓN
+    # ===================================================
+    df_bitacora = pd.read_excel(archivo)
+    df_bitacora.columns = df_bitacora.columns.str.strip().str.lower()
+
+    columnas_requeridas = [
+        "fecha de ejecucion","hora inicio","hora final",
+        "inspector","localidad","cierre","tiempo de tarea"
     ]
 
-    for col in columnas_necesarias:
+    for col in columnas_requeridas:
         if col not in df_bitacora.columns:
             st.error(f"❌ Falta la columna: {col}")
             st.stop()
 
-    # ---------------------------------------------------
-    # CONVERTIR COLUMNAS
-    # ---------------------------------------------------
+    df_bitacora["inspector"] = (
+        df_bitacora["inspector"]
+        .astype(str).str.upper().str.strip()
+    )
+
+    df_bitacora["localidad"] = (
+        df_bitacora["localidad"]
+        .astype(str).str.upper().str.strip()
+    )
+
     df_bitacora["fecha"] = pd.to_datetime(
         df_bitacora["fecha de ejecucion"], errors="coerce"
     ).dt.date
 
     df_bitacora["hora_inicio"] = df_bitacora["hora inicio"].apply(parse_hora)
     df_bitacora["hora_final"] = df_bitacora["hora final"].apply(parse_hora)
-    df_bitacora["inspector"] = df_bitacora["inspector"].astype(str).str.strip()
-
-    df_bitacora = df_bitacora.dropna(
-        subset=["hora_inicio", "hora_final"]
+    df_bitacora["tiempo_tarea_td"] = (
+        df_bitacora["tiempo de tarea"].apply(parse_tiempo_tarea)
     )
 
-    # ---------------------------------------------------
+    df_bitacora["hora_inicio"] = (
+        df_bitacora["hora_inicio"].apply(lambda x: x if x else "SIN HORA")
+    )
+
+    # ===================================================
     # SUPERVISORES
-    # ---------------------------------------------------
+    # ===================================================
     supervisores_dict = {
         "ARIZA MARIN SERGIO": "ANDRES ARROYAVE",
         "BEDOYA DIEGO ALEJANDRO": "DANNY DE LA CRUZ",
@@ -354,32 +381,124 @@ with tab2:
         .fillna("SIN SUPERVISOR")
     )
 
-    # ---------------------------------------------------
-    # PRIMERA Y ÚLTIMA HORA DEL DÍA
-    # ---------------------------------------------------
+    # ===================================================
+    # FILTROS
+    # ===================================================
+    fechas = sorted(df_bitacora["fecha"].dropna().unique())
+    fecha_sel = st.selectbox("Selecciona fecha", fechas)
+
+    df2 = df_bitacora[df_bitacora["fecha"] == fecha_sel]
+
+    supervisor_sel = st.selectbox(
+        "Selecciona supervisor",
+        sorted(df2["supervisor"].unique())
+    )
+
+    df2 = df2[df2["supervisor"] == supervisor_sel]
+
+    inspectores_disponibles = sorted(df2["inspector"].unique())
+    inspectores_sel = st.multiselect(
+        "Selecciona inspectores",
+        inspectores_disponibles,
+        default=inspectores_disponibles
+    )
+
+    df2 = df2[df2["inspector"].isin(inspectores_sel)]
+
+    # ===================================================
+    # AGRUPACIÓN DIARIA
+    # ===================================================
     primeras = (
-        df_bitacora.sort_values("hora_inicio")
-        .groupby(["inspector", "fecha"], as_index=False)
-        .first()[["inspector", "supervisor", "fecha", "hora_inicio"]]
+        df2.sort_values("hora_inicio")
+           .groupby(["inspector","fecha"], as_index=False)
+           .first()[["inspector","supervisor","fecha","hora_inicio","localidad"]]
     )
 
     ultimas = (
-        df_bitacora.sort_values("hora_final")
-        .groupby(["inspector", "fecha"], as_index=False)
-        .last()[["inspector", "fecha", "hora_final"]]
+        df2.sort_values("hora_final")
+           .groupby(["inspector","fecha"], as_index=False)
+           .last()[["inspector","fecha","hora_final"]]
     )
 
     df_agrupado = primeras.merge(
         ultimas,
-        on=["inspector", "fecha"],
+        on=["inspector","fecha"],
         how="left"
     )
 
-    # ---------------------------------------------------
-    # RESULTADO FINAL
-    # ---------------------------------------------------
-    st.markdown("### 📊 Resumen diario por inspector")
+    # ===================================================
+    # PUNTUALIDAD
+    # ===================================================
+    hora_oficial = datetime.time(7, 30)
+
+    def mins_tarde(h):
+        if h == "SIN HORA" or h is None:
+            return None
+        h1 = datetime.datetime.combine(datetime.date.today(), h)
+        h2 = datetime.datetime.combine(datetime.date.today(), hora_oficial)
+        return int((h1 - h2).total_seconds() / 60)
+
+    df_agrupado["minutos_tarde"] = df_agrupado["hora_inicio"].apply(mins_tarde)
+
+    def estado(m):
+        if m is None:
+            return "SIN INICIO"
+        if m <= 0:
+            return "Puntual"
+        if m <= 15:
+            return "Tarde"
+        return "Muy tarde"
+
+    df_agrupado["estado"] = df_agrupado["minutos_tarde"].apply(estado)
+
+    # ===================================================
+    # PRODUCCIÓN
+    # ===================================================
+    valores_efectivos = [
+        "INSPECCIONADA",
+        "INSPECCIONADA CON DEFECTO NO CRITICO",
+        "INSPECCIONADA CON DEFECTO CRITICO",
+        "CERTIFICADA",
+        "CERTIFICADA CON NOVEDAD"
+    ]
+
+    df2["efectiva"] = df2["cierre"].isin(valores_efectivos)
+
+    total_ordenes = df2.shape[0]
+    total_efectivas = df2[df2["efectiva"]].shape[0]
+    porcentaje = round((total_efectivas / total_ordenes) * 100, 1) if total_ordenes else 0
+
+    # ===================================================
+    # TIEMPO PROMEDIO EFECTIVAS
+    # ===================================================
+    df_eff = df2[
+        (df2["efectiva"]) &
+        (df2["tiempo_tarea_td"].notna())
+    ]
+
+    tiempo_promedio = (
+        td_to_str(df_eff["tiempo_tarea_td"].mean())
+        if not df_eff.empty else "—"
+    )
+
+    # ===================================================
+    # KPIs
+    # ===================================================
+    st.markdown("## ⭐ KPIs del día")
+
+    c1, c2, c3 = st.columns(3)
+    c1.metric("📋 Tareas", total_ordenes)
+    c2.metric("✅ Efectivas", total_efectivas)
+    c3.metric("📈 % Efectividad", f"{porcentaje}%")
+
+    st.metric("🕓 Tiempo prom. tarea efectiva", tiempo_promedio)
+
+    # ===================================================
+    # TABLA FINAL
+    # ===================================================
+    st.markdown("### Tabla de inspecciones del día")
     st.dataframe(df_agrupado, use_container_width=True)
+
 
 # ---------------------------------------------------
 # ✅ PESTAÑA 3: GRÁFICAS GENERALES
