@@ -176,8 +176,8 @@ with tab2:
 
         # -----------------------------------------------------
         # 4. Mapeo de supervisores actualizado
-        # -----------------------------------------------------
-        supervisores_dict = {
+
+    supervisores_dict = {
             "ARIZA MARIN SERGIO": "ANDRES ARROYAVE",
             "ANDRES ARROYAVE": "ANDRES ARROYAVE",
             "BEDOYA DIEGO ALEJANDRO": "DANNY DE LA CRUZ",
