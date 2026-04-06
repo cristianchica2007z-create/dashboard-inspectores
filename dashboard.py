@@ -117,12 +117,7 @@ inspectores_lista = [
 ]
 
 
-# ---------------------------------------------------
-# ✅ TAB 1 — INVENTARIO DE PAPELERÍA (FINAL DEFINITIVO)
-# ---------------------------------------------------
-# ---------------------------------------------------
-# ✅ TAB 1 — INVENTARIO DE PAPELERÍA (FINAL)
-# ---------------------------------------------------
+
 # ---------------------------------------------------
 # ✅ TAB 1 — INVENTARIO DE PAPELERÍA (FINAL ESTABLE)
 # ---------------------------------------------------
@@ -319,177 +314,202 @@ with tab1:
 # -----------------------------------------------------
 # -----------------------------------------------------
 # -----------------------------------------------------
-# ✅ PESTAÑA 2: SEGUIMIENTO DIARIO — VERSIÓN FINAL
+# -----------------------------------------------------
+# ✅ PESTAÑA 2: SEGUIMIENTO DIARIO — VERSIÓN FINAL (BITACORA COMPARTIDA)
 # -----------------------------------------------------
 
 with tab2:
     st.subheader("Control de horario de inspectores")
 
-    st.write("### Cargar archivo de bitácora (formato XLSX recomendado)")
-    archivo = st.file_uploader("Sube el archivo de bitácora", type=["xls", "xlsx"])
+    ARCHIVO_BITACORA = "BITACORA.xlsx"
 
-    if archivo:
+    st.write(
+        "### Cargar archivo de bitácora diaria (archivo compartido) \n"
+        "Cuando se actualiza, todos los usuarios verán la nueva información."
+    )
 
-        import numpy as np
-        import datetime
+    archivo = st.file_uploader(
+        "Sube el archivo de bitácora",
+        type=["xls", "xlsx"],
+        key="bitacora_tab2"
+    )
 
-        # -----------------------------------------------------
-        # Funciones utilitarias
-        # -----------------------------------------------------
-        def hora_to_decimal(hora):
-            if hora == "SIN HORA" or hora is None:
-                return None
-            return hora.hour + hora.minute/60 + hora.second/3600
+    # -----------------------------------------------------
+    # ✅ GUARDAR Y REEMPLAZAR BITACORA.xlsx
+    # -----------------------------------------------------
+    if archivo is not None:
+        with open(ARCHIVO_BITACORA, "wb") as f:
+            f.write(archivo.read())
 
-        def decimal_to_hora(decimal):
-            if decimal is None or pd.isna(decimal):
-                return None
-            h = int(decimal)
-            m = int((decimal - h) * 60)
-            s = int((((decimal - h) * 60) - m) * 60)
-            return datetime.time(h, m, s)
+        subir_a_github(ARCHIVO_BITACORA)
+        st.success("✅ Archivo BITACORA.xlsx actualizado y compartido correctamente")
 
-        def hora_to_string(hora):
-            if hora is None:
-                return "—"
-            return hora.strftime("%I:%M %p")
+    # -----------------------------------------------------
+    # ✅ CARGAR SIEMPRE DESDE BITACORA.xlsx
+    # -----------------------------------------------------
+    if not os.path.exists(ARCHIVO_BITACORA):
+        st.warning("⚠️ Aún no se ha cargado ningún archivo de bitácora.")
+        st.stop()
 
-        def parse_hora(valor):
+    df = pd.read_excel(ARCHIVO_BITACORA)
+    st.caption("📁 Usando archivo compartido actual: BITACORA.xlsx")
+
+    import numpy as np
+    import datetime
+
+    # -----------------------------------------------------
+    # Funciones utilitarias
+    # -----------------------------------------------------
+    def hora_to_decimal(hora):
+        if hora == "SIN HORA" or hora is None:
+            return None
+        return hora.hour + hora.minute/60 + hora.second/3600
+
+    def decimal_to_hora(decimal):
+        if decimal is None or pd.isna(decimal):
+            return None
+        h = int(decimal)
+        m = int((decimal - h) * 60)
+        s = int((((decimal - h) * 60) - m) * 60)
+        return datetime.time(h, m, s)
+
+    def hora_to_string(hora):
+        if hora is None:
+            return "—"
+        return hora.strftime("%I:%M %p")
+
+    def parse_hora(valor):
+        try:
+            return pd.to_datetime(valor, format="%H:%M").time()
+        except:
             try:
-                return pd.to_datetime(valor, format="%H:%M").time()
+                return pd.to_datetime(str(valor)).time()
             except:
-                try:
-                    return pd.to_datetime(str(valor)).time()
-                except:
-                    return None
+                return None
 
-        def parse_tiempo_tarea(valor):
-            try:
-                return pd.to_timedelta(str(valor))
-            except:
-                return pd.NaT
+    def parse_tiempo_tarea(valor):
+        try:
+            return pd.to_timedelta(str(valor))
+        except:
+            return pd.NaT
 
-        def td_to_str(td):
-            if pd.isna(td):
-                return "—"
-            s = int(td.total_seconds())
-            h = s // 3600
-            m = (s % 3600) // 60
-            s2 = s % 60
-            return f"{h}h {m}m {s2}s" if h > 0 else f"{m}m {s2}s"
+    def td_to_str(td):
+        if pd.isna(td):
+            return "—"
+        s = int(td.total_seconds())
+        h = s // 3600
+        m = (s % 3600) // 60
+        s2 = s % 60
+        return f"{h}h {m}m {s2}s" if h > 0 else f"{m}m {s2}s"
 
-        # -----------------------------------------------------
-        # 1. Cargar archivo
-        # -----------------------------------------------------
-        df = pd.read_excel(archivo)
+    # -----------------------------------------------------
+    # Normalizar columnas
+    # -----------------------------------------------------
+    df.columns = df.columns.str.strip().str.lower()
 
-        # -----------------------------------------------------
-        # 2. Normalizar columnas
-        # -----------------------------------------------------
-        df.columns = df.columns.str.strip().str.lower()
+    columnas = [
+        "fecha de ejecucion","hora inicio","hora final",
+        "inspector","localidad","cierre","tiempo de tarea"
+    ]
+    for col in columnas:
+        if col not in df.columns:
+            st.error(f"❌ Falta la columna: {col}")
+            st.stop()
 
-        columnas = [
-            "fecha de ejecucion","hora inicio","hora final",
-            "inspector","localidad","cierre","tiempo de tarea"
-        ]
-        for col in columnas:
-            if col not in df.columns:
-                st.error(f"❌ Falta la columna: {col}")
-                st.stop()
+    # -----------------------------------------------------
+    # Normalizar nombres
+    # -----------------------------------------------------
+    df["inspector"] = (
+        df["inspector"]
+        .astype(str)
+        .str.upper()
+        .str.strip()
+        .str.replace(r"\s+", " ", regex=True)
+    )
 
-        # -----------------------------------------------------
-        # NORMALIZAR NOMBRES (alto nivel)
-        # -----------------------------------------------------
-        df["inspector"] = (
-            df["inspector"]
-            .astype(str)
-            .str.upper()
-            .str.strip()
-            .str.replace(r"\s+", " ", regex=True)
-        )
+    df["localidad"] = (
+        df["localidad"]
+        .astype(str)
+        .str.upper()
+        .str.strip()
+    )
 
-        df["localidad"] = (
-            df["localidad"]
-            .astype(str)
-            .str.upper()
-            .str.strip()
-        )
+    # -----------------------------------------------------
+    # Convertir horas y fechas
+    # -----------------------------------------------------
+    df["fecha"] = pd.to_datetime(df["fecha de ejecucion"], errors="coerce").dt.date
+    df["hora_inicio"] = df["hora inicio"].apply(parse_hora)
+    df["hora_final"] = df["hora final"].apply(parse_hora)
+    df["tiempo_tarea_td"] = df["tiempo de tarea"].apply(parse_tiempo_tarea)
 
-        # -----------------------------------------------------
-        # Convertir horas y fechas
-        # -----------------------------------------------------
-        df["fecha"] = pd.to_datetime(df["fecha de ejecucion"], errors="coerce").dt.date
-        df["hora_inicio"] = df["hora inicio"].apply(parse_hora)
-        df["hora_final"] = df["hora final"].apply(parse_hora)
-        df["tiempo_tarea_td"] = df["tiempo de tarea"].apply(parse_tiempo_tarea)
+    df["hora_inicio"] = df["hora_inicio"].apply(
+        lambda x: x if pd.notna(x) else "SIN HORA"
+    )
 
-        # ✅ NO eliminar filas sin hora — asignar SIN HORA
-        df["hora_inicio"] = df["hora_inicio"].apply(lambda x: x if pd.notna(x) else "SIN HORA")
+    # -----------------------------------------------------
+    # Mapeo de supervisores
+    # -----------------------------------------------------
+    supervisores_dict = {
+        "ARIZA MARIN SERGIO": "ANDRES ARROYAVE",
+        "ANDRES ARROYAVE": "ANDRES ARROYAVE",
+        "BEDOYA DIEGO ALEJANDRO": "DANNY DE LA CRUZ",
+        "DANNY DE LA CRUZ": "DANNY DE LA CRUZ",
+        "CARVAJAL RESTREPO JUAN DAVID": "JANIER MARIN",
+        "JANIER MARIN": "JANIER MARIN",
+        "CHAVARRIAGA JUAN MANUEL": "CRISTIAN CHICA",
+        "CRISTIAN CHICA": "CRISTIAN CHICA",
+        "ECHEVERRY CARDONA JHON STIVEN": "JANIER MARIN",
+        "GALLEGO CADAVID NORBEY": "DANNY DE LA CRUZ",
+        "GIRALDO GARCIA SIGIFREDO": "ANDRES ARROYAVE",
+        "LOPEZ PINEDA CESAR AUGUSTO": "JANIER MARIN",
+        "NOREÑA GIRALDO GEOVANNY": "ANDRES ARROYAVE",
+        "OSPINA CASTELLANOS ANDERSON": "CRISTIAN CHICA",
+        "OSPINA RODRIGUEZ DANIEL ALBERTO": "ANDRES ARROYAVE",
+        "RUIZ DILON MARLON ANDREY": "ANDRES ARROYAVE",
+        "LARGO OSORIO JOSE OMAR": "ANDRES ARROYAVE",
+        "PULGARIN QUINTERO JULIAN ANDRES": "DANNY DE LA CRUZ",
+        "TAYACK TRUJILLO DEIVER EVELIO": "ANDRES ARROYAVE",
+        "RUIZ ARENAS JUAN CAMILO": "CRISTIAN CHICA",
+        "PATIÑO CIFUENTES RICARDO": "JANIER MARIN",
+        "VARGAS FRANCO JHON EDISON": "CRISTIAN CHICA",
+        "CARDONA CANO NELSON": "CRISTIAN CHICA",
+        "CARDONA OROZCO JULIAN ANDRES": "ANDRES ARROYAVE",
+        "GRISALES CUERVO JUAN DAVID": "JANIER MARIN",
+        "LEON MARIN LEONARDO FABIO": "JANIER MARIN",
+        "VELASQUEZ TAPASCO JHON DIEGO": "ANDRES ARROYAVE",
+        "CARDONA CASTANO DIDIER ORLANDO": "CRISTIAN CHICA",
+        "TORRES HERNANDEZ JOHN JAMES": "ANDRES ARROYAVE",
+        "COBO HOYOS JUAN MANUEL": "CRISTIAN CHICA",
+        "OSPINA NARANJO BERNARDO": "CRISTIAN CHICA",
+        "COGOLLO FIGUEROA RANDY": "DANNY DE LA CRUZ",
+        "ARIAS TORO YEISON": "DANNY DE LA CRUZ",
+        "MIRANDA FRANCO EFRAIN": "DANNY DE LA CRUZ",
+        "ARDILA MORA GUSTAVO ADOLFO": "DANNY DE LA CRUZ",
+        "LOPEZ VELEZ ESTEBAN": "JANIER MARIN",
+        "GALEANO GRISALEZ RICARDO": "DANNY DE LA CRUZ",
+        "CAICEDO ESCOBAR JUNIOR SANTIAGO": "JANIER MARIN",
+        "OTERO CAICEDO ANYEMBER": "DANNY DE LA CRUZ",
+        "BUITRAGO RAMIREZ LEONARD": "CRISTIAN CHICA",
+        "BORJAS WILLY ALEXANDER": "ANDRES ARROYAVE",
+        "MARIN LEON JAISSON JOAQUIN": "CRISTIAN CHICA",
+        "AMAYA HINCAPIE JUAN CARLOS": "CRISTIAN CHICA",
+        "BEDOYA SANCHEZ CRISTIAN DAVID": "ANDRES ARROYAVE",
+        "RAMIREZ WILSON ENRIQUE": "CRISTIAN CHICA",
+        "CANO MORALES JIMY ALFREDO": "ANDRES ARROYAVE",
+        "CASTRO CASTAÑO JUAN DAVID": "CRISTIAN CHICA",
+        "LOAIZA GAMBA JHON ALEXANDER": "ANDRES ARROYAVE",
+        "VILLA LOAIZA JHEISON ESTIBEN": "CRISTIAN CHICA",
+        "CÁRDENAS GALIANO HAROLD MAURICIO": "JANIER MARIN",
+        "VARGAS CORREA VICTOR ALFONSO": "DANNY DE LA CRUZ",
+        "VILLA MERA CHRISTIAN DAVID": "JANIER MARIN",
+        "AVENDAÑO GARCIA JUAN NEPOMUCENO": "ANDRES ARROYAVE",
+        "PELAEZ TATIS GABRIEL ESTEBAN": "CRISTIAN CHICA",
+    }
 
-        # -----------------------------------------------------
-        # Mapeo de supervisores (normalizado)
-        # -----------------------------------------------------
-        supervisores_dict = {
-            "ARIZA MARIN SERGIO": "ANDRES ARROYAVE",
-            "ANDRES ARROYAVE": "ANDRES ARROYAVE",
-            "BEDOYA DIEGO ALEJANDRO": "DANNY DE LA CRUZ",
-            "DANNY DE LA CRUZ": "DANNY DE LA CRUZ",
-            "CARVAJAL RESTREPO JUAN DAVID": "JANIER MARIN",
-            "JANIER MARIN": "JANIER MARIN",
-            "CHAVARRIAGA JUAN MANUEL": "CRISTIAN CHICA",
-            "CRISTIAN CHICA": "CRISTIAN CHICA",
-            "ECHEVERRY CARDONA JHON STIVEN": "JANIER MARIN",
-            "GALLEGO CADAVID NORBEY": "DANNY DE LA CRUZ",
-            "GIRALDO GARCIA SIGIFREDO": "ANDRES ARROYAVE",
-            "LOPEZ PINEDA CESAR AUGUSTO": "JANIER MARIN",
-            "NOREÑA GIRALDO GEOVANNY": "ANDRES ARROYAVE",
-            "OSPINA CASTELLANOS ANDERSON": "CRISTIAN CHICA",
-            "OSPINA RODRIGUEZ DANIEL ALBERTO": "ANDRES ARROYAVE",
-            "RUIZ DILON MARLON ANDREY": "ANDRES ARROYAVE",
-            "LARGO OSORIO JOSE OMAR": "ANDRES ARROYAVE",
-            "PULGARIN QUINTERO JULIAN ANDRES": "DANNY DE LA CRUZ",
-            "TAYACK TRUJILLO DEIVER EVELIO": "ANDRES ARROYAVE",
-            "RUIZ ARENAS JUAN CAMILO": "CRISTIAN CHICA",
-            "PATIÑO CIFUENTES RICARDO": "JANIER MARIN",
-            "VARGAS FRANCO JHON EDISON": "CRISTIAN CHICA",
-            "CARDONA CANO NELSON": "CRISTIAN CHICA",
-            "CARDONA OROZCO JULIAN ANDRES": "ANDRES ARROYAVE",
-            "GRISALES CUERVO JUAN DAVID": "JANIER MARIN",
-            "LEON MARIN LEONARDO FABIO": "JANIER MARIN",
-            "VELASQUEZ TAPASCO JHON DIEGO": "ANDRES ARROYAVE",
-            "CARDONA CASTANO DIDIER ORLANDO": "CRISTIAN CHICA",
-            "TORRES HERNANDEZ JOHN JAMES": "ANDRES ARROYAVE",
-            "COBO HOYOS JUAN MANUEL": "CRISTIAN CHICA",
-            "OSPINA NARANJO BERNARDO": "CRISTIAN CHICA",
-            "COGOLLO FIGUEROA RANDY": "DANNY DE LA CRUZ",
-            "ARIAS TORO YEISON": "DANNY DE LA CRUZ",
-            "MIRANDA FRANCO EFRAIN": "DANNY DE LA CRUZ",
-            "ARDILA MORA GUSTAVO ADOLFO": "DANNY DE LA CRUZ",
-            "LOPEZ VELEZ ESTEBAN": "JANIER MARIN",
-            "GALEANO GRISALEZ RICARDO": "DANNY DE LA CRUZ",
-            "CAICEDO ESCOBAR JUNIOR SANTIAGO": "JANIER MARIN",
-            "OTERO CAICEDO ANYEMBER": "DANNY DE LA CRUZ",
-            "BUITRAGO RAMIREZ LEONARD": "CRISTIAN CHICA",
-            "BORJAS WILLY ALEXANDER": "ANDRES ARROYAVE",
-            "MARIN LEON JAISSON JOAQUIN": "CRISTIAN CHICA",
-            "AMAYA HINCAPIE JUAN CARLOS": "CRISTIAN CHICA",
-            "BEDOYA SANCHEZ CRISTIAN DAVID": "ANDRES ARROYAVE",
-            "RAMIREZ WILSON ENRIQUE": "CRISTIAN CHICA",
-            "CANO MORALES JIMY ALFREDO": "ANDRES ARROYAVE",
-            "CASTRO CASTAÑO JUAN DAVID": "CRISTIAN CHICA",
-            "LOAIZA GAMBA JHON ALEXANDER": "ANDRES ARROYAVE",
-            "VILLA LOAIZA JHEISON ESTIBEN": "CRISTIAN CHICA",
-            "CÁRDENAS GALIANO HAROLD MAURICIO": "JANIER MARIN",
-            "VARGAS CORREA VICTOR ALFONSO": "DANNY DE LA CRUZ",
-            "VILLA MERA CHRISTIAN DAVID": "JANIER MARIN",
-            "AVENDAÑO GARCIA JUAN NEPOMUCENO": "ANDRES ARROYAVE",
-            "PELAEZ TATIS GABRIEL ESTEBAN": "CRISTIAN CHICA",
-        }
+    supervisores_dict = {k.upper(): v for k,v in supervisores_dict.items()}
+    df["supervisor"] = df["inspector"].map(supervisores_dict).fillna("SIN SUPERVISOR")
 
-        supervisores_dict = {k.upper(): v for k,v in supervisores_dict.items()}
-        df["supervisor"] = df["inspector"].map(supervisores_dict).fillna("SIN SUPERVISOR")
-
-        # -----------------------------------------------------
+  # -----------------------------------------------------
         # FILTRO FECHA
         # -----------------------------------------------------
         fechas_validas = sorted(df["fecha"].dropna().unique())
