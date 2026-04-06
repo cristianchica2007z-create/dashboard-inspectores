@@ -109,7 +109,7 @@ with tab2:
 
     # -----------------------------------------------------
     # FUNCIONES UTILITARIAS (bien alineadas)
-    # -----------------------------------------------------
+
     def hora_to_decimal(hora):
         return hora.hour + hora.minute / 60 + hora.second / 3600
 
