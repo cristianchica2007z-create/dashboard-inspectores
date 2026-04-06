@@ -69,169 +69,139 @@ tab1, tab2, tab3 = st.tabs([
 
 # ---------------------------------------------------
 # ---------------------------------------------------
-# ---------------------------------------------------
-# ✅ PESTAÑA 1: INVENTARIO DE PAPELERÍA
-# ---------------------------------------------------
-
-# ---------------------------------------------------
-# ✅ TAB 1 — INVENTARIO DE PAPELERÍA (FINAL ESTABLE)
-# ---------------------------------------------------
+# ===================================================
+# ✅ TAB 1 — INVENTARIO DE PAPELERÍA (VERSIÓN ESTABLE)
+# ===================================================
 with tab1:
     st.subheader("📦 Control de entrega de papelería e inventario")
+
     archivo_inventario = "inventario.xlsx"
-    # Crear archivo si no existe
+
+    # -------------------------------------------------
+    # CREAR / LEER INVENTARIO
+    # -------------------------------------------------
     if not os.path.exists(archivo_inventario):
-        df_init = pd.DataFrame(columns=[
+        df_inv = pd.DataFrame(columns=[
             "Fecha", "Sede", "Inspector",
             "Responsable", "Observación", "Ítems"
         ])
-        df_init.to_excel(archivo_inventario, index=False, engine="openpyxl")
-    df_inv = pd.read_excel(archivo_inventario, engine="openpyxl")
-    # =================================================
-   # =================================================
-# =================================================
-# ✅ FORMULARIO (SE LIMPIA AL GUARDAR)
-# =================================================
-with st.form("form_entrega", clear_on_submit=True):
-
-    st.markdown("### Registrar entrega")
-
-    # -------- DATOS GENERALES --------
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        sede = st.selectbox(
-            "Sede",
-            ["CALDAS", "RISARALDA"],
-            key="form_sede"
-        )
-
-    with col2:
-        inspector = st.selectbox(
-            "Inspector",
-            inspectores_lista,
-            key="form_inspector"
-        )
-
-    with col3:
-        fecha = st.date_input(
-            "Fecha",
-            key="form_fecha"
-        )
-
-    col4, col5 = st.columns([1, 2])
-
-    with col4:
-        responsable = st.selectbox(
-            "Responsable",
-            [
-                "JUAN DIEGO SANCHEZ",
-                "CRISTIAN CHICA",
-                "ANDRES ARROYAVE",
-                "MARIA CAMILA",
-                "JANIER",
-                "DANNY DE LA CRUZ"
-            ],
-            key="form_responsable"
-        )
-
-    with col5:
-        observacion = st.text_input(
-            "Observación (opcional)",
-            key="form_obs"
-        )
-
-    # -------- ÍTEMS --------
-    st.markdown("### Ítems entregados")
-
-    items_def = [
-        "Stickers 🔵", "Cepo 🔒", "Guantes 🧤", "Piernera 🦿",
-        "Monogafas 🥽", "Llaves de cepo 🗝️", "Formatos 📄",
-        "Sellos 🕹️", "Papelería general 📦"
-    ]
-
-    items_seleccionados = []
-
-    filas = [items_def[i:i+4] for i in range(0, len(items_def), 4)]
-
-    for f_idx, fila in enumerate(filas):
-        cols = st.columns(4)
-        for c_idx, item in enumerate(fila):
-
-            marcar = cols[c_idx].checkbox(
-                item,
-                key=f"chk_{f_idx}_{c_idx}"
-            )
-
-            cantidad = cols[c_idx].number_input(
-                "Cantidad",
-                min_value=0,
-                step=1,
-                label_visibility="collapsed",
-                key=f"qty_{f_idx}_{c_idx}"
-            )
-
-            if marcar and cantidad > 0:
-                items_seleccionados.append(f"{item} x{cantidad}")
-
-    # ✅ BOTÓN OBLIGATORIO Y DENTRO DEL FORMULARIO
-    submitted = st.form_submit_button("✅ Guardar entrega")
-
-
-    # =================================================
-# =================================================
-# ✅ GUARDAR ENTREGA
-# =================================================
-if submitted:
-    if not items_seleccionados:
-        st.warning("⚠️ Debes seleccionar al menos un ítem con cantidad.")
-    else:
-        nueva_fila = pd.DataFrame({
-            "Fecha": [fecha.strftime("%Y-%m-%d")],
-            "Sede": [sede],
-            "Inspector": [inspector],
-            "Responsable": [responsable],
-            "Observación": [observacion],
-            "Ítems": [", ".join(items_seleccionados)]
-        })
-
-        df_inv = pd.concat([df_inv, nueva_fila], ignore_index=True)
         df_inv.to_excel(archivo_inventario, index=False, engine="openpyxl")
+    else:
+        df_inv = pd.read_excel(archivo_inventario, engine="openpyxl")
 
-        st.success("✅ Entrega registrada correctamente")
+    # Normalizar columnas (blindaje)
+    df_inv.columns = df_inv.columns.str.strip()
+
     # =================================================
- # =================================================
-# ✅ HISTORIAL DE ENTREGAS
-# =================================================
-st.markdown("### 📋 Historial de entregas")
+    # ✅ FORMULARIO DE ENTREGA
+    # =================================================
+    with st.form("form_entrega", clear_on_submit=True):
+        st.markdown("### Registrar entrega")
 
-filtro_inspector = st.selectbox(
-    "Filtrar por inspector",
-    ["TODOS"] + inspectores_lista
-)
+        # ----- Datos generales -----
+        col1, col2, col3 = st.columns(3)
 
-# ✅ df_hist SIEMPRE se crea aquí
-df_hist = df_inv.copy()
+        with col1:
+            sede = st.selectbox("Sede", ["CALDAS", "RISARALDA"])
 
-if filtro_inspector != "TODOS":
-    df_hist = df_hist[df_hist["Inspector"] == filtro_inspector]
+        with col2:
+            inspector = st.selectbox("Inspector", inspectores_lista)
 
-st.dataframe(
-    df_hist,
-    use_container_width=True
-)
+        with col3:
+            fecha = st.date_input("Fecha")
 
-# =================================================
-# ✅ GUARDAR CAMBIOS DEL HISTORIAL
-# (GUARDA EL INVENTARIO COMPLETO)
-# =================================================
-if st.button("💾 Guardar cambios del historial"):
-    df_inv.to_excel(
-        archivo_inventario,
-        index=False,
-        engine="openpyxl"
+        col4, col5 = st.columns([1, 2])
+
+        with col4:
+            responsable = st.selectbox(
+                "Responsable",
+                [
+                    "JUAN DIEGO SANCHEZ",
+                    "CRISTIAN CHICA",
+                    "ANDRES ARROYAVE",
+                    "MARIA CAMILA",
+                    "JANIER",
+                    "DANNY DE LA CRUZ"
+                ]
+            )
+
+        with col5:
+            observacion = st.text_input("Observación (opcional)")
+
+        # ----- Ítems -----
+        st.markdown("### Ítems entregados")
+
+        items_def = [
+            "Stickers 🔵", "Cepo 🔒", "Guantes 🧤", "Piernera 🦿",
+            "Monogafas 🥽", "Llaves de cepo 🗝️", "Formatos 📄",
+            "Sellos 🕹️", "Papelería general 📦"
+        ]
+
+        items_seleccionados = []
+
+        filas = [items_def[i:i+4] for i in range(0, len(items_def), 4)]
+
+        for fila in filas:
+            cols = st.columns(4)
+            for col, item in zip(cols, fila):
+                marcar = col.checkbox(item)
+                cantidad = col.number_input(
+                    "Cantidad", min_value=0, step=1,
+                    label_visibility="collapsed"
+                )
+
+                if marcar and cantidad > 0:
+                    items_seleccionados.append(f"{item} x{cantidad}")
+
+        submitted = st.form_submit_button("✅ Guardar entrega")
+
+    # =================================================
+    # ✅ GUARDAR ENTREGA
+    # =================================================
+    if submitted:
+        if not items_seleccionados:
+            st.warning("⚠️ Debes seleccionar al menos un ítem con cantidad.")
+        else:
+            nueva_fila = pd.DataFrame([{
+                "Fecha": fecha.strftime("%Y-%m-%d"),
+                "Sede": sede,
+                "Inspector": inspector,
+                "Responsable": responsable,
+                "Observación": observacion,
+                "Ítems": ", ".join(items_seleccionados)
+            }])
+
+            df_inv = pd.concat([df_inv, nueva_fila], ignore_index=True)
+            df_inv.to_excel(archivo_inventario, index=False, engine="openpyxl")
+
+            st.success("✅ Entrega registrada correctamente")
+
+    # =================================================
+    # ✅ HISTORIAL DE ENTREGAS
+    # =================================================
+    st.markdown("### 📋 Historial de entregas")
+
+    filtro_inspector = st.selectbox(
+        "Filtrar por inspector",
+        ["TODOS"] + inspectores_lista
     )
-    st.success("✅ Cambios del historial guardados")
+
+    df_hist = df_inv.copy()
+    if filtro_inspector != "TODOS":
+        df_hist = df_hist[df_hist["Inspector"] == filtro_inspector]
+
+    st.dataframe(df_hist, use_container_width=True)
+
+    # =================================================
+    # ✅ GUARDAR HISTORIAL
+    # =================================================
+    if st.button("💾 Guardar cambios del historial"):
+        df_inv.to_excel(
+            archivo_inventario,
+            index=False,
+            engine="openpyxl"
+        )
+        st.success("✅ Cambios del historial guardados")
     # =================================================
     # ✅ RESUMEN MENSUAL CONSOLIDADO
     # =================================================
