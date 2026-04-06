@@ -108,9 +108,7 @@ with tab2:
     df = pd.read_excel(ARCHIVO_BITACORA)
 
 
-        # -----------------------------------------------------
-        # Funciones utilitarias
-        # -----------------------------------------------------
+
         def hora_to_decimal(hora):
             return hora.hour + hora.minute/60 + hora.second/3600
 
