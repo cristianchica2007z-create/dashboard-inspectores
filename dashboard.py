@@ -68,6 +68,7 @@ tab1, tab2, tab3 = st.tabs([
 
 
 # ===================================================
+# ===================================================
 # ✅ TAB 1 — INVENTARIO DE PAPELERÍA (FINAL ESTABLE)
 # ===================================================
 with tab1:
@@ -95,20 +96,15 @@ with tab1:
     with st.form("form_entrega", clear_on_submit=True):
         st.markdown("### Registrar entrega")
 
-        # -------- DATOS GENERALES --------
         col1, col2, col3 = st.columns(3)
-
         with col1:
             sede = st.selectbox("Sede", ["CALDAS", "RISARALDA"], key="inv_sede")
-
         with col2:
             inspector = st.selectbox("Inspector", inspectores_lista, key="inv_inspector")
-
         with col3:
             fecha = st.date_input("Fecha", key="inv_fecha")
 
         col4, col5 = st.columns([1, 2])
-
         with col4:
             responsable = st.selectbox(
                 "Responsable",
@@ -122,13 +118,11 @@ with tab1:
                 ],
                 key="inv_responsable"
             )
-
         with col5:
             observacion = st.text_input("Observación (opcional)", key="inv_obs")
 
         # -------- ÍTEMS --------
         st.markdown("### Ítems entregados")
-
         items_def = [
             "Stickers 🔵", "Cepo 🔒", "Guantes 🧤", "Piernera 🦿",
             "Monogafas 🥽", "Llaves de cepo 🗝️", "Formatos 📄",
@@ -136,17 +130,12 @@ with tab1:
         ]
 
         items_seleccionados = []
-
         filas = [items_def[i:i+4] for i in range(0, len(items_def), 4)]
 
         for f_idx, fila in enumerate(filas):
             cols = st.columns(4)
             for c_idx, item in enumerate(fila):
-                marcar = cols[c_idx].checkbox(
-                    item,
-                    key=f"item_chk_{f_idx}_{c_idx}"
-                )
-
+                marcar = cols[c_idx].checkbox(item, key=f"item_chk_{f_idx}_{c_idx}")
                 cantidad = cols[c_idx].number_input(
                     "Cantidad",
                     min_value=0,
@@ -154,7 +143,6 @@ with tab1:
                     label_visibility="collapsed",
                     key=f"item_qty_{f_idx}_{c_idx}"
                 )
-
                 if marcar and cantidad > 0:
                     items_seleccionados.append(f"{item} x{cantidad}")
 
@@ -175,7 +163,6 @@ with tab1:
                 "Observación": observacion,
                 "Ítems": ", ".join(items_seleccionados)
             }])
-
             df_inv = pd.concat([df_inv, nueva_fila], ignore_index=True)
             df_inv.to_excel(archivo_inventario, index=False, engine="openpyxl")
             st.success("✅ Entrega registrada correctamente")
@@ -197,75 +184,61 @@ with tab1:
 
     st.dataframe(df_hist, use_container_width=True)
 
-    # =================================================
-    # ✅ GUARDAR HISTORIAL
-    # =================================================
     if st.button("💾 Guardar cambios del historial", key="inv_guardar_hist"):
         df_inv.to_excel(archivo_inventario, index=False, engine="openpyxl")
         st.success("✅ Cambios del historial guardados")
+
     # =================================================
-# =================================================
-# =================================================
-# ✅ RESUMEN MENSUAL CONSOLIDADO POR ÍTEM
-# =================================================
-st.markdown("## 📊 Consumo mensual consolidado por ítem")
+    # ✅ CONSUMO MENSUAL CONSOLIDADO POR ÍTEM
+    # ✅ (ESTE BLOQUE DEBE ESTAR DENTRO DE TAB 1)
+    # =================================================
+    st.markdown("## 📊 Consumo mensual consolidado por ítem")
 
-df_cons = df_inv.copy()
+    df_cons = df_inv.copy()
+    df_cons["Fecha"] = pd.to_datetime(df_cons["Fecha"], errors="coerce")
+    df_cons["Mes"] = df_cons["Fecha"].dt.to_period("M").astype(str)
 
-df_cons["Fecha"] = pd.to_datetime(df_cons["Fecha"], errors="coerce")
-df_cons["Mes"] = df_cons["Fecha"].dt.to_period("M").astype(str)
+    registros = []
+    for _, row in df_cons.iterrows():
+        if pd.isna(row["Ítems"]):
+            continue
+        for it in row["Ítems"].split(","):
+            it = it.strip()
+            if " x" in it:
+                nombre, cantidad = it.rsplit(" x", 1)
+                cantidad = int(cantidad)
+            else:
+                nombre = it
+                cantidad = 1
+            registros.append({
+                "Mes": row["Mes"],
+                "Ítem": nombre,
+                "Cantidad": cantidad
+            })
 
-registros = []
+    df_plot = pd.DataFrame(registros)
 
-for _, row in df_cons.iterrows():
-    if pd.isna(row["Ítems"]):
-        continue
+    if not df_plot.empty:
+        df_plot = df_plot.groupby(["Mes", "Ítem"], as_index=False).sum()
+        fig = px.bar(
+            df_plot,
+            x="Mes",
+            y="Cantidad",
+            color="Ítem",
+            barmode="group",
+            text="Cantidad",
+            title="Consumo mensual consolidado por ítem"
+        )
 
-    for it in row["Ítems"].split(","):
-        it = it.strip()
-        if " x" in it:
-            nombre, cantidad = it.rsplit(" x", 1)
-            cantidad = int(cantidad)
-        else:
-            nombre = it
-            cantidad = 1
+        fig.update_traces(textposition="outside")
+        fig.update_layout(
+            xaxis_title="Mes",
+            yaxis_title="Cantidad entregada",
+            legend_title="Ítem"
+        )
 
-        registros.append({
-            "Mes": row["Mes"],
-            "Ítem": nombre,
-            "Cantidad": cantidad
-        })
+        st.plotly_chart(fig, use_container_width=True)
 
-df_plot = pd.DataFrame(registros)
-
-if not df_plot.empty:
-    df_plot = df_plot.groupby(
-        ["Mes", "Ítem"], as_index=False
-    ).sum()
-
-    fig = px.bar(
-        df_plot,
-        x="Mes",
-        y="Cantidad",
-        color="Ítem",
-        barmode="group",
-        text="Cantidad",
-        title="Consumo mensual consolidado por ítem"
-    )
-
-    fig.update_traces(textposition="outside")
-    fig.update_layout(
-        xaxis_title="Mes",
-        yaxis_title="Cantidad entregada",
-        legend_title="Ítem"
-    )
-
-    st.plotly_chart(fig, use_container_width=True)
-
-# ---------------------------------------------------
-
-# ===================================================
-# ===================================================
 # ===================================================
 # ===================================================
 # ✅ TAB 2 — SEGUIMIENTO DIARIO (PARTE 1/4)
