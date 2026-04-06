@@ -512,266 +512,322 @@ with tab2:
   # -----------------------------------------------------
         # FILTRO FECHA
         # -----------------------------------------------------
-        fechas_validas = sorted(df["fecha"].dropna().unique())
-        fecha_sel = st.selectbox("Selecciona fecha:", fechas_validas)
-        df2 = df[df["fecha"] == fecha_sel]
+# FILTRO FECHA
+fechas_validas = sorted(df["fecha"].dropna().unique())
+fecha_sel = st.selectbox("Selecciona fecha:", fechas_validas)
+df2 = df[df["fecha"] == fecha_sel]
 
-        # -----------------------------------------------------
-        # FILTRO SUPERVISOR
-        # -----------------------------------------------------
-        supervisor_sel = st.selectbox("Selecciona supervisor:", sorted(df2["supervisor"].unique()))
-        df2 = df2[df2["supervisor"] == supervisor_sel]
+# -----------------------------------------------------
+# FILTRO SUPERVISOR
+# -----------------------------------------------------
+supervisor_sel = st.selectbox(
+    "Selecciona supervisor:",
+    sorted(df2["supervisor"].unique())
+)
+df2 = df2[df2["supervisor"] == supervisor_sel]
 
-        # -----------------------------------------------------
-        # ✅ LISTA COMPLETA DE INSPECTORES DEL EXCEL
-        # -----------------------------------------------------
-        inspectores_todos = sorted(df["inspector"].unique())
+# -----------------------------------------------------
+# LISTA DE INSPECTORES POR SUPERVISOR
+# -----------------------------------------------------
+inspectores_todos = sorted(df["inspector"].unique())
 
-        inspectores_supervisor = [
-            i for i in inspectores_todos
-            if supervisores_dict.get(i, "") == supervisor_sel
+inspectores_supervisor = [
+    i for i in inspectores_todos
+    if supervisores_dict.get(i, "") == supervisor_sel
+]
+
+inspectores_filtrados = st.multiselect(
+    "Selecciona inspectores:",
+    inspectores_supervisor,
+    default=inspectores_supervisor
+)
+
+# -----------------------------------------------------
+# PRIMERA Y ULTIMA HORA DEL DIA
+# -----------------------------------------------------
+primeras = (
+    df2.sort_values("hora_inicio")
+       .groupby(["inspector", "fecha"], as_index=False)
+       .first()[["inspector", "supervisor", "fecha", "hora_inicio", "localidad"]]
+)
+
+ultimas = (
+    df2.sort_values("hora_final")
+       .groupby(["inspector", "fecha"], as_index=False)
+       .last()[["inspector", "fecha", "hora_final"]]
+)
+
+df_agrupado = primeras.merge(
+    ultimas,
+    on=["inspector", "fecha"],
+    how="left"
+)
+
+# -----------------------------------------------------
+# PUNTUALIDAD
+# -----------------------------------------------------
+hora_oficial = datetime.time(7, 30)
+
+def mins_tarde(h):
+    h1 = datetime.datetime.combine(datetime.date.today(), h)
+    h2 = datetime.datetime.combine(datetime.date.today(), hora_oficial)
+    return int((h1 - h2).total_seconds() / 60)
+
+def safe_mins_tarde(h):
+    if h == "SIN HORA" or h is None:
+        return None
+    return mins_tarde(h)
+
+df_agrupado["minutos_tarde"] = df_agrupado["hora_inicio"].apply(safe_mins_tarde)
+
+def estado(m):
+    if m is None:
+        return "SIN INICIO"
+    if m <= 0:
+        return "Puntual"
+    if m <= 15:
+        return "Tarde"
+    return "Muy tarde"
+
+df_agrupado["estado"] = df_agrupado["minutos_tarde"].apply(estado)
+
+# -----------------------------------------------------
+# PRODUCCION
+# -----------------------------------------------------
+valores_efectivos = [
+    "INSPECCIONADA",
+    "INSPECCIONADA CON DEFECTO NO CRITICO",
+    "INSPECCIONADA CON DEFECTO CRITICO",
+    "CERTIFICADA",
+    "CERTIFICADA CON NOVEDAD"
+]
+
+df2["efectiva"] = df2["cierre"].isin(valores_efectivos)
+df_agrupado["efectiva"] = df2["efectiva"]
+
+total_ordenes = df2.shape[0]
+total_efectivas = df2[df2["efectiva"]].shape[0]
+porcentaje_efectividad = (
+    round((total_efectivas / total_ordenes) * 100, 1)
+    if total_ordenes else 0
+)
+
+# -----------------------------------------------------
+# TIEMPO PROMEDIO EFECTIVAS
+# -----------------------------------------------------
+df_eff = df2[(df2["efectiva"] == True) & (df2["tiempo_tarea_td"].notna())]
+
+if df_eff.shape[0] > 0:
+    tiempo_promedio_tarea_str = td_to_str(df_eff["tiempo_tarea_td"].mean())
+else:
+    tiempo_promedio_tarea_str = "—"
+
+# -----------------------------------------------------
+# KPIs DEL DIA
+# -----------------------------------------------------
+st.markdown("## ⭐ KPIs del día")
+
+df_agrupado["ini_dec"] = df_agrupado["hora_inicio"].apply(
+    lambda x: hora_to_decimal(x) if x != "SIN HORA" else None
+)
+
+df_agrupado["fin_dec"] = df_agrupado["hora_final"].apply(
+    lambda x: hora_to_decimal(x) if pd.notna(x) else None
+)
+
+df_agrupado["dur_dec"] = df_agrupado["fin_dec"] - df_agrupado["ini_dec"]
+
+c1, c2, c3 = st.columns(3)
+
+c1.metric(
+    "⏰ Promedio inicio",
+    hora_to_string(decimal_to_hora(df_agrupado["ini_dec"].mean()))
+)
+c2.metric(
+    "🕒 Promedio fin",
+    hora_to_string(decimal_to_hora(df_agrupado["fin_dec"].mean()))
+)
+dur_prom = df_agrupado["dur_dec"].mean()
+c3.metric(
+    "💼 Duración prom.",
+    f"{round(dur_prom, 2)}h" if pd.notna(dur_prom) else "—"
+)
+
+c4, c5, c6, c7 = st.columns(4)
+c4.metric("📋 Tareas", total_ordenes)
+c5.metric("✅ Efectivas", total_efectivas)
+c6.metric("📈 % Efectividad", f"{porcentaje_efectividad}%")
+c7.metric("🕓 Prom. tarea efectiva", tiempo_promedio_tarea_str)
+
+
+# -----------------------------------------------------
+# RESUMEN POR INSPECTOR
+# -----------------------------------------------------
+resumen = (
+    df2.groupby("inspector")
+       .apply(lambda x: pd.Series({
+           "total_ordenes": x.shape[0],
+           "ordenes_efectivas": x["efectiva"].sum(),
+           "porcentaje_efectividad": (
+               round((x["efectiva"].sum() / x.shape[0]) * 100, 1)
+               if x.shape[0] else 0
+           ),
+           "promedio_tiempo_tarea": td_to_str(
+               x.loc[x["efectiva"] == True, "tiempo_tarea_td"].mean()
+           )
+       }))
+       .reset_index()
+)
+
+# -----------------------------------------------------
+# ARMAR TABLA COMPLETA
+# -----------------------------------------------------
+inspectores_completos = pd.DataFrame({
+    "inspector": inspectores_supervisor
+})
+
+df_tabla = inspectores_completos.merge(
+    df_agrupado,
+    on="inspector",
+    how="left"
+)
+
+df_tabla = df_tabla.merge(
+    resumen,
+    on="inspector",
+    how="left"
+)
+
+df_tabla = df_tabla.fillna({
+    "hora_inicio": "—",
+    "hora_final": "—",
+    "localidad": "—",
+    "estado": "SIN ACTIVIDAD",
+    "total_ordenes": 0,
+    "ordenes_efectivas": 0,
+    "porcentaje_efectividad": 0,
+    "promedio_tiempo_tarea": "—"
+})
+
+df_tabla = df_tabla[
+    df_tabla["inspector"].isin(inspectores_filtrados)
+]
+
+st.write("### 📋 Tabla de inspecciones del día")
+st.dataframe(
+    df_tabla[
+        [
+            "inspector", "supervisor", "fecha",
+            "hora_inicio", "hora_final", "localidad",
+            "estado", "total_ordenes",
+            "ordenes_efectivas",
+            "porcentaje_efectividad",
+            "promedio_tiempo_tarea"
         ]
+    ],
+    use_container_width=True
+)
 
-        insp_sel = st.multiselect(
-            "Selecciona inspectores:",
-            inspectores_supervisor,
-            default=inspectores_supervisor
-        )
+# -----------------------------------------------------
+# PRODUCCIÓN
+# -----------------------------------------------------
+df_prod = (
+    df2.groupby("inspector")
+       .apply(lambda x: pd.Series({
+           "efectivas": x["efectiva"].sum(),
+           "no_efectivas": (~x["efectiva"]).sum()
+       }))
+       .reset_index()
+)
 
-        inspectores_filtrados = insp_sel
+st.write("## 📦 Producción por inspector")
+fig_prod = px.bar(
+    df_prod,
+    y="inspector",
+    x=["efectivas", "no_efectivas"],
+    orientation="h",
+    barmode="group",
+    color_discrete_map={
+        "efectivas": "green",
+        "no_efectivas": "red"
+    }
+)
+fig_prod.update_traces(
+    texttemplate="%{x}",
+    textposition="outside"
+)
+st.plotly_chart(fig_prod, use_container_width=True)
 
-        # -----------------------------------------------------
-        # PRIMERA Y ÚLTIMA HORA
-        # -----------------------------------------------------
-        primeras = (
-            df2.sort_values("hora_inicio")
-               .groupby(["inspector","fecha"], as_index=False)
-               .first()[["inspector","supervisor","fecha","hora_inicio","localidad"]]
-        )
+# -----------------------------------------------------
+# TOP 5 EFECTIVIDAD
+# -----------------------------------------------------
+df_rank = (
+    df2.groupby("inspector")
+       .apply(lambda x: pd.Series({
+           "efectivas": x["efectiva"].sum(),
+           "total": x.shape[0],
+           "efectividad": (
+               round((x["efectiva"].sum() / x.shape[0]) * 100, 2)
+               if x.shape[0] else 0
+           )
+       }))
+       .reset_index()
+)
 
-        ultimas = (
-            df2.sort_values("hora_final")
-               .groupby(["inspector","fecha"], as_index=False)
-               .last()[["inspector","fecha","hora_final"]]
-        )
+df_rank = (
+    df_rank
+    .sort_values("efectividad", ascending=False)
+    .head(5)
+)
 
-        df_agrupado = primeras.merge(ultimas, on=["inspector","fecha"], how="left")
+st.write("## 🏆 TOP 5 Efectividad")
+fig_rank = px.bar(
+    df_rank,
+    x="efectividad",
+    y="inspector",
+    orientation="h",
+    text="efectividad",
+    color="efectividad",
+    color_continuous_scale="Blues"
+)
+fig_rank.update_traces(
+    texttemplate="%{x}%",
+    textposition="outside"
+)
+st.plotly_chart(fig_rank, use_container_width=True)
 
-        # -----------------------------------------------------
-        # PUNTUALIDAD
-        # -----------------------------------------------------
-        hora_oficial = datetime.time(7,30)
+# -----------------------------------------------------
+# PRODUCTIVIDAD POR HORA (EFECTIVAS)
+# -----------------------------------------------------
+st.write("## ⏱️ Productividad por hora (efectivas)")
 
-        def mins_tarde(h):
-            h1 = datetime.datetime.combine(datetime.date.today(), h)
-            h2 = datetime.datetime.combine(datetime.date.today(), hora_oficial)
-            return int((h1 - h2).total_seconds() / 60)
+df_horas = df2[df2["efectiva"] == True]
 
-        def safe_mins_tarde(h):
-            if h == "SIN HORA" or h is None:
-                return None
-            return mins_tarde(h)
+if df_horas.shape[0] == 0:
+    st.info("⚠️ No hay tareas efectivas para esta fecha.")
+else:
+    df_horas["hora_bloque"] = df_horas["hora_inicio"].apply(
+        lambda x: x if isinstance(x, datetime.time)
+        else datetime.time(0, 0)
+    )
+    df_horas["hora_str"] = df_horas["hora_bloque"].astype(str)
 
-        df_agrupado["minutos_tarde"] = df_agrupado["hora_inicio"].apply(safe_mins_tarde)
+    horas_prod = (
+        df_horas.groupby("hora_str")
+                .size()
+                .reset_index(name="cantidad")
+    )
 
-        def estado(m):
-            if m is None:
-                return "SIN INICIO"
-            if m <= 0:
-                return "Puntual"
-            if m <= 15:
-                return "Tarde"
-            return "Muy tarde"
-
-        df_agrupado["estado"] = df_agrupado["minutos_tarde"].apply(estado)
-
-        # -----------------------------------------------------
-        # PRODUCCIÓN
-        # -----------------------------------------------------
-        valores_efectivos = [
-            "INSPECCIONADA",
-            "INSPECCIONADA CON DEFECTO NO CRITICO",
-            "INSPECCIONADA CON DEFECTO CRITICO",
-            "CERTIFICADA",
-            "CERTIFICADA CON NOVEDAD"
-        ]
-
-        df2["efectiva"] = df2["cierre"].isin(valores_efectivos)
-        df_agrupado["efectiva"] = df2["efectiva"]
-
-        total_ordenes = df2.shape[0]
-        total_efectivas = df2[df2["efectiva"]].shape[0]
-        porcentaje_efectividad = round((total_efectivas / total_ordenes) * 100, 1) if total_ordenes else 0
-
-        # -----------------------------------------------------
-        # TIEMPO PROM. EFECTIVAS
-        # -----------------------------------------------------
-        df_eff = df2[(df2["efectiva"] == True) & (df2["tiempo_tarea_td"].notna())]
-
-        if df_eff.shape[0] > 0:
-            tiempo_promedio_tarea_str = td_to_str(df_eff["tiempo_tarea_td"].mean())
-        else:
-            tiempo_promedio_tarea_str = "—"
-
-        # -----------------------------------------------------
-        # KPIs
-        # -----------------------------------------------------
-        st.markdown("## ⭐ KPIs del día")
-
-        df_agrupado["ini_dec"] = df_agrupado["hora_inicio"].apply(
-            lambda x: hora_to_decimal(x) if x != "SIN HORA" else None
-        )
-
-        df_agrupado["fin_dec"] = df_agrupado["hora_final"].apply(
-            lambda x: hora_to_decimal(x) if pd.notna(x) else None
-        )
-
-        df_agrupado["dur_dec"] = df_agrupado["fin_dec"] - df_agrupado["ini_dec"]
-
-        c1, c2, c3 = st.columns(3)
-        c1.metric("⏰ Promedio inicio", hora_to_string(decimal_to_hora(df_agrupado["ini_dec"].mean())))
-        c2.metric("🕒 Promedio fin", hora_to_string(decimal_to_hora(df_agrupado["fin_dec"].mean())))
-        dur_prom = df_agrupado["dur_dec"].mean()
-        c3.metric("💼 Duración prom.", f"{round(dur_prom,2)}h" if pd.notna(dur_prom) else "—")
-
-        c4, c5, c6, c7 = st.columns(4)
-        c4.metric("📋 Tareas", total_ordenes)
-        c5.metric("✅ Efectivas", total_efectivas)
-        c6.metric("📈 % Efectividad", f"{porcentaje_efectividad}%")
-        c7.metric("🕓 Prom. tarea efectiva", tiempo_promedio_tarea_str)
-
-        # -----------------------------------------------------
-        # RESUMEN POR INSPECTOR
-        # -----------------------------------------------------
-        resumen = (
-            df2.groupby("inspector")
-                .apply(lambda x: pd.Series({
-                    "total_ordenes": x.shape[0],
-                    "ordenes_efectivas": x["efectiva"].sum(),
-                    "porcentaje_efectividad":
-                        round((x["efectiva"].sum() / x.shape[0]) * 100, 1) if x.shape[0] else 0,
-                    "promedio_tiempo_tarea":
-                        td_to_str(x.loc[x["efectiva"] == True, "tiempo_tarea_td"].mean())
-                }))
-                .reset_index()
-        )
-
-        # -----------------------------------------------------
-        # ARMAR TABLA COMPLETA
-        # -----------------------------------------------------
-        inspectores_completos = pd.DataFrame({"inspector": inspectores_supervisor})
-
-        df_tabla = inspectores_completos.merge(df_agrupado, on="inspector", how="left")
-        df_tabla = df_tabla.merge(resumen, on="inspector", how="left")
-
-        df_tabla = df_tabla.fillna({
-            "hora_inicio": "—",
-            "hora_final": "—",
-            "localidad": "—",
-            "estado": "SIN ACTIVIDAD",
-            "total_ordenes": 0,
-            "ordenes_efectivas": 0,
-            "porcentaje_efectividad": 0,
-            "promedio_tiempo_tarea": "—"
-        })
-
-        df_tabla = df_tabla[df_tabla["inspector"].isin(inspectores_filtrados)]
-
-        st.write("### Tabla de inspecciones del día")
-        st.dataframe(
-            df_tabla[[
-                "inspector","supervisor","fecha",
-                "hora_inicio","hora_final","localidad",
-                "estado","total_ordenes","ordenes_efectivas",
-                "porcentaje_efectividad","promedio_tiempo_tarea"
-            ]],
-            use_container_width=True
-        )
-
-        # -----------------------------------------------------
-        # PRODUCCIÓN
-        # -----------------------------------------------------
-        df_prod = (
-            df2.groupby("inspector")
-               .apply(lambda x: pd.Series({
-                   "efectivas": x["efectiva"].sum(),
-                   "no_efectivas": (~x["efectiva"]).sum()
-               }))
-               .reset_index()
-        )
-
-        st.write("## Producción por inspector")
-        fig_prod = px.bar(
-            df_prod,
-            y="inspector",
-            x=["efectivas","no_efectivas"],
-            orientation="h",
-            barmode="group",
-            color_discrete_map={"efectivas":"green","no_efectivas":"red"}
-        )
-        fig_prod.update_traces(texttemplate='%{x}', textposition='outside')
-        st.plotly_chart(fig_prod, use_container_width=True)
-
-        # -----------------------------------------------------
-        # TOP 5
-        # -----------------------------------------------------
-        df_rank = (
-            df2.groupby("inspector")
-               .apply(lambda x: pd.Series({
-                   "efectivas": x["efectiva"].sum(),
-                   "total": x.shape[0],
-                   "efectividad": round((x["efectiva"].sum()/x.shape[0])*100,2) if x.shape[0] else 0
-               }))
-               .reset_index()
-        )
-
-        df_rank = df_rank.sort_values("efectividad", ascending=False).head(5)
-
-        st.write("## 🏆 TOP 5 Efectividad")
-        fig_rank = px.bar(
-            df_rank,
-            x="efectividad",
-            y="inspector",
-            orientation="h",
-            text="efectividad",
-            color="efectividad",
-            color_continuous_scale="Blues"
-        )
-        fig_rank.update_traces(texttemplate='%{x}%', textposition='outside')
-        st.plotly_chart(fig_rank,use_container_width=True)
-
-        # -----------------------------------------------------
-        # PRODUCTIVIDAD POR HORA
-        # -----------------------------------------------------
-        st.write("## Productividad por hora (efectivas)")
-
-        df_horas = df2[df2["efectiva"] == True]
-
-        if df_horas.shape[0] == 0:
-            st.info("⚠️ No hay tareas efectivas para esta fecha.")
-        else:
-            df_horas["hora_bloque"] = df_horas["hora_inicio"].apply(
-                lambda x: x if isinstance(x, datetime.time) else datetime.time(0, 0)
-            )
-            df_horas["hora_str"] = df_horas["hora_bloque"].astype(str)
-
-            horas_prod = (
-                df_horas.groupby("hora_str")
-                        .size()
-                        .reset_index(name="cantidad")
-            )
-
-            fig_horas = px.bar(
-                horas_prod,
-                x="hora_str",
-                y="cantidad",
-                text="cantidad",
-                color="cantidad",
-                color_continuous_scale="blues"
-            )
-            fig_horas.update_traces(textposition="outside")
-            st.plotly_chart(fig_horas, use_container_width=True)
-
+    fig_horas = px.bar(
+        horas_prod,
+        x="hora_str",
+        y="cantidad",
+        text="cantidad",
+        color="cantidad",
+        color_continuous_scale="Blues"
+    )
+    fig_horas.update_traces(textposition="outside")
+    st.plotly_chart(fig_horas, use_container_width=True)
 # ---------------------------------------------------
 # ✅ PESTAÑA 3: GRÁFICAS GENERALES
 # ✅ TAB 3 — SEGUIMIENTO MENSUAL (MULTI‑DÍA)
