@@ -105,7 +105,11 @@ with tab1:
         )
 
     # Normalizar columnas (blindaje)
-    df_inv.columns = df_inv.columns.str.strip().str.lower()
+
+ df_bitacora.columns = (
+        df_bitacora.columns.str.strip().str.lower()
+    )
+
 
     # ---------------------------------------------------
     # LISTA DE INSPECTORES (DESDE INVENTARIO)
