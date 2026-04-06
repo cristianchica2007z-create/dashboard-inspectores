@@ -68,9 +68,6 @@ tab1, tab2, tab3 = st.tabs([
 
 
 # ---------------------------------------------------
-# ---------------------------------------------------
-# ---------------------------------------------------
-# ---------------------------------------------------
 # ✅ PESTAÑA 1: INVENTARIO DE PAPELERÍA
 # ---------------------------------------------------
 with tab1:
@@ -79,7 +76,7 @@ with tab1:
     ARCHIVO_INVENTARIO = "inventario.xlsx"
 
     # ---------------------------------------------------
-    # DEFINICIÓN DE COLUMNAS VÁLIDAS DE INVENTARIO
+    # DEFINICIÓN DE COLUMNAS DE INVENTARIO
     # ---------------------------------------------------
     columnas_inventario = [
         "fecha", "sede", "inspector",
@@ -87,22 +84,9 @@ with tab1:
     ]
 
     # ---------------------------------------------------
-    # CREAR / RECUPERAR INVENTARIO CORRECTO
+    # CREAR O LEER INVENTARIO
     # ---------------------------------------------------
-    crear_nuevo = False
-
     if not os.path.exists(ARCHIVO_INVENTARIO):
-        crear_nuevo = True
-    else:
-        try:
-            df_tmp = pd.read_excel(ARCHIVO_INVENTARIO, engine="openpyxl")
-            df_tmp.columns = df_tmp.columns.str.strip().str.lower()
-            if not all(col in df_tmp.columns for col in columnas_inventario):
-                crear_nuevo = True
-        except Exception:
-            crear_nuevo = True
-
-    if crear_nuevo:
         df_inv = pd.DataFrame(columns=columnas_inventario)
         df_inv.to_excel(
             ARCHIVO_INVENTARIO,
@@ -114,10 +98,12 @@ with tab1:
             ARCHIVO_INVENTARIO,
             engine="openpyxl"
         )
-        df_inv.columns = df_inv.columns.str.strip().str.lower()
+
+    # Normalizar columnas
+    df_inv.columns = df_inv.columns.str.strip().str.lower()
 
     # ---------------------------------------------------
-    # LISTA DE INSPECTORES (DESDE INVENTARIO)
+    # LISTA DE INSPECTORES
     # ---------------------------------------------------
     inspectores_lista = sorted(
         df_inv["inspector"].dropna().unique().tolist()
@@ -132,7 +118,10 @@ with tab1:
         col1, col2, col3 = st.columns(3)
 
         with col1:
-            sede = st.selectbox("Sede", ["CALDAS", "RISARALDA"])
+            sede = st.selectbox(
+                "Sede",
+                ["CALDAS", "RISARALDA"]
+            )
 
         with col2:
             inspector = st.selectbox(
@@ -159,7 +148,9 @@ with tab1:
             )
 
         with col5:
-            observacion = st.text_input("Observación (opcional)")
+            observacion = st.text_input(
+                "Observación (opcional)"
+            )
 
         # ---------------- ÍTEMS ----------------
         st.markdown("### Ítems entregados")
@@ -178,7 +169,8 @@ with tab1:
             cols = st.columns(4)
             for c_idx, item in enumerate(fila):
                 marcar = cols[c_idx].checkbox(
-                    item, key=f"inv_chk_{f_idx}_{c_idx}"
+                    item,
+                    key=f"inv_chk_{f_idx}_{c_idx}"
                 )
                 cantidad = cols[c_idx].number_input(
                     "Cantidad",
@@ -188,16 +180,20 @@ with tab1:
                     key=f"inv_qty_{f_idx}_{c_idx}"
                 )
                 if marcar and cantidad > 0:
-                    items_seleccionados.append(f"{item} x{cantidad}")
+                    items_seleccionados.append(
+                        f"{item} x{cantidad}"
+                    )
 
         submitted = st.form_submit_button("✅ Guardar entrega")
 
     # ===================================================
-    # ✅ GUARDAR ENTREGA (SOLO INVENTARIO)
+    # ✅ GUARDAR ENTREGA
     # ===================================================
     if submitted:
         if not items_seleccionados:
-            st.warning("⚠️ Debes seleccionar al menos un ítem con cantidad.")
+            st.warning(
+                "⚠️ Debes seleccionar al menos un ítem con cantidad."
+            )
         else:
             nueva_fila = pd.DataFrame({
                 "fecha": [fecha],
@@ -208,7 +204,10 @@ with tab1:
                 "ítems": [", ".join(items_seleccionados)]
             })
 
-            df_inv = pd.concat([df_inv, nueva_fila], ignore_index=True)
+            df_inv = pd.concat(
+                [df_inv, nueva_fila],
+                ignore_index=True
+            )
 
             df_inv.to_excel(
                 ARCHIVO_INVENTARIO,
@@ -219,31 +218,26 @@ with tab1:
             st.success("✅ Entrega registrada correctamente")
 
     # ===================================================
-    # ✅ HISTORIAL DE ENTREGAS (SOLO INVENTARIO)
-    # 🔑 LIMPIEZA EXPLÍCITA DE SESSION_STATE
+    # ✅ HISTORIAL DE ENTREGAS (SIN ESTADO)
     # ===================================================
     st.markdown("### 📋 Historial de entregas")
 
     filtro_inspector = st.selectbox(
         "Filtrar por inspector",
-        ["TODOS"] + inspectores_lista,
-        key="filtro_hist_inventario"
+        ["TODOS"] + inspectores_lista
     )
 
     df_hist = df_inv.copy()
 
     if filtro_inspector != "TODOS":
-        df_hist = df_hist[df_hist["inspector"] == filtro_inspector]
+        df_hist = df_hist[
+            df_hist["inspector"] == filtro_inspector
+        ]
 
-    # 🔥 ESTA ES LA LÍNEA CLAVE QUE FALTABA
-    if "editor_hist_inventario" in st.session_state:
-        del st.session_state["editor_hist_inventario"]
-
-    st.data_editor(
+    # ✅ USAR DATAFRAME (NO editor)
+    st.dataframe(
         df_hist,
-        num_rows="dynamic",
-        use_container_width=True,
-        key="editor_hist_inventario"
+        use_container_width=True
     )
 
     # ===================================================
@@ -252,7 +246,10 @@ with tab1:
     st.markdown("## 📊 Consumo mensual consolidado por ítem")
 
     df_cons = df_inv.copy()
-    df_cons["fecha"] = pd.to_datetime(df_cons["fecha"], errors="coerce")
+    df_cons["fecha"] = pd.to_datetime(
+        df_cons["fecha"],
+        errors="coerce"
+    )
     df_cons["mes"] = df_cons["fecha"].dt.to_period("M").astype(str)
 
     registros = []
