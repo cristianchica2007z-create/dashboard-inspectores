@@ -176,81 +176,67 @@ with tab2:
 
 
         # -----------------------------------------------------
-        # 4. Mapeo de supervisores actualizado
-
+     # -----------------------------------------------------
+    # 4. Mapeo de supervisores actualizado
+    # -----------------------------------------------------
     supervisores_dict = {
-            "ARIZA MARIN SERGIO": "ANDRES ARROYAVE",
-            "ANDRES ARROYAVE": "ANDRES ARROYAVE",
-            "BEDOYA DIEGO ALEJANDRO": "DANNY DE LA CRUZ",
-            "DANNY DE LA CRUZ": "DANNY DE LA CRUZ",
-            "CARVAJAL RESTREPO JUAN DAVID": "JANIER MARIN",
-            "JANIER MARIN": "JANIER MARIN",
-            "CHAVARRIAGA JUAN MANUEL": "CRISTIAN CHICA",
-            "CRISTIAN CHICA": "CRISTIAN CHICA",
-            "ECHEVERRY CARDONA JHON STIVEN": "JANIER MARIN",
-            "GALLEGO CADAVID NORBEY": "DANNY DE LA CRUZ",
-            "GIRALDO GARCIA SIGIFREDO": "ANDRES ARROYAVE",
-            "LOPEZ PINEDA CESAR AUGUSTO": "JANIER MARIN",
-            "NOREÑA GIRALDO GEOVANNY": "ANDRES ARROYAVE",
-            "OSPINA CASTELLANOS ANDERSON": "CRISTIAN CHICA",
-            "OSPINA RODRIGUEZ DANIEL ALBERTO": "ANDRES ARROYAVE",
-            "RUIZ DILON MARLON ANDREY": "ANDRES ARROYAVE",
-            "LARGO OSORIO JOSE OMAR": "ANDRES ARROYAVE",
-            "PULGARIN QUINTERO JULIAN ANDRES": "DANNY DE LA CRUZ",
-            "TAYACK TRUJILLO DEIVER EVELIO": "ANDRES ARROYAVE",
-            "RUIZ ARENAS JUAN CAMILO": "CRISTIAN CHICA",
-            "PATIÑO CIFUENTES RICARDO": "JANIER MARIN",
-            "VARGAS FRANCO JHON EDISON": "CRISTIAN CHICA",
-            "CARDONA CANO NELSON": "CRISTIAN CHICA",
-            "CARDONA OROZCO JULIAN ANDRES": "ANDRES ARROYAVE",
-            "GRISALES CUERVO JUAN DAVID": "JANIER MARIN",
-            "LEON MARIN LEONARDO FABIO": "JANIER MARIN",
-            "VELASQUEZ TAPASCO JHON DIEGO": "ANDRES ARROYAVE",
-            "CARDONA CASTANO DIDIER ORLANDO": "CRISTIAN CHICA",
-            "TORRES HERNANDEZ JOHN JAMES": "ANDRES ARROYAVE",
-            "COBO HOYOS JUAN MANUEL": "CRISTIAN CHICA",
-            "OSPINA NARANJO BERNARDO": "CRISTIAN CHICA",
-            "COGOLLO FIGUEROA RANDY": "DANNY DE LA CRUZ",
-            "ARIAS TORO YEISON": "DANNY DE LA CRUZ",
-            "MIRANDA FRANCO EFRAIN": "DANNY DE LA CRUZ",
-            "ARDILA MORA GUSTAVO ADOLFO": "DANNY DE LA CRUZ",
-            "LOPEZ VELEZ ESTEBAN": "JANIER MARIN",
-            "GALEANO GRISALEZ RICARDO": "DANNY DE LA CRUZ",
-            "CAICEDO ESCOBAR JUNIOR SANTIAGO": "JANIER MARIN",
-            "OTERO CAICEDO ANYEMBER": "DANNY DE LA CRUZ",
-            "BUITRAGO RAMIREZ LEONARD": "CRISTIAN CHICA",
-            "BORJAS WILLY ALEXANDER": "ANDRES ARROYAVE",
-            "MARIN LEON JAISSON JOAQUIN": "CRISTIAN CHICA",
-            "AMAYA HINCAPIE JUAN CARLOS": "CRISTIAN CHICA",
-            "BEDOYA SANCHEZ CRISTIAN DAVID": "ANDRES ARROYAVE",
-            "RAMIREZ WILSON ENRIQUE": "CRISTIAN CHICA",
-            "CANO MORALES JIMY ALFREDO": "ANDRES ARROYAVE",
-            "CASTRO CASTAÑO JUAN DAVID": "CRISTIAN CHICA",
-            "LOAIZA GAMBA JHON ALEXANDER": "ANDRES ARROYAVE",
-            "VILLA LOAIZA JHEISON ESTIBEN": "CRISTIAN CHICA",
-            "CÁRDENAS GALIANO HAROLD MAURICIO": "JANIER MARIN",
-            "VARGAS CORREA VICTOR ALFONSO": "DANNY DE LA CRUZ",
-            "VILLA MERA CHRISTIAN DAVID": "JANIER MARIN",
-            "AVENDAÑO GARCIA JUAN NEPOMUCENO": "ANDRES ARROYAVE",
-            "PELAEZ TATIS GABRIEL ESTEBAN": "CRISTIAN CHICA",
-        }
+        "ARIZA MARIN SERGIO": "ANDRES ARROYAVE",
+        "ANDRES ARROYAVE": "ANDRES ARROYAVE",
+        "BEDOYA DIEGO ALEJANDRO": "DANNY DE LA CRUZ",
+        "DANNY DE LA CRUZ": "DANNY DE LA CRUZ",
+        "CARVAJAL RESTREPO JUAN DAVID": "JANIER MARIN",
+        "JANIER MARIN": "JANIER MARIN",
+        "CHAVARRIAGA JUAN MANUEL": "CRISTIAN CHICA",
+        "CRISTIAN CHICA": "CRISTIAN CHICA",
+        "ECHEVERRY CARDONA JHON STIVEN": "JANIER MARIN",
+        "GALLEGO CADAVID NORBEY": "DANNY DE LA CRUZ",
+        "GIRALDO GARCIA SIGIFREDO": "ANDRES ARROYAVE",
+        "LOPEZ PINEDA CESAR AUGUSTO": "JANIER MARIN",
+        "NOREÑA GIRALDO GEOVANNY": "ANDRES ARROYAVE",
+        "OSPINA CASTELLANOS ANDERSON": "CRISTIAN CHICA",
+        "OSPINA RODRIGUEZ DANIEL ALBERTO": "ANDRES ARROYAVE",
+        "RUIZ DILON MARLON ANDREY": "ANDRES ARROYAVE",
+        "LARGO OSORIO JOSE OMAR": "ANDRES ARROYAVE",
+        "PULGARIN QUINTERO JULIAN ANDRES": "DANNY DE LA CRUZ",
+        "TAYACK TRUJILLO DEIVER EVELIO": "ANDRES ARROYAVE",
+        "RUIZ ARENAS JUAN CAMILO": "CRISTIAN CHICA",
+        "PATIÑO CIFUENTES RICARDO": "JANIER MARIN",
+        "VARGAS FRANCO JHON EDISON": "CRISTIAN CHICA",
+        "CARDONA CANO NELSON": "CRISTIAN CHICA",
+        "CARDONA OROZCO JULIAN ANDRES": "ANDRES ARROYAVE",
+        "GRISALES CUERVO JUAN DAVID": "JANIER MARIN",
+        "LEON MARIN LEONARDO FABIO": "JANIER MARIN",
+        "VELASQUEZ TAPASCO JHON DIEGO": "ANDRES ARROYAVE",
+        "CARDONA CASTANO DIDIER ORLANDO": "CRISTIAN CHICA",
+        "TORRES HERNANDEZ JOHN JAMES": "ANDRES ARROYAVE",
+        "COBO HOYOS JUAN MANUEL": "CRISTIAN CHICA",
+        "OSPINA NARANJO BERNARDO": "CRISTIAN CHICA",
+        "COGOLLO FIGUEROA RANDY": "DANNY DE LA CRUZ",
+        "ARIAS TORO YEISON": "DANNY DE LA CRUZ",
+        "MIRANDA FRANCO EFRAIN": "DANNY DE LA CRUZ",
+        "ARDILA MORA GUSTAVO ADOLFO": "DANNY DE LA CRUZ",
+        "LOPEZ VELEZ ESTEBAN": "JANIER MARIN",
+        "GALEANO GRISALEZ RICARDO": "DANNY DE LA CRUZ",
+        "CAICEDO ESCOBAR JUNIOR SANTIAGO": "JANIER MARIN",
+        "OTERO CAICEDO ANYEMBER": "DANNY DE LA CRUZ",
+        "BUITRAGO RAMIREZ LEONARD": "CRISTIAN CHICA",
+        "BORJAS WILLY ALEXANDER": "ANDRES ARROYAVE",
+        "MARIN LEON JAISSON JOAQUIN": "CRISTIAN CHICA",
+        "AMAYA HINCAPIE JUAN CARLOS": "CRISTIAN CHICA",
+        "BEDOYA SANCHEZ CRISTIAN DAVID": "ANDRES ARROYAVE",
+        "RAMIREZ WILSON ENRIQUE": "CRISTIAN CHICA",
+        "CANO MORALES JIMY ALFREDO": "ANDRES ARROYAVE",
+        "CASTRO CASTAÑO JUAN DAVID": "CRISTIAN CHICA",
+        "LOAIZA GAMBA JHON ALEXANDER": "ANDRES ARROYAVE",
+        "VILLA LOAIZA JHEISON ESTIBEN": "CRISTIAN CHICA",
+        "CÁRDENAS GALIANO HAROLD MAURICIO": "JANIER MARIN",
+        "VARGAS CORREA VICTOR ALFONSO": "DANNY DE LA CRUZ",
+        "VILLA MERA CHRISTIAN DAVID": "JANIER MARIN",
+        "AVENDAÑO GARCIA JUAN NEPOMUCENO": "ANDRES ARROYAVE",
+        "PELAEZ TATIS GABRIEL ESTEBAN": "CRISTIAN CHICA",
+    }
 
-        df["supervisor"] = df["inspector"].map(supervisores_dict).fillna("SIN SUPERVISOR")
-
-        # -----------------------------------------------------
-        # 5. Filtros
-        # -----------------------------------------------------
-        fecha_sel = st.selectbox("Selecciona fecha:", sorted(df["fecha"].unique()))
-        df = df[df["fecha"] == fecha_sel]
-
-        supervisor_sel = st.selectbox("Selecciona supervisor:", sorted(df["supervisor"].unique()))
-        df = df[df["supervisor"] == supervisor_sel]
-
-        insp_sel = st.multiselect("Selecciona inspectores:", sorted(df["inspector"].unique()), default=sorted(df["inspector"].unique()))
-        df = df[df["inspector"].isin(insp_sel)]
-
-        loc_sel = st.multiselect("Selecciona localidad:", sorted(df["localidad"].unique()), default=sorted(df["localidad"].unique()))
-        df = df[df["localidad"].isin(loc_sel)]
+    df["supervisor"] = df["inspector"].map(supervisores_dict).fillna("SIN SUPERVISOR")
 
         # -----------------------------------------------------
         # 6. Primera y última hora del día
