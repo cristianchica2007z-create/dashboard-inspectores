@@ -99,13 +99,14 @@ with tab2:
 
         st.success("✅ Bitácora actualizada y compartida")
 
-    # Si NO existe BITACORA.xlsx todavía, detener
-    if not os.path.exists(ARCHIVO_BITACORA):
-        st.info("ℹ️ Carga un archivo de bitácora para iniciar el análisis.")
-        st.stop()
+# Si NO existe BITACORA.xlsx todavía y NO se cargó archivo
+if archivo is None and not os.path.exists(ARCHIVO_BITACORA):
+    st.info("ℹ️ Carga un archivo de bitácora para iniciar el análisis.")
+    st.stop()
 
-    # ✅ A partir de aquí TODA tu lógica existente sigue EXACTAMENTE igual
-    df = pd.read_excel(ARCHIVO_BITACORA)
+# ✅ A partir de aquí ya es seguro leer
+df = pd.read_excel(ARCHIVO_BITACORA)
+
 
     # -----------------------------------------------------
     # FUNCIONES UTILITARIAS (bien alineadas)
