@@ -69,42 +69,64 @@ tab1, tab2, tab3 = st.tabs([
 
 # ===================================================
 # ===================================================
-# ✅ TAB 1 — INVENTARIO DE PAPELERÍA (FINAL ESTABLE)
+# ✅ TAB 1 — INVENTARIO DE PAPELERÍA (PARTE 1/4)
+# Carga y preparación del inventario
 # ===================================================
 with tab1:
     st.subheader("📦 Control de entrega de papelería e inventario")
 
     archivo_inventario = "inventario.xlsx"
 
-    # -------------------------------------------------
-    # CREAR / LEER INVENTARIO
-    # -------------------------------------------------
+    # Crear archivo si no existe
     if not os.path.exists(archivo_inventario):
         df_inv = pd.DataFrame(columns=[
             "Fecha", "Sede", "Inspector",
             "Responsable", "Observación", "Ítems"
         ])
-        df_inv.to_excel(archivo_inventario, index=False, engine="openpyxl")
+        df_inv.to_excel(
+            archivo_inventario,
+            index=False,
+            engine="openpyxl"
+        )
     else:
-        df_inv = pd.read_excel(archivo_inventario, engine="openpyxl")
+        df_inv = pd.read_excel(
+            archivo_inventario,
+            engine="openpyxl"
+        )
 
+    # Normalizar nombres de columnas
     df_inv.columns = df_inv.columns.str.strip()
-
-    # =================================================
-    # ✅ FORMULARIO DE ENTREGA
-    # =================================================
+    # ===================================================
+# ✅ TAB 1 — PARTE 2/4
+# Formulario de registro de entrega
+# ===================================================
     with st.form("form_entrega", clear_on_submit=True):
         st.markdown("### Registrar entrega")
 
         col1, col2, col3 = st.columns(3)
+
         with col1:
-            sede = st.selectbox("Sede", ["CALDAS", "RISARALDA"], key="inv_sede")
+            sede = st.selectbox(
+                "Sede",
+                ["CALDAS", "RISARALDA"],
+                key="inv_sede"
+            )
+
         with col2:
-            inspector = st.selectbox("Inspector", inspectores_lista, key="inv_inspector")
+            inspector = st.selectbox(
+                "Inspector",
+                inspectores_lista,
+                key="inv_inspector"
+            )
+
         with col3:
-            fecha = st.date_input("Fecha", key="inv_fecha")
+            fecha = st.date_input(
+                "Fecha",
+                key="inv_fecha"
+            )
 
         col4, col5 = st.columns([1, 2])
+
         with col4:
             responsable = st.selectbox(
                 "Responsable",
@@ -118,11 +140,16 @@ with tab1:
                 ],
                 key="inv_responsable"
             )
-        with col5:
-            observacion = st.text_input("Observación (opcional)", key="inv_obs")
 
-        # -------- ÍTEMS --------
+        with col5:
+            observacion = st.text_input(
+                "Observación (opcional)",
+                key="inv_obs"
+            )
+
+        # ---------- ÍTEMS ----------
         st.markdown("### Ítems entregados")
+
         items_def = [
             "Stickers 🔵", "Cepo 🔒", "Guantes 🧤", "Piernera 🦿",
             "Monogafas 🥽", "Llaves de cepo 🗝️", "Formatos 📄",
@@ -135,7 +162,10 @@ with tab1:
         for f_idx, fila in enumerate(filas):
             cols = st.columns(4)
             for c_idx, item in enumerate(fila):
-                marcar = cols[c_idx].checkbox(item, key=f"item_chk_{f_idx}_{c_idx}")
+                marcar = cols[c_idx].checkbox(
+                    item,
+                    key=f"item_chk_{f_idx}_{c_idx}"
+                )
                 cantidad = cols[c_idx].number_input(
                     "Cantidad",
                     min_value=0,
@@ -143,17 +173,22 @@ with tab1:
                     label_visibility="collapsed",
                     key=f"item_qty_{f_idx}_{c_idx}"
                 )
+
                 if marcar and cantidad > 0:
-                    items_seleccionados.append(f"{item} x{cantidad}")
+                    items_seleccionados.append(
+                        f"{item} x{cantidad}"
+                    )
 
         submitted = st.form_submit_button("✅ Guardar entrega")
-
-    # =================================================
-    # ✅ GUARDAR ENTREGA
-    # =================================================
+        # ===================================================
+# ✅ TAB 1 — PARTE 3/4
+# Guardado y historial
+# ===================================================
     if submitted:
         if not items_seleccionados:
-            st.warning("⚠️ Debes seleccionar al menos un ítem con cantidad.")
+            st.warning(
+                "⚠️ Debes seleccionar al menos un ítem con cantidad."
+            )
         else:
             nueva_fila = pd.DataFrame([{
                 "Fecha": fecha.strftime("%Y-%m-%d"),
@@ -163,13 +198,21 @@ with tab1:
                 "Observación": observacion,
                 "Ítems": ", ".join(items_seleccionados)
             }])
-            df_inv = pd.concat([df_inv, nueva_fila], ignore_index=True)
-            df_inv.to_excel(archivo_inventario, index=False, engine="openpyxl")
+
+            df_inv = pd.concat(
+                [df_inv, nueva_fila],
+                ignore_index=True
+            )
+
+            df_inv.to_excel(
+                archivo_inventario,
+                index=False,
+                engine="openpyxl"
+            )
+
             st.success("✅ Entrega registrada correctamente")
 
-    # =================================================
-    # ✅ HISTORIAL DE ENTREGAS
-    # =================================================
+    # ---------- HISTORIAL ----------
     st.markdown("### 📋 Historial de entregas")
 
     filtro_inspector = st.selectbox(
@@ -180,28 +223,45 @@ with tab1:
 
     df_hist = df_inv.copy()
     if filtro_inspector != "TODOS":
-        df_hist = df_hist[df_hist["Inspector"] == filtro_inspector]
+        df_hist = df_hist[
+            df_hist["Inspector"] == filtro_inspector
+        ]
 
     st.dataframe(df_hist, use_container_width=True)
 
-    if st.button("💾 Guardar cambios del historial", key="inv_guardar_hist"):
-        df_inv.to_excel(archivo_inventario, index=False, engine="openpyxl")
+    if st.button(
+        "💾 Guardar cambios del historial",
+        key="inv_guardar_hist"
+    ):
+        df_inv.to_excel(
+            archivo_inventario,
+            index=False,
+            engine="openpyxl"
+        )
         st.success("✅ Cambios del historial guardados")
-
-    # =================================================
-    # ✅ CONSUMO MENSUAL CONSOLIDADO POR ÍTEM
-    # ✅ (ESTE BLOQUE DEBE ESTAR DENTRO DE TAB 1)
-    # =================================================
+        # ===================================================
+# ✅ TAB 1 — PARTE 4/4
+# Consumo mensual consolidado por ítem
+# ===================================================
     st.markdown("## 📊 Consumo mensual consolidado por ítem")
 
     df_cons = df_inv.copy()
-    df_cons["Fecha"] = pd.to_datetime(df_cons["Fecha"], errors="coerce")
-    df_cons["Mes"] = df_cons["Fecha"].dt.to_period("M").astype(str)
+    df_cons["Fecha"] = pd.to_datetime(
+        df_cons["Fecha"],
+        errors="coerce"
+    )
+    df_cons["Mes"] = (
+        df_cons["Fecha"]
+        .dt.to_period("M")
+        .astype(str)
+    )
 
     registros = []
+
     for _, row in df_cons.iterrows():
         if pd.isna(row["Ítems"]):
             continue
+
         for it in row["Ítems"].split(","):
             it = it.strip()
             if " x" in it:
@@ -210,6 +270,7 @@ with tab1:
             else:
                 nombre = it
                 cantidad = 1
+
             registros.append({
                 "Mes": row["Mes"],
                 "Ítem": nombre,
@@ -219,7 +280,11 @@ with tab1:
     df_plot = pd.DataFrame(registros)
 
     if not df_plot.empty:
-        df_plot = df_plot.groupby(["Mes", "Ítem"], as_index=False).sum()
+        df_plot = df_plot.groupby(
+            ["Mes", "Ítem"],
+            as_index=False
+        ).sum()
+
         fig = px.bar(
             df_plot,
             x="Mes",
@@ -238,6 +303,7 @@ with tab1:
         )
 
         st.plotly_chart(fig, use_container_width=True)
+
 
 # ===================================================
 # ===================================================
