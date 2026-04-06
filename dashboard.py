@@ -91,6 +91,7 @@ with tab2:
     import datetime
 
     # ---------------------------------------------------
+  # ---------------------------------------------------
     # CARGA DE BITÁCORA (GUARDADO Y COMPARTIDO)
     # ---------------------------------------------------
     st.write("### Cargar archivo de bitácora (formato XLSX recomendado)")
@@ -146,6 +147,16 @@ with tab2:
             except:
                 return None
 
+    # ✅ ESTA ES LA FUNCIÓN QUE FALTABA
+    def td_to_str(td):
+        if pd.isna(td):
+            return "—"
+        total_sec = int(td.total_seconds())
+        h = total_sec // 3600
+        m = (total_sec % 3600) // 60
+        s = total_sec % 60
+        return f"{h}h {m}m {s}s" if h > 0 else f"{m}m {s}s"
+
     # -----------------------------------------------------
     # NORMALIZAR COLUMNAS
     # -----------------------------------------------------
@@ -160,7 +171,6 @@ with tab2:
         if col not in df.columns:
             st.error(f"❌ Falta la columna: {col}")
             st.stop()
-
     # -----------------------------------------------------
     # CONVERTIR COLUMNAS CLAVE
     # -----------------------------------------------------
