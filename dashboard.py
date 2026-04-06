@@ -750,4 +750,3 @@ with tab3:
                 "efectivas": "Órdenes efectivas"
             })
             st.dataframe(detalle_final, use_container_width=True)
-
