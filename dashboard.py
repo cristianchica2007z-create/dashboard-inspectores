@@ -80,31 +80,33 @@ with tab1:
 # ---------------------------------------------------
 with tab2:
     st.subheader("Control de horario de inspectores")
-    ARCHIVO_BITACORA = "BITACORA.xlsx"
-  import numpy as np
-        import datetime
 
+    ARCHIVO_BITACORA = "BITACORA.xlsx"
+
+    import numpy as np
+    import datetime
 
     st.write("### Cargar archivo de bitácora (formato XLSX recomendado)")
-archivo = st.file_uploader(
-    "Sube el archivo de bitácora (se guarda y comparte)",
-    type=["xls", "xlsx"]
-)
+    archivo = st.file_uploader(
+        "Sube el archivo de bitácora (se guarda y comparte)",
+        type=["xls", "xlsx"]
+    )
 
-# Si alguien carga archivo → se guarda como BITACORA.xlsx
-if archivo is not None:
-    with open(ARCHIVO_BITACORA, "wb") as f:
-        f.write(archivo.read())
+    # Si alguien carga archivo → se guarda como BITACORA.xlsx
+    if archivo is not None:
+        with open(ARCHIVO_BITACORA, "wb") as f:
+            f.write(archivo.read())
 
-    st.success("✅ Bitácora actualizada y compartida")
+        st.success("✅ Bitácora actualizada y compartida")
 
-# Si NO existe BITACORA.xlsx todavía, detener
-if not os.path.exists(ARCHIVO_BITACORA):
-    st.info("ℹ️ Carga un archivo de bitácora para iniciar el análisis.")
-    st.stop()
+    # Si NO existe BITACORA.xlsx todavía, detener
+    if not os.path.exists(ARCHIVO_BITACORA):
+        st.info("ℹ️ Carga un archivo de bitácora para iniciar el análisis.")
+        st.stop()
 
-# ✅ A partir de aquí TODA la lógica sigue igual
-df = pd.read_excel(ARCHIVO_BITACORA)
+    # ✅ A partir de aquí TODA tu lógica existente sigue EXACTAMENTE igual
+    df = pd.read_excel(ARCHIVO_BITACORA)
+
 
         # -----------------------------------------------------
         # Funciones utilitarias
