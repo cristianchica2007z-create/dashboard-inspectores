@@ -205,13 +205,13 @@ with tab1:
         st.success("✅ Cambios del historial guardados")
     # =================================================
 # =================================================
+# =================================================
 # ✅ RESUMEN MENSUAL CONSOLIDADO POR ÍTEM
 # =================================================
 st.markdown("## 📊 Consumo mensual consolidado por ítem")
 
 df_cons = df_inv.copy()
 
-# Convertir fecha
 df_cons["Fecha"] = pd.to_datetime(df_cons["Fecha"], errors="coerce")
 df_cons["Mes"] = df_cons["Fecha"].dt.to_period("M").astype(str)
 
@@ -239,11 +239,9 @@ for _, row in df_cons.iterrows():
 df_plot = pd.DataFrame(registros)
 
 if not df_plot.empty:
-    df_plot = (
-        df_plot
-        .groupby(["Mes", "Ítem"], as_index=False)
-        .sum()
-    )
+    df_plot = df_plot.groupby(
+        ["Mes", "Ítem"], as_index=False
+    ).sum()
 
     fig = px.bar(
         df_plot,
@@ -263,11 +261,6 @@ if not df_plot.empty:
     )
 
     st.plotly_chart(fig, use_container_width=True)
-else:
-    st.info("No hay datos suficientes para mostrar el consumo mensual.")
-
-
-
 
 # ---------------------------------------------------
 
