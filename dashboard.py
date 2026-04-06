@@ -67,10 +67,8 @@ tab1, tab2, tab3 = st.tabs([
 
 
 
-# ---------------------------------------------------
-# ---------------------------------------------------
 # ===================================================
-# ✅ TAB 1 — INVENTARIO DE PAPELERÍA (VERSIÓN ESTABLE)
+# ✅ TAB 1 — INVENTARIO DE PAPELERÍA (FINAL ESTABLE)
 # ===================================================
 with tab1:
     st.subheader("📦 Control de entrega de papelería e inventario")
@@ -89,7 +87,6 @@ with tab1:
     else:
         df_inv = pd.read_excel(archivo_inventario, engine="openpyxl")
 
-    # Normalizar columnas (blindaje)
     df_inv.columns = df_inv.columns.str.strip()
 
     # =================================================
@@ -98,17 +95,17 @@ with tab1:
     with st.form("form_entrega", clear_on_submit=True):
         st.markdown("### Registrar entrega")
 
-        # ----- Datos generales -----
+        # -------- DATOS GENERALES --------
         col1, col2, col3 = st.columns(3)
 
         with col1:
-            sede = st.selectbox("Sede", ["CALDAS", "RISARALDA"])
+            sede = st.selectbox("Sede", ["CALDAS", "RISARALDA"], key="inv_sede")
 
         with col2:
-            inspector = st.selectbox("Inspector", inspectores_lista)
+            inspector = st.selectbox("Inspector", inspectores_lista, key="inv_inspector")
 
         with col3:
-            fecha = st.date_input("Fecha")
+            fecha = st.date_input("Fecha", key="inv_fecha")
 
         col4, col5 = st.columns([1, 2])
 
@@ -122,13 +119,14 @@ with tab1:
                     "MARIA CAMILA",
                     "JANIER",
                     "DANNY DE LA CRUZ"
-                ]
+                ],
+                key="inv_responsable"
             )
 
         with col5:
-            observacion = st.text_input("Observación (opcional)")
+            observacion = st.text_input("Observación (opcional)", key="inv_obs")
 
-        # ----- Ítems -----
+        # -------- ÍTEMS --------
         st.markdown("### Ítems entregados")
 
         items_def = [
@@ -141,13 +139,20 @@ with tab1:
 
         filas = [items_def[i:i+4] for i in range(0, len(items_def), 4)]
 
-        for fila in filas:
+        for f_idx, fila in enumerate(filas):
             cols = st.columns(4)
-            for col, item in zip(cols, fila):
-                marcar = col.checkbox(item)
-                cantidad = col.number_input(
-                    "Cantidad", min_value=0, step=1,
-                    label_visibility="collapsed"
+            for c_idx, item in enumerate(fila):
+                marcar = cols[c_idx].checkbox(
+                    item,
+                    key=f"item_chk_{f_idx}_{c_idx}"
+                )
+
+                cantidad = cols[c_idx].number_input(
+                    "Cantidad",
+                    min_value=0,
+                    step=1,
+                    label_visibility="collapsed",
+                    key=f"item_qty_{f_idx}_{c_idx}"
                 )
 
                 if marcar and cantidad > 0:
@@ -173,7 +178,6 @@ with tab1:
 
             df_inv = pd.concat([df_inv, nueva_fila], ignore_index=True)
             df_inv.to_excel(archivo_inventario, index=False, engine="openpyxl")
-
             st.success("✅ Entrega registrada correctamente")
 
     # =================================================
@@ -183,7 +187,8 @@ with tab1:
 
     filtro_inspector = st.selectbox(
         "Filtrar por inspector",
-        ["TODOS"] + inspectores_lista
+        ["TODOS"] + inspectores_lista,
+        key="inv_filtro_inspector"
     )
 
     df_hist = df_inv.copy()
@@ -195,12 +200,8 @@ with tab1:
     # =================================================
     # ✅ GUARDAR HISTORIAL
     # =================================================
-    if st.button("💾 Guardar cambios del historial"):
-        df_inv.to_excel(
-            archivo_inventario,
-            index=False,
-            engine="openpyxl"
-        )
+    if st.button("💾 Guardar cambios del historial", key="inv_guardar_hist"):
+        df_inv.to_excel(archivo_inventario, index=False, engine="openpyxl")
         st.success("✅ Cambios del historial guardados")
     # =================================================
     # ✅ RESUMEN MENSUAL CONSOLIDADO
