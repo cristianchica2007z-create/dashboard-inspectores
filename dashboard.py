@@ -219,36 +219,38 @@ with tab1:
             st.success("✅ Entrega registrada correctamente")
 
     # ===================================================
-    # ✅ HISTORIAL DE ENTREGAS
-    # ===================================================
-    st.markdown("### 📋 Historial de entregas")
+  # ===================================================
+# ✅ HISTORIAL + FILTRO + EDICIÓN (SOLO INVENTARIO)
+# ===================================================
+st.markdown("### 📋 Historial de entregas")
 
-    filtro_inspector = st.selectbox(
-        "Filtrar por inspector",
-        ["TODOS"] + inspectores_lista
+filtro_inspector = st.selectbox(
+    "Filtrar por inspector",
+    ["TODOS"] + inspectores_lista,
+    key="filtro_hist"
+)
+
+# ⚠️ USAR SIEMPRE df_inv (NO df)
+df_hist = df_inv.copy()
+
+if filtro_inspector != "TODOS":
+    df_hist = df_hist[df_hist["inspector"] == filtro_inspector]
+
+df_editado = st.data_editor(
+    df_hist,
+    num_rows="dynamic",
+    use_container_width=True,
+    key="editor_hist"
+)
+
+if st.button("💾 Guardar cambios del historial", key="btn_hist"):
+    df_editado.to_excel(
+        archivo_inventario,
+        index=False,
+        engine="openpyxl"
     )
-
-    df_hist = df_inv.copy()
-
-    if filtro_inspector != "TODOS":
-        df_hist = df_hist[
-            df_hist["inspector"] == filtro_inspector
-        ]
-
-    df_editado = st.data_editor(
-        df_hist,
-        num_rows="dynamic",
-        use_container_width=True
-    )
-
-    if st.button("💾 Guardar cambios del historial"):
-        df_editado.to_excel(
-            archivo_inventario,
-            index=False,
-            engine="openpyxl"
-        )
-        subir_a_github(archivo_inventario)
-        st.success("✅ Historial actualizado")
+    subir_a_github(archivo_inventario)
+    st.success("✅ Cambios del historial guardados")
 
     # ===================================================
     # ✅ RESUMEN MENSUAL CONSOLIDADO
