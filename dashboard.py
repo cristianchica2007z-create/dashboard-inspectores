@@ -5,7 +5,6 @@ import plotly.express as px
 
 
 # -------------------------------------------------
-# -------------------------------------------------
 # LOGIN DE USUARIO – DISEÑO FINAL LIMPIO
 # -------------------------------------------------
 import json
@@ -96,6 +95,7 @@ if st.session_state.usuario is None:
 
     st.markdown('</div>', unsafe_allow_html=True)
     st.stop()
+
 
 
     
