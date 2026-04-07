@@ -6,7 +6,7 @@ import plotly.express as px
 
 # -------------------------------------------------
 # -------------------------------------------------
-# LOGIN DE USUARIO – DISEÑO FINAL CON LOGO ARRIBA
+# LOGIN DE USUARIO – DISEÑO LIMPIO Y ESTABLE
 # -------------------------------------------------
 import json
 
@@ -22,54 +22,34 @@ def cargar_usuarios():
 
 if st.session_state.usuario is None:
 
-    # ====== ESTILOS ======
-    st.markdown("""
+    st.markdown(
+        """
         <style>
-        .login-wrapper {
-            max-width: 420px;
-            margin: 4rem auto;
-            text-align: center;
-        }
-        .logo-box {
-            background: white;
-            width: 140px;
-            height: 140px;
-            margin: 0 auto -60px auto;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 12px 30px rgba(0,0,0,0.18);
-            z-index: 10;
-            position: relative;
-        }
         .login-card {
-            background: white;
-            padding: 80px 2.5rem 2.5rem 2.5rem;
-            border-radius: 18px;
-            box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+            max-width: 420px;
+            margin: 2rem auto;
+            padding: 2rem;
+            border-radius: 16px;
+            background-color: #ffffff;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
         }
         .login-title {
+            text-align: center;
             font-size: 1.4rem;
             font-weight: 600;
-            margin-bottom: 2rem;
+            margin-bottom: 1.5rem;
             color: #0d3b66;
         }
         </style>
-    """, unsafe_allow_html=True)
+        """,
+        unsafe_allow_html=True
+    )
 
-    st.markdown('<div class="login-wrapper">', unsafe_allow_html=True)
+    # LOGO CENTRADO Y GRANDE
+    st.image("logo.png", width=200)
 
-    # LOGO SUPERIOR
-    st.markdown('<div class="logo-box">', unsafe_allow_html=True)
-    st.image("logo.png", width=100)
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    # CARD DE LOGIN
     st.markdown('<div class="login-card">', unsafe_allow_html=True)
-
-    st.markdown('<div class="login-title">INICIAR SESIÓN</div>',
-                unsafe_allow_html=True)
+    st.markdown('<div class="login-title">INICIAR SESIÓN</div>', unsafe_allow_html=True)
 
     usuarios = cargar_usuarios()
 
@@ -97,8 +77,7 @@ if st.session_state.usuario is None:
         else:
             st.error("❌ Usuario no encontrado")
 
-    st.markdown('</div></div>', unsafe_allow_html=True)
-
+    st.markdown('</div>', unsafe_allow_html=True)
     st.stop()
     
 # ---------------------------------------------------
