@@ -56,19 +56,25 @@ st.set_page_config(
 
 
 # -------------------------------------------------
-# LOGO SUPERIOR DERECHO
+# HEADER CON LOGO A LA DERECHA
 # -------------------------------------------------
-col_logo, col_titulo = st.columns([1, 6])
-
-with col_logo:
-    st.image("logo.png", use_container_width=True)
+col_titulo, col_logo = st.columns([8, 2])
 
 with col_titulo:
     st.markdown(
-        "<h1 style='text-align:left;'>📊 Dashboard Inspectores</h1>",
+        "<h1 style='margin-bottom: 0;'>📊 Dashboard Inspectores</h1>",
         unsafe_allow_html=True
     )
 
+with col_logo:
+    st.markdown(
+        """
+        <div style="display: flex; justify-content: flex-end;">
+            <img src="logo.png" style="max-height:80px;">
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
 # ---------------------------------------------------
 # ✅ CREAR PESTAÑAS
