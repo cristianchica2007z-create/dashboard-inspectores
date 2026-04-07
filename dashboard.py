@@ -1066,9 +1066,19 @@ with tab3:
         # =================================================
         # 2️⃣ GUARDAR FECHA Y HORA (BITACORA_INFO.json)
         # =================================================
-        info = {
-            "ultima_actualizacion": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        }
+       from zoneinfo import ZoneInfo
+import datetime
+
+TZ_UTC = ZoneInfo("UTC")
+
+info = {
+    # Se guarda en UTC (estándar)
+    "ultima_actualizacion": datetime.datetime.now(TZ_UTC).strftime(
+        "%Y-%m-%d %H:%M:%S"
+    ),
+    # Usuario autenticado
+    "usuario_actualizo": st.session_state.usuario
+}
 
         contenido_info_b64 = base64.b64encode(
             json.dumps(info, indent=2).encode("utf-8")
