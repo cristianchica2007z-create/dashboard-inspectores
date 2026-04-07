@@ -763,30 +763,54 @@ with tab2:
     ]
 
     # ---------------------------------------------------
-    # ✅ KPI: PROMEDIO HORA DE INICIO (TODAS LAS ÓRDENES)
+# ---------------------------------------------------
+    # ✅ KPI: PROMEDIO HORA DE INICIO
+    # (PRIMERA TAREA DEL DÍA POR INSPECTOR)
     # ---------------------------------------------------
-    df_ini = df2[
-        (df2["hora_inicio"] != "SIN HORA") &
-        (df2["hora_inicio"].notna())
-    ]
+    df_inicio_jornada = (
+        df2[
+            (df2["hora_inicio"] != "SIN HORA") &
+            (df2["hora_inicio"].notna())
+        ]
+        .groupby("inspector", as_index=False)
+        .agg({"hora_inicio": "min"})
+    )
 
-    prom_ini = df_ini["hora_inicio"].apply(hora_to_decimal).mean()
+    df_inicio_jornada["ini_dec"] = (
+        df_inicio_jornada["hora_inicio"]
+        .apply(hora_to_decimal)
+    )
+
+    prom_ini = df_inicio_jornada["ini_dec"].mean()
+
     hora_prom_ini = (
         hora_to_string(decimal_to_hora(prom_ini))
         if pd.notna(prom_ini) else "—"
     )
 
     # ---------------------------------------------------
-    # ✅ KPI: PROMEDIO HORA DE FIN (TODAS LAS ÓRDENES)
+    # ✅ KPI: PROMEDIO HORA DE FIN
+    # (ÚLTIMA TAREA DEL DÍA POR INSPECTOR)
     # ---------------------------------------------------
-    df_fin = df2[df2["hora_final"].notna()]
+    df_fin_jornada = (
+        df2[
+            df2["hora_final"].notna()
+        ]
+        .groupby("inspector", as_index=False)
+        .agg({"hora_final": "max"})
+    )
 
-    prom_fin = df_fin["hora_final"].apply(hora_to_decimal).mean()
+    df_fin_jornada["fin_dec"] = (
+        df_fin_jornada["hora_final"]
+        .apply(hora_to_decimal)
+    )
+
+    prom_fin = df_fin_jornada["fin_dec"].mean()
+
     hora_prom_fin = (
         hora_to_string(decimal_to_hora(prom_fin))
         if pd.notna(prom_fin) else "—"
     )
-
     # ---------------------------------------------------
     # ✅ KPI: PROMEDIO TIEMPO POR TAREA (SOLO EFECTIVAS)
     # ---------------------------------------------------
