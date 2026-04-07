@@ -409,6 +409,7 @@ with tab1:
 # ===================================================
 # ===================================================
 # ===================================================
+  # ===================================================
     # ✅ TAB 2 — PARTE 1 / 4
     # Carga + normalización + filtro de GRUPO
     # ===================================================
@@ -439,7 +440,7 @@ with tab1:
     df_bitacora.columns = df_bitacora.columns.str.strip().str.lower()
 
     # -------------------------------------------------
-    # ✅ INCLUIR ÚNICAMENTE GRUPOS OPERATIVOS
+    # ✅ EXCLUIR GRUPOS NO OPERATIVOS
     # -------------------------------------------------
     if "grupo" in df_bitacora.columns:
         df_bitacora["grupo"] = (
@@ -449,11 +450,17 @@ with tab1:
             .str.strip()
         )
 
+        grupos_excluir = [
+            "SST-NAL",
+            "INSP-ANT",
+            "INSP_ANT_PREV_CW287728",
+            "INSP-VALLE",
+            "SUSP-ANT",
+            "SUPERVISIONES"
+        ]
+
         df_bitacora = df_bitacora[
-            df_bitacora["grupo"].isin([
-                "INSP-CALDAS",
-                "INSP-RIS"
-            ])
+            ~df_bitacora["grupo"].isin(grupos_excluir)
         ]
     else:
         st.error(
@@ -462,6 +469,38 @@ with tab1:
         )
         st.stop()
 
+    # -------------------------------------------------
+    # PROTECCIÓN: EVITAR PESTAÑA VACÍA
+    # -------------------------------------------------
+    if df_bitacora.empty:
+        st.warning(
+            "⚠️ No hay datos disponibles después del filtro por GRUPO.\n"
+            "Revisa los valores de la columna GRUPO en la bitácora."
+        )
+        st.stop()
+
+    # -------------------------------------------------
+    # MOSTRAR FECHA Y HORA DE LA ÚLTIMA ACTUALIZACIÓN
+    # -------------------------------------------------
+    import json
+
+    info_path = "BITACORA_INFO.json"
+    ultima_actualizacion = "—"
+
+    try:
+        if os.path.exists(info_path):
+            with open(info_path, "r", encoding="utf-8") as f:
+                info = json.load(f)
+                ultima_actualizacion = info.get(
+                    "ultima_actualizacion", "—"
+                )
+    except Exception:
+        ultima_actualizacion = "—"
+
+    st.caption(
+        f"🕓 Última actualización de la bitácora: "
+        f"{ultima_actualizacion}"
+    )
     # -------------------------------------------------
     # MOSTRAR FECHA Y HORA DE LA ÚLTIMA ACTUALIZACIÓN
     # (FORMA SEGURA – NO ROMPE TAB 2)
