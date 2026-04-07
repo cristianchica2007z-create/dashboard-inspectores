@@ -761,6 +761,7 @@ c6.metric("📈 % Efectividad", f"{porcentaje}%")
     # ===================================================
 
     # ---------------------------------------------------
+# ---------------------------------------------------
     # RESUMEN POR INSPECTOR
     # ---------------------------------------------------
     resumen = (
@@ -770,7 +771,7 @@ c6.metric("📈 % Efectividad", f"{porcentaje}%")
                "ordenes_efectivas": x["efectiva"].sum(),
                "porcentaje_efectividad":
                    round((x["efectiva"].sum() / x.shape[0]) * 100, 1)
-                   if x.shape[0] else 0,
+                   if x.shape[0] > 0 else 0,
                "promedio_tiempo_tarea":
                    td_to_str(
                        x.loc[x["efectiva"] == True, "tiempo_tarea_td"].mean()
@@ -780,9 +781,13 @@ c6.metric("📈 % Efectividad", f"{porcentaje}%")
     )
 
     # ---------------------------------------------------
-    # TABLA CONSOLIDADA DEL DÍA
+    # ARMAR TABLA COMPLETA DEL DÍA
     # ---------------------------------------------------
-    df_tabla = df_agrupado.merge(resumen, on="inspector", how="left")
+    df_tabla = df_agrupado.merge(
+        resumen,
+        on="inspector",
+        how="left"
+    )
 
     df_tabla = df_tabla.fillna({
         "hora_inicio": "—",
@@ -794,6 +799,27 @@ c6.metric("📈 % Efectividad", f"{porcentaje}%")
         "porcentaje_efectividad": 0,
         "promedio_tiempo_tarea": "—"
     })
+
+    st.markdown("### 📋 Tabla de inspecciones del día")
+
+    st.dataframe(
+        df_tabla[
+            [
+                "inspector",
+                "supervisor",
+                "fecha",
+                "hora_inicio",
+                "hora_final",
+                "localidad",
+                "estado",
+                "total_ordenes",
+                "ordenes_efectivas",
+                "porcentaje_efectividad",
+                "promedio_tiempo_tarea"
+            ]
+        ],
+        use_container_width=True
+    )
 
     st.markdown("### 📋 Tabla de inspecciones del día")
     st.dataframe(
