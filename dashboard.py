@@ -599,11 +599,16 @@ with tab2:
         lambda x: x if pd.notna(x) else "SIN HORA"
     )
     # ===================================================
+   # ===================================================
     # ✅ TAB 2 — PARTE 2 / 4
     # Supervisores y filtros
     # ===================================================
+
+    # -------------------------------------------
+    # ASIGNAR SUPERVISOR A CADA INSPECTOR
+    # -------------------------------------------
     supervisores_dict = {k.upper(): v for k, v in {
-      "ARIZA MARIN SERGIO": "ANDRES ARROYAVE",
+        "ARIZA MARIN SERGIO": "ANDRES ARROYAVE",
         "ANDRES ARROYAVE": "ANDRES ARROYAVE",
         "BEDOYA DIEGO ALEJANDRO": "DANNY DE LA CRUZ",
         "DANNY DE LA CRUZ": "DANNY DE LA CRUZ",
@@ -665,61 +670,54 @@ with tab2:
         .fillna("SIN SUPERVISOR")
     )
 
- 
-# FILTRO DE FECHA
-# ------------------------------
-fechas_validas = sorted(df_bitacora["fecha"].dropna().unique())
-fecha_sel = st.selectbox("Selecciona fecha:", fechas_validas)
-df2 = df_bitacora[df_bitacora["fecha"] == fecha_sel]
+    # -------------------------------------------
+    # FILTRO DE FECHA
+    # -------------------------------------------
+    fechas_validas = sorted(df_bitacora["fecha"].dropna().unique())
+    fecha_sel = st.selectbox("Selecciona fecha:", fechas_validas)
+    df2 = df_bitacora[df_bitacora["fecha"] == fecha_sel]
 
-# ------------------------------
-# FILTRO DE SUPERVISORES (CHECKLIST TIPO EXCEL)
-# ------------------------------
-supervisores_disponibles = sorted(
-    df2["supervisor"].dropna().unique()
-)
+    # -------------------------------------------
+    # FILTRO DE SUPERVISORES (CHECKLIST TIPO EXCEL ✅)
+    # -------------------------------------------
+    supervisores_disponibles = sorted(df2["supervisor"].unique())
 
-with st.expander("Seleccionar supervisores", expanded=True):
-    supervisores_sel = []
-    for sup in supervisores_disponibles:
-        if st.checkbox(
-            sup,
-            value=True,
-            key=f"sup_{fecha_sel}_{sup}"  # 👈 clave dependiente de fecha
-        ):
-            supervisores_sel.append(sup)
+    with st.expander("Seleccionar supervisores", expanded=True):
+        supervisores_sel = []
+        for sup in supervisores_disponibles:
+            if st.checkbox(
+                sup,
+                value=True,
+                key=f"sup_{fecha_sel}_{sup}"
+            ):
+                supervisores_sel.append(sup)
 
-if supervisores_sel:
-    df2 = df2[df2["supervisor"].isin(supervisores_sel)]
-else:
-    st.warning("⚠️ Selecciona al menos un supervisor.")
-    st.stop()
+    if supervisores_sel:
+        df2 = df2[df2["supervisor"].isin(supervisores_sel)]
+    else:
+        st.warning("⚠️ Selecciona al menos un supervisor.")
+        st.stop()
 
-if df2.empty:
-    st.warning("⚠️ No hay datos con los supervisores seleccionados.")
-    st.stop()
+    if df2.empty:
+        st.warning("⚠️ No hay datos para los supervisores seleccionados.")
+        st.stop()
 
-# ------------------------------
-# FILTRO DE INSPECTORES (SINCRONIZADO)
-# ------------------------------
-inspectores_disponibles = sorted(
-    df2["inspector"].dropna().unique()
-)
+    # -------------------------------------------
+    # FILTRO DE INSPECTORES (DEPENDIENTE)
+    # -------------------------------------------
+    inspectores_disponibles = sorted(df2["inspector"].unique())
 
-inspectores_sel = st.multiselect(
-    "Selecciona inspectores:",
-    inspectores_disponibles,
-    default=inspectores_disponibles,
-    key=f"inspectores_{fecha_sel}_{'_'.join(supervisores_sel)}"
-)
+    inspectores_sel = st.multiselect(
+        "Selecciona inspectores:",
+        inspectores_disponibles,
+        default=inspectores_disponibles
+    )
 
-if inspectores_sel:
-    df2 = df2[df2["inspector"].isin(inspectores_sel)]
-
-if df2.empty:
-    st.warning("⚠️ No hay datos con los inspectores seleccionados.")
-    st.stop()
-
+    if inspectores_sel:
+        df2 = df2[df2["inspector"].isin(inspectores_sel)]
+    else:
+        st.warning("⚠️ Selecciona al menos un inspector.")
+        st.stop()
 
 # ===================================================
 # ===================================================
