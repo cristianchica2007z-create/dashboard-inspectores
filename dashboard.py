@@ -437,20 +437,25 @@ with tab2:
     # -------------------------------------------------
     # ✅ EXCLUIR GRUPOS NO OPERATIVOS
     # -------------------------------------------------
-    if "grupo" in df_bitacora.columns:
-        df_bitacora["grupo"] = (
-            df_bitacora["grupo"]
-            .astype(str)
-            .str.upper()
-            .str.strip()
-        )
+   # -------------------------------------------------
+# ✅ INCLUIR ÚNICAMENTE GRUPOS OPERATIVOS
+# -------------------------------------------------
+if "grupo" in df_bitacora.columns:
+    df_bitacora["grupo"] = (
+        df_bitacora["grupo"]
+        .astype(str)
+        .str.upper()
+        .str.strip()
+    )
 
-        df_bitacora = df_bitacora[
-            ~df_bitacora["GRUPO"].isin(
-                ["INSP-CALDAS", "INSP-RIS"]
-            )
-        ]
-
+    df_bitacora = df_bitacora[
+        df_bitacora["grupo"].isin([
+            "INSP-CALDAS",
+            "INSP-RIS"
+        ])
+    ]
+else:
+    st.warning("⚠️ La columna GRUPO no existe en el archivo de bitácora.")
     # -------------------------------------------------
     # MOSTRAR FECHA Y HORA DE LA ÚLTIMA ACTUALIZACIÓN
     # (FORMA SEGURA – NO ROMPE TAB 2)
