@@ -339,20 +339,7 @@ with tab2:
     # -------------------------------------------------
 # MOSTRAR FECHA Y HORA DE LA ÚLTIMA ACTUALIZACIÓN
 # -------------------------------------------------
-import json
 
-info_path = "BITACORA_INFO.json"
-
-if os.path.exists(info_path):
-    with open(info_path, "r", encoding="utf-8") as f:
-        info = json.load(f)
-
-    st.caption(
-        f"🕓 Última actualización de la bitácora: "
-        f"{info.get('ultima_actualizacion', '—')}"
-    )
-else:
-    st.caption("🕓 Última actualización de la bitácora: —")
 
     # FUNCIONES UTILITARIAS
     # -------------------------------------------------
