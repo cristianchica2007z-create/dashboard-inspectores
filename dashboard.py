@@ -406,16 +406,13 @@ with tab1:
 
 
 # ===================================================
+# ✅ TAB 2 — PARTE 1 / 4
+# Carga + funciones + normalización
+# LEE BITACORA.xlsx DESDE EL REPOSITORIO
 # ===================================================
-# ===================================================
-# ===================================================
-  # ===================================================
-    # ✅ TAB 2 — PARTE 1 / 4
-    # Carga + normalización + filtro de GRUPO
-    # ===================================================
+with tab2:
     st.subheader("🕒 Control Operativo e&c")
     st.subheader("Eje Cafetero")
-
     # -------------------------------------------------
     # VALIDAR QUE EXISTA BITÁCORA COMPARTIDA
     # -------------------------------------------------
@@ -434,66 +431,6 @@ with tab1:
     # -------------------------------------------------
     df_bitacora = pd.read_excel(archivo_bitacora)
 
-    # -------------------------------------------------
-    # NORMALIZAR NOMBRES DE COLUMNAS
-    # -------------------------------------------------
-    df_bitacora.columns = df_bitacora.columns.str.strip().str.lower()
-
-    # -------------------------------------------------
-  # -------------------------------------------------
-    # ✅ FILTRO OPERATIVO POR GRUPO (ROBUSTO)
-    # -------------------------------------------------
-    if "grupo" in df_bitacora.columns:
-        df_bitacora["grupo"] = (
-            df_bitacora["grupo"]
-            .astype(str)
-            .str.upper()
-            .str.strip()
-        )
-
-        # Incluir únicamente grupos operativos reales
-        df_bitacora = df_bitacora[
-            df_bitacora["grupo"].str.startswith("INSP-")
-        ]
-    else:
-        st.error(
-            f"❌ La columna 'grupo' no existe en el archivo.\n"
-            f"Columnas detectadas: {list(df_bitacora.columns)}"
-        )
-        st.stop()
-
-    # -------------------------------------------------
-    # PROTECCIÓN: EVITAR PESTAÑA VACÍA
-    # -------------------------------------------------
-    if df_bitacora.empty:
-        st.warning(
-            "⚠️ No hay datos disponibles después del filtro por GRUPO.\n"
-            "Revisa los valores de la columna GRUPO en la bitácora."
-        )
-        st.stop()
-
-    # -------------------------------------------------
-    # MOSTRAR FECHA Y HORA DE LA ÚLTIMA ACTUALIZACIÓN
-    # -------------------------------------------------
-    import json
-
-    info_path = "BITACORA_INFO.json"
-    ultima_actualizacion = "—"
-
-    try:
-        if os.path.exists(info_path):
-            with open(info_path, "r", encoding="utf-8") as f:
-                info = json.load(f)
-                ultima_actualizacion = info.get(
-                    "ultima_actualizacion", "—"
-                )
-    except Exception:
-        ultima_actualizacion = "—"
-
-    st.caption(
-        f"🕓 Última actualización de la bitácora: "
-        f"{ultima_actualizacion}"
-    )
     # -------------------------------------------------
     # MOSTRAR FECHA Y HORA DE LA ÚLTIMA ACTUALIZACIÓN
     # (FORMA SEGURA – NO ROMPE TAB 2)
