@@ -57,7 +57,7 @@ if st.session_state.usuario is None:
     # -----------------------------
     # LOGO ALINEADO A LA IZQUIERDA
     # -----------------------------
-    col_logo, col_espacio = st.columns([15, 10])
+    col_logo, col_espacio = st.columns([55, 10])
 
     with col_logo:
         st.image("logo.png", width=420)
