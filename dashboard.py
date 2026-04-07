@@ -764,6 +764,9 @@ c6.metric("📈 % Efectividad", f"{porcentaje}%")
 # ---------------------------------------------------
     # RESUMEN POR INSPECTOR
     # ---------------------------------------------------
+ # ---------------------------------------------------
+    # RESUMEN POR INSPECTOR
+    # ---------------------------------------------------
     resumen = (
         df2.groupby("inspector")
            .apply(lambda x: pd.Series({
