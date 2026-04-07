@@ -6,23 +6,36 @@ import plotly.express as px
 
 # -------------------------------------------------
 # -------------------------------------------------
-# LOGIN DE USUARIO – DISEÑO FINAL LIMPIO (STREAMLIT)
+# -------------------------------------------------
+# LOGIN DE USUARIO – DISEÑO LIMPIO Y ORGANIZADO
 # -------------------------------------------------
 import json
 
+# -----------------------------
+# SESSION STATE
+# -----------------------------
 if "usuario" not in st.session_state:
     st.session_state.usuario = None
     st.session_state.rol = None
 
+# -----------------------------
+# CARGAR USUARIOS
+# -----------------------------
 def cargar_usuarios():
     if os.path.exists("USUARIOS.json"):
         with open("USUARIOS.json", "r", encoding="utf-8") as f:
             return json.load(f)
     return {}
 
+
+# =================================================
+# LOGIN
+# =================================================
 if st.session_state.usuario is None:
 
-    # -------- ESTILOS --------
+    # -----------------------------
+    # ESTILOS
+    # -----------------------------
     st.markdown("""
         <style>
         .login-card {
@@ -43,12 +56,17 @@ if st.session_state.usuario is None:
         </style>
     """, unsafe_allow_html=True)
 
-    # -------- LOGO CENTRADO --------
-    st.markdown("<div style='text-align:center;'>", unsafe_allow_html=True)
-    st.image("logo.png", width=450)
-    st.markdown("</div>", unsafe_allow_html=True)
+    # -----------------------------
+    # LOGO (DESPLAZADO A LA DERECHA)
+    # -----------------------------
+    col_espacio, col_logo, col_espacio2 = st.columns([2.5, 4, 1])
 
-    # -------- CARD --------
+    with col_logo:
+        st.image("logo.png", width=420)
+
+    # -----------------------------
+    # CARD LOGIN
+    # -----------------------------
     st.markdown('<div class="login-card">', unsafe_allow_html=True)
     st.markdown('<div class="login-title">INICIAR SESIÓN</div>', unsafe_allow_html=True)
 
@@ -78,7 +96,7 @@ if st.session_state.usuario is None:
         else:
             st.error("❌ Usuario no encontrado")
 
-    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
     st.stop()
 
     
