@@ -408,11 +408,10 @@ with tab1:
 # ===================================================
 # ===================================================
 # ===================================================
-# ✅ TAB 2 — PARTE 1 / 4
-# Carga + funciones + normalización
-# LEE BITACORA.xlsx DESDE EL REPOSITORIO
 # ===================================================
-with tab2:
+    # ✅ TAB 2 — PARTE 1 / 4
+    # Carga + normalización + filtro de GRUPO
+    # ===================================================
     st.subheader("🕒 Control Operativo e&c")
     st.subheader("Eje Cafetero")
 
@@ -435,27 +434,34 @@ with tab2:
     df_bitacora = pd.read_excel(archivo_bitacora)
 
     # -------------------------------------------------
-    # ✅ EXCLUIR GRUPOS NO OPERATIVOS
+    # NORMALIZAR NOMBRES DE COLUMNAS
     # -------------------------------------------------
-   # -------------------------------------------------
-# ✅ INCLUIR ÚNICAMENTE GRUPOS OPERATIVOS
-# -------------------------------------------------
-if "grupo" in df_bitacora.columns:
-    df_bitacora["grupo"] = (
-        df_bitacora["grupo"]
-        .astype(str)
-        .str.upper()
-        .str.strip()
-    )
+    df_bitacora.columns = df_bitacora.columns.str.strip().str.lower()
 
-    df_bitacora = df_bitacora[
-        df_bitacora["grupo"].isin([
-            "INSP-CALDAS",
-            "INSP-RIS"
-        ])
-    ]
-else:
-    st.warning("⚠️ La columna GRUPO no existe en el archivo de bitácora.")
+    # -------------------------------------------------
+    # ✅ INCLUIR ÚNICAMENTE GRUPOS OPERATIVOS
+    # -------------------------------------------------
+    if "grupo" in df_bitacora.columns:
+        df_bitacora["grupo"] = (
+            df_bitacora["grupo"]
+            .astype(str)
+            .str.upper()
+            .str.strip()
+        )
+
+        df_bitacora = df_bitacora[
+            df_bitacora["grupo"].isin([
+                "INSP-CALDAS",
+                "INSP-RIS"
+            ])
+        ]
+    else:
+        st.error(
+            f"❌ La columna 'grupo' no existe en el archivo.\n"
+            f"Columnas detectadas: {list(df_bitacora.columns)}"
+        )
+        st.stop()
+
     # -------------------------------------------------
     # MOSTRAR FECHA Y HORA DE LA ÚLTIMA ACTUALIZACIÓN
     # (FORMA SEGURA – NO ROMPE TAB 2)
@@ -479,7 +485,6 @@ else:
         f"🕓 Última actualización de la bitácora: "
         f"{ultima_actualizacion}"
     )
-
     # -------------------------------------------------
     # FUNCIONES UTILITARIAS
     # -------------------------------------------------
