@@ -25,7 +25,8 @@ TZ_CO = ZoneInfo("America/Bogota")
 def ahora_colombia():
     return datetime.datetime.now(TZ_CO)
 
-
+st.write("Hora servidor:", datetime.datetime.now())
+st.write("Hora Colombia:", ahora_colombia())
 
 
 if "usuario" not in st.session_state:
