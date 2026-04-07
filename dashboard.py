@@ -6,39 +6,30 @@ import plotly.express as px
 
 # -------------------------------------------------
 # -------------------------------------------------
-# LOGIN DE USUARIO – FINAL LIMPIO Y ALINEADO
-# -------------------------------------------------
+# =======================
+# LOGIN – BLOQUE ABSOLUTO
+# =======================
 import json
+import os
+import streamlit as st
 
-# -----------------------------
-# SESSION STATE
-# -----------------------------
 if "usuario" not in st.session_state:
     st.session_state.usuario = None
     st.session_state.rol = None
 
-# -----------------------------
-# CARGAR USUARIOS
-# -----------------------------
 def cargar_usuarios():
     if os.path.exists("USUARIOS.json"):
         with open("USUARIOS.json", "r", encoding="utf-8") as f:
             return json.load(f)
     return {}
 
-# =================================================
-# LOGIN
-# =================================================
 if st.session_state.usuario is None:
 
-    # -----------------------------
-    # ESTILOS (SOLO CARD)
-    # -----------------------------
     st.markdown("""
         <style>
         .login-card {
             max-width: 420px;
-            margin: 0.5rem auto 3rem auto;
+            margin: 4rem auto;
             padding: 2.5rem;
             border-radius: 18px;
             background-color: #ffffff;
@@ -54,47 +45,25 @@ if st.session_state.usuario is None:
         </style>
     """, unsafe_allow_html=True)
 
-    # -----------------------------
-    # LOGO ALINEADO A LA IZQUIERDA
-    # -----------------------------
-    col_logo, col_espacio = st.columns([55, 10])
+    st.image("logo.png", width=420)
 
-    with col_logo:
-        st.image("logo.png", width=420)
-
-    # -----------------------------
-    # CARD DE LOGIN
-    # -----------------------------
     st.markdown('<div class="login-card">', unsafe_allow_html=True)
     st.markdown('<div class="login-title">INICIAR SESIÓN</div>', unsafe_allow_html=True)
 
     usuarios = cargar_usuarios()
 
-    usuario_ingresado = st.text_input(
-        "Usuario",
-        placeholder="Ingresa tu usuario"
-    )
-
-    pin_ingresado = st.text_input(
-        "PIN (4 dígitos)",
-        type="password",
-        max_chars=4,
-        placeholder="••••"
-    )
+    usuario = st.text_input("Usuario")
+    pin = st.text_input("PIN (4 dígitos)", type="password", max_chars=4)
 
     if st.button("🔐 INICIAR SESIÓN", use_container_width=True):
-        if usuario_ingresado in usuarios:
-            if pin_ingresado == usuarios[usuario_ingresado]["pin"]:
-                st.session_state.usuario = usuario_ingresado
-                st.session_state.rol = usuarios[usuario_ingresado]["rol"]
-                st.success("✅ Acceso autorizado")
-                st.rerun()
-            else:
-                st.error("❌ PIN incorrecto")
+        if usuario in usuarios and pin == usuarios[usuario]["pin"]:
+            st.session_state.usuario = usuario
+            st.session_state.rol = usuarios[usuario]["rol"]
+            st.rerun()
         else:
-            st.error("❌ Usuario no encontrado")
+            st.error("❌ Usuario o PIN incorrectos")
 
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
 
 
