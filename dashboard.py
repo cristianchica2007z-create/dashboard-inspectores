@@ -305,8 +305,7 @@ with tab1:
         st.plotly_chart(fig, use_container_width=True)
 
 
-# ===================================================
-# ===================================================
+
 # ===================================================
 # ===================================================
 # ✅ TAB 2 — PARTE 1 / 4
@@ -316,11 +315,11 @@ with tab1:
 with tab2:
     st.subheader("🕒 Control de horario de inspectores")
 
-    archivo_bitacora = "BITACORA.xlsx"
-
     # -------------------------------------------------
     # VALIDAR QUE EXISTA BITÁCORA COMPARTIDA
     # -------------------------------------------------
+    archivo_bitacora = "BITACORA.xlsx"
+
     if not os.path.exists(archivo_bitacora):
         st.warning(
             "⚠️ No hay una bitácora cargada.\n\n"
@@ -335,12 +334,30 @@ with tab2:
     df_bitacora = pd.read_excel(archivo_bitacora)
 
     # -------------------------------------------------
+    # MOSTRAR FECHA Y HORA DE LA ÚLTIMA ACTUALIZACIÓN
+    # (FORMA SEGURA – NO ROMPE TAB 2)
+    # -------------------------------------------------
+    import json
+
+    info_path = "BITACORA_INFO.json"
+    ultima_actualizacion = "—"
+
+    try:
+        if os.path.exists(info_path):
+            with open(info_path, "r", encoding="utf-8") as f:
+                info = json.load(f)
+                ultima_actualizacion = info.get(
+                    "ultima_actualizacion", "—"
+                )
+    except Exception:
+        ultima_actualizacion = "—"
+
+    st.caption(
+        f"🕓 Última actualización de la bitácora: "
+        f"{ultima_actualizacion}"
+    )
 
     # -------------------------------------------------
-# MOSTRAR FECHA Y HORA DE LA ÚLTIMA ACTUALIZACIÓN
-# -------------------------------------------------
-
-
     # FUNCIONES UTILITARIAS
     # -------------------------------------------------
     import datetime
@@ -363,7 +380,7 @@ with tab2:
     def hora_to_decimal(h):
         if h is None or h == "SIN HORA":
             return None
-        return h.hour + h.minute/60 + h.second/3600
+        return h.hour + h.minute / 60 + h.second / 3600
 
     def decimal_to_hora(d):
         if d is None or pd.isna(d):
