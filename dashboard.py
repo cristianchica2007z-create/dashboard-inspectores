@@ -6,14 +6,6 @@ import json
 import datetime
 from zoneinfo import ZoneInfo
 
-# -------------------------------------------------
-# -------------------------------------------------
-# =======================
-# LOGIN – BLOQUE ABSOLUTO
-# =======================
-import json
-import os
-import streamlit as st
 
 
 # -------------------------------------------------
@@ -474,17 +466,9 @@ with tab2:
         st.stop()
 
     # -------------------------------------------------
-    # MOSTRAR FECHA Y HORA DE LA ÚLTIMA ACTUALIZACIÓN
+ # -------------------------------------------------
+    # MOSTRAR FECHA, HORA (COLOMBIA) Y USUARIO QUE ACTUALIZÓ
     # -------------------------------------------------
-# -------------------------------------------------
-    # MOSTRAR FECHA Y HORA DE LA ÚLTIMA ACTUALIZACIÓN
-    # (CONVERSIÓN A HORA COLOMBIA)
-    # -------------------------------------------------
-# -------------------------------------------------
-    # MOSTRAR FECHA, HORA Y USUARIO DE ÚLTIMA ACTUALIZACIÓN
-    # (CONVERSIÓN A HORA COLOMBIA)
-    # -------------------------------------------------
-   
     TZ_UTC = ZoneInfo("UTC")
     TZ_CO = ZoneInfo("America/Bogota")
 
@@ -497,13 +481,11 @@ with tab2:
             with open(info_path, "r", encoding="utf-8") as f:
                 info = json.load(f)
 
-                # Hora guardada como UTC
                 fecha_utc = datetime.datetime.strptime(
                     info.get("ultima_actualizacion"),
                     "%Y-%m-%d %H:%M:%S"
                 ).replace(tzinfo=TZ_UTC)
 
-                # Convertir a hora Colombia
                 fecha_colombia = fecha_utc.astimezone(TZ_CO)
 
                 ultima_actualizacion = fecha_colombia.strftime(
