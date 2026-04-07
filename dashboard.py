@@ -45,7 +45,7 @@ if st.session_state.usuario is None:
 
     # -------- LOGO CENTRADO --------
     st.markdown("<div style='text-align:center;'>", unsafe_allow_html=True)
-    st.image("logo.png", width=400)
+    st.image("logo.png", width=450)
     st.markdown("</div>", unsafe_allow_html=True)
 
     # -------- CARD --------
