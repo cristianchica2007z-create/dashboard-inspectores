@@ -763,10 +763,71 @@ with tab2:
 
 
 # ---------------------------------------------------
-# ✅ PESTAÑA 3: GRÁFICAS GENERALES
-# ---------------------------------------------------
+# ===================================================
+# ✅ TAB 3 — ADMINISTRACIÓN DE BITÁCORA
+# Guarda / reemplaza BITACORA.xlsx en GitHub
+# ===================================================
 with tab3:
-    st.subheader("Gráficas de desempeño general")
-    st.info("Aquí veremos indicadores, tendencias y análisis más avanzados usando Plotly.")
+    st.subheader("📂 Administración de Bitácora Compartida")
+
+    st.info(
+        "Desde aquí se sube la bitácora OFICIAL.\n\n"
+        "Todos los usuarios verán la misma información en la pestaña "
+        "🕒 Seguimiento Diario (TAB 2), sin volver a cargar archivos."
+    )
+
+    archivo = st.file_uploader(
+        "Sube el archivo BITACORA.xlsx",
+        type=["xls", "xlsx"]
+    )
+
+    if archivo is not None:
+        import base64
+        import requests
+
+        # Leer secrets
+        token = st.secrets["github"]["token"]
+        repo = st.secrets["github"]["repo"]
+        branch = st.secrets["github"].get("branch", "main")
+
+        # Leer contenido del archivo
+        contenido = archivo.read()
+        contenido_b64 = base64.b64encode(contenido).decode("utf-8")
+
+        # URL del archivo en GitHub
+        url = f"https://api.github.com/repos/{repo}/contents/BITACORA.xlsx"
+
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github+json"
+        }
+
+        # Verificar si el archivo ya existe (para obtener el SHA)
+        r = requests.get(url, headers=headers)
+        sha = None
+        if r.status_code == 200:
+            sha = r.json().get("sha")
+
+        payload = {
+            "message": "Actualización de BITACORA.xlsx desde Streamlit",
+            "content": contenido_b64,
+            "branch": branch
+        }
+
+        if sha:
+            payload["sha"] = sha  # Reemplazo del archivo existente
+
+        r2 = requests.put(url, headers=headers, json=payload)
+
+        if r2.status_code in (200, 201):
+            st.success("✅ Bitácora guardada correctamente en GitHub")
+            st.info(
+                "Desde ahora, la pestaña 🕒 Seguimiento Diario "
+                "mostrará esta misma información para todos los usuarios."
+            )
+        else:
+            st.error("❌ Error al guardar el archivo en GitHub")
+            st.json(r2.json())
+
 
       
