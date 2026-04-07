@@ -62,7 +62,7 @@ st.title("📊 Dashboard Inspectores")
 tab1, tab2, tab3 = st.tabs([
     "📦 Inventario Papelería",
     "🕒 Seguimiento Diario",
-    "📈 Gráficas Generales"
+    "📈 Subir Archivos"
 ])
 
 
@@ -335,6 +335,25 @@ with tab2:
     df_bitacora = pd.read_excel(archivo_bitacora)
 
     # -------------------------------------------------
+
+    # -------------------------------------------------
+# MOSTRAR FECHA Y HORA DE LA ÚLTIMA ACTUALIZACIÓN
+# -------------------------------------------------
+import json
+
+info_path = "BITACORA_INFO.json"
+
+if os.path.exists(info_path):
+    with open(info_path, "r", encoding="utf-8") as f:
+        info = json.load(f)
+
+    st.caption(
+        f"🕓 Última actualización de la bitácora: "
+        f"{info.get('ultima_actualizacion', '—')}"
+    )
+else:
+    st.caption("🕓 Última actualización de la bitácora: —")
+
     # FUNCIONES UTILITARIAS
     # -------------------------------------------------
     import datetime
@@ -792,8 +811,10 @@ with tab2:
 # ---------------------------------------------------
 # ===================================================
 # ===================================================
+# ===================================================
 # ✅ TAB 3 — ADMINISTRACIÓN DE BITÁCORA (PROTEGIDO)
 # Guarda / reemplaza BITACORA.xlsx en GitHub
+# Guarda fecha y hora en BITACORA_INFO.json
 # ===================================================
 with tab3:
     st.subheader("🔐 Administración de Bitácora Compartida")
@@ -836,47 +857,97 @@ with tab3:
     if archivo is not None:
         import base64
         import requests
+        import json
+        from datetime import datetime
 
-        # Leer secrets de GitHub
+        # -----------------------------
+        # LEER SECRETS DE GITHUB
+        # -----------------------------
         token = st.secrets["github"]["token"]
         repo = st.secrets["github"]["repo"]
         branch = st.secrets["github"].get("branch", "main")
-
-        # Leer contenido del archivo
-        contenido = archivo.read()
-        contenido_b64 = base64.b64encode(contenido).decode("utf-8")
-
-        # URL del archivo en GitHub
-        url = f"https://api.github.com/repos/{repo}/contents/BITACORA.xlsx"
 
         headers = {
             "Authorization": f"Bearer {token}",
             "Accept": "application/vnd.github+json"
         }
 
-        # Verificar si el archivo ya existe (para obtener el SHA)
-        r = requests.get(url, headers=headers)
-        sha = None
-        if r.status_code == 200:
-            sha = r.json().get("sha")
+        # =================================================
+        # 1️⃣ GUARDAR / REEMPLAZAR BITACORA.xlsx
+        # =================================================
+        contenido_excel = archivo.read()
+        contenido_excel_b64 = base64.b64encode(
+            contenido_excel
+        ).decode("utf-8")
 
-        payload = {
+        url_excel = f"https://api.github.com/repos/{repo}/contents/BITACORA.xlsx"
+
+        r_excel = requests.get(url_excel, headers=headers)
+        sha_excel = None
+        if r_excel.status_code == 200:
+            sha_excel = r_excel.json().get("sha")
+
+        payload_excel = {
             "message": "Actualización de BITACORA.xlsx desde Streamlit",
-            "content": contenido_b64,
+            "content": contenido_excel_b64,
             "branch": branch
         }
 
-        if sha:
-            payload["sha"] = sha  # Reemplazo del archivo existente
+        if sha_excel:
+            payload_excel["sha"] = sha_excel
 
-        r2 = requests.put(url, headers=headers, json=payload)
+        r_put_excel = requests.put(
+            url_excel,
+            headers=headers,
+            json=payload_excel
+        )
 
-        if r2.status_code in (200, 201):
-            st.success("✅ Bitácora guardada correctamente en GitHub")
-            st.info(
-                "La pestaña 🕒 Seguimiento Diario se actualizará automáticamente "
-                "para todos los usuarios."
-            )
-        else:
-            st.error("❌ Error al guardar el archivo en GitHub")
-            st.json(r2.json())
+        if r_put_excel.status_code not in (200, 201):
+            st.error("❌ Error al guardar BITACORA.xlsx en GitHub")
+            st.json(r_put_excel.json())
+            st.stop()
+
+        # =================================================
+        # 2️⃣ GUARDAR FECHA Y HORA (BITACORA_INFO.json)
+        # =================================================
+        info = {
+            "ultima_actualizacion": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+
+        contenido_info_b64 = base64.b64encode(
+            json.dumps(info, indent=2).encode("utf-8")
+        ).decode("utf-8")
+
+        url_info = f"https://api.github.com/repos/{repo}/contents/BITACORA_INFO.json"
+
+        r_info = requests.get(url_info, headers=headers)
+        sha_info = None
+        if r_info.status_code == 200:
+            sha_info = r_info.json().get("sha")
+
+        payload_info = {
+            "message": "Actualización de fecha y hora de BITACORA",
+            "content": contenido_info_b64,
+            "branch": branch
+        }
+
+        if sha_info:
+            payload_info["sha"] = sha_info
+
+        requests.put(
+            url_info,
+            headers=headers,
+            json=payload_info
+        )
+
+        # =================================================
+        # ✅ CONFIRMACIÓN FINAL
+        # =================================================
+        st.success("✅ Bitácora actualizada correctamente")
+        st.caption(
+            f"🕓 Última actualización: {info['ultima_actualizacion']}"
+        )
+        st.info(
+            "La pestaña 🕒 Seguimiento Diario se actualizará automáticamente "
+            "para todos los usuarios."
+        )
