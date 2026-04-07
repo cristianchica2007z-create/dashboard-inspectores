@@ -5,7 +5,8 @@ import plotly.express as px
 
 
 # -------------------------------------------------
-# LOGIN DE USUARIO (ESTILO CORPORATIVO)
+# -------------------------------------------------
+# LOGIN DE USUARIO (ESTILO CORPORATIVO + LOGO REAL)
 # -------------------------------------------------
 import json
 
@@ -29,7 +30,7 @@ if st.session_state.usuario is None:
             margin: 4rem auto;
             background: #ffffff;
             padding: 2.5rem;
-            border-radius: 16px;
+            border-radius: 18px;
             box-shadow: 0 12px 30px rgba(0,0,0,0.15);
         }
         .login-title {
@@ -40,9 +41,10 @@ if st.session_state.usuario is None:
             margin-bottom: 2rem;
             color: #0d3b66;
         }
-        .login-logo {
+        .logo-center {
             display: flex;
             justify-content: center;
+            margin-bottom: 1rem;
         }
         </style>
     """, unsafe_allow_html=True)
@@ -50,23 +52,22 @@ if st.session_state.usuario is None:
     # ====== CONTENEDOR ======
     st.markdown('<div class="login-container">', unsafe_allow_html=True)
 
-    # Logo
-    st.markdown(
-        '<div class="login-logo"><img src="logo.png" width="120"></div>',
-        unsafe_allow_html=True
-    )
+    # LOGO REAL DESDE LA CARPETA
+    with st.container():
+        st.markdown('<div class="logo-center">', unsafe_allow_html=True)
+        st.image("logo.png", width=120)
+        st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown(
         '<div class="login-title">INICIAR SESIÓN</div>',
         unsafe_allow_html=True
     )
 
-    # Inputs reales de Streamlit
     usuarios = cargar_usuarios()
 
     usuario_ingresado = st.text_input(
         "Usuario",
-        placeholder="Ingresa tu usuario",
+        placeholder="Ingresa tu usuario"
     )
 
     pin_ingresado = st.text_input(
@@ -91,6 +92,7 @@ if st.session_state.usuario is None:
     st.markdown('</div>', unsafe_allow_html=True)
 
     st.stop()
+    
 # ---------------------------------------------------
 # ✅ LISTA MAESTRA DE INSPECTORES
 # ---------------------------------------------------
