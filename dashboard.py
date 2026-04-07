@@ -671,39 +671,49 @@ with tab2:
 
    # -------------------------------------------------
 # -------------------------------------------------
-# FILTRO DE SUPERVISORES (LISTA TIPO EXCEL)
 # -------------------------------------------------
-supervisores_disponibles = sorted(df2["supervisor"].unique())
+    # FILTRO DE SUPERVISORES (MULTI-SELECCIÓN TIPO EXCEL)
+    # -------------------------------------------------
+    supervisores_disponibles = sorted(
+        df2["supervisor"].dropna().unique()
+    )
 
-supervisores_sel = st.multiselect(
-    "Selecciona supervisor(es):",
-    supervisores_disponibles,
-    default=supervisores_disponibles,
-    help="Selecciona uno, varios o desmarca para comparar"
-)
+    supervisores_sel = st.multiselect(
+        "Selecciona supervisor(es):",
+        supervisores_disponibles,
+        default=supervisores_disponibles
+    )
 
-if supervisores_sel:
-    df2 = df2[df2["supervisor"].isin(supervisores_sel)]
+    if supervisores_sel:
+        df2 = df2[df2["supervisor"].isin(supervisores_sel)]
 
-# Si después del filtro no hay datos, avisar pero NO detener
-if df2.empty:
-    st.warning("⚠️ No hay datos para los supervisores seleccionados.")
+    if df2.empty:
+        st.warning(
+            "⚠️ No hay registros para los supervisores seleccionados."
+        )
+        st.stop()
 
-    
+    # -------------------------------------------------
+    # FILTRO DE INSPECTORES (DEPENDIENTE DE SUPERVISOR)
+    # -------------------------------------------------
+    inspectores_disponibles = sorted(
+        df2["inspector"].dropna().unique()
+    )
 
-inspectores_disponibles = sorted(df2["inspector"].unique())
+    inspectores_sel = st.multiselect(
+        "Selecciona inspectores:",
+        inspectores_disponibles,
+        default=inspectores_disponibles
+    )
 
-inspectores_sel = st.multiselect(
-    "Selecciona inspectores:",
-    inspectores_disponibles,
-    default=inspectores_disponibles
-)
+    if inspectores_sel:
+        df2 = df2[df2["inspector"].isin(inspectores_sel)]
 
-if inspectores_sel:
-    df2 = df2[df2["inspector"].isin(inspectores_sel)]
-
-if df2.empty:
-    st.warning("⚠️ No hay datos con estos inspectores.")
+    if df2.empty:
+        st.warning(
+            "⚠️ No hay registros con los inspectores seleccionados."
+        )
+        st.stop()
 
 # ===================================================
 # ===================================================
