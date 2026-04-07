@@ -19,7 +19,7 @@ import streamlit as st
 # -------------------------------------------------
 # ZONA HORARIA COLOMBIA
 # -------------------------------------------------
-from zoneinfo import ZoneInfo
+
 import datetime
 
 TZ_CO = ZoneInfo("America/Bogota")
@@ -1075,8 +1075,7 @@ with tab3:
         # =================================================
         # 2️⃣ GUARDAR FECHA Y HORA (BITACORA_INFO.json)
         # =================================================
-       from zoneinfo import ZoneInfo
-import datetime
+
 
 TZ_UTC = ZoneInfo("UTC")
 
