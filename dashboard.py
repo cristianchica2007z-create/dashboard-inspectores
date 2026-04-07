@@ -51,8 +51,7 @@ inspectores_lista = sorted([
 # ---------------------------------------------------
 st.set_page_config(      
     page_title="DASHBOARD INSPECTORES e&c",
-    page_title="Eje Cafetero",
-    layout="wide"
+       layout="wide"
 )
 
 # -------------------------------------------------
@@ -81,9 +80,6 @@ tab1, tab2, tab3 = st.tabs([
     "📈 Subir Archivos"
 ])
 
-
-
-# ===================================================
 # ===================================================
 # ✅ TAB 1 — INVENTARIO DE PAPELERÍA (PARTE 1/4)
 # Carga y preparación del inventario
