@@ -4,6 +4,49 @@ import os
 import plotly.express as px
 
 
+# -------------------------------------------------
+# LOGIN DE USUARIO (PIN 4 DÍGITOS)
+# -------------------------------------------------
+import json
+
+# Inicializar sesión
+if "usuario" not in st.session_state:
+    st.session_state.usuario = None
+    st.session_state.rol = None
+
+def cargar_usuarios():
+    if os.path.exists("USUARIOS.json"):
+        with open("USUARIOS.json", "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {}
+
+# Si NO está autenticado, mostrar login
+if st.session_state.usuario is None:
+
+    st.title("🔐 Acceso al Dashboard")
+
+    usuarios = cargar_usuarios()
+
+    usuario_ingresado = st.text_input("Usuario")
+    pin_ingresado = st.text_input(
+        "PIN (4 dígitos)",
+        type="password",
+        max_chars=4
+    )
+
+    if st.button("Ingresar"):
+        if usuario_ingresado in usuarios:
+            if pin_ingresado == usuarios[usuario_ingresado]["pin"]:
+                st.session_state.usuario = usuario_ingresado
+                st.session_state.rol = usuarios[usuario_ingresado]["rol"]
+                st.success("✅ Acceso autorizado")
+                st.experimental_rerun()
+            else:
+                st.error("❌ PIN incorrecto")
+        else:
+            st.error("❌ Usuario no encontrado")
+
+    st.stop()
 
 # ---------------------------------------------------
 # ✅ LISTA MAESTRA DE INSPECTORES
