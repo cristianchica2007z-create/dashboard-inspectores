@@ -791,15 +791,40 @@ with tab2:
 
 # ---------------------------------------------------
 # ===================================================
-# ✅ TAB 3 — ADMINISTRACIÓN DE BITÁCORA
+# ===================================================
+# ✅ TAB 3 — ADMINISTRACIÓN DE BITÁCORA (PROTEGIDO)
 # Guarda / reemplaza BITACORA.xlsx en GitHub
 # ===================================================
 with tab3:
-    st.subheader("📂 Administración de Bitácora Compartida")
+    st.subheader("🔐 Administración de Bitácora Compartida")
+
+    # -------------------------------------------------
+    # VALIDACIÓN DE ADMINISTRADOR
+    # -------------------------------------------------
+    clave_ingresada = st.text_input(
+        "Contraseña de administrador",
+        type="password",
+        placeholder="Ingresa la clave para administrar la bitácora"
+    )
+
+    clave_real = st.secrets["admin"]["password"]
+
+    if clave_ingresada != clave_real:
+        st.warning(
+            "⛔ Acceso restringido.\n\n"
+            "Solo personal autorizado puede cargar o actualizar la bitácora."
+        )
+        st.stop()
+
+    # -------------------------------------------------
+    # CONTENIDO SOLO PARA ADMIN
+    # -------------------------------------------------
+    st.success("✅ Acceso autorizado")
 
     st.info(
         "Desde aquí se sube la bitácora OFICIAL.\n\n"
-        "Todos los usuarios verán la misma información en la pestaña "
+        "Al cargar un nuevo archivo, este reemplazará el anterior y "
+        "todos los usuarios verán la MISMA información en la pestaña "
         "🕒 Seguimiento Diario (TAB 2), sin volver a cargar archivos."
     )
 
@@ -812,7 +837,7 @@ with tab3:
         import base64
         import requests
 
-        # Leer secrets
+        # Leer secrets de GitHub
         token = st.secrets["github"]["token"]
         repo = st.secrets["github"]["repo"]
         branch = st.secrets["github"].get("branch", "main")
@@ -849,12 +874,9 @@ with tab3:
         if r2.status_code in (200, 201):
             st.success("✅ Bitácora guardada correctamente en GitHub")
             st.info(
-                "Desde ahora, la pestaña 🕒 Seguimiento Diario "
-                "mostrará esta misma información para todos los usuarios."
+                "La pestaña 🕒 Seguimiento Diario se actualizará automáticamente "
+                "para todos los usuarios."
             )
         else:
             st.error("❌ Error al guardar el archivo en GitHub")
             st.json(r2.json())
-
-
-      
