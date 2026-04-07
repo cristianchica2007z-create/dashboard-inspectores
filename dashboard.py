@@ -5,7 +5,8 @@ import plotly.express as px
 
 
 # -------------------------------------------------
-# LOGIN DE USUARIO – DISEÑO FINAL LIMPIO
+# -------------------------------------------------
+# LOGIN DE USUARIO – FINAL LIMPIO Y ALINEADO
 # -------------------------------------------------
 import json
 
@@ -31,7 +32,7 @@ def cargar_usuarios():
 if st.session_state.usuario is None:
 
     # -----------------------------
-    # ESTILOS
+    # ESTILOS (SOLO CARD)
     # -----------------------------
     st.markdown("""
         <style>
@@ -54,9 +55,9 @@ if st.session_state.usuario is None:
     """, unsafe_allow_html=True)
 
     # -----------------------------
-    # LOGO ALINEADO (CON COLUMNAS)
+    # LOGO ALINEADO A LA IZQUIERDA
     # -----------------------------
-    col_espacio, col_logo, col_espacio2 = st.columns([2.5, 4, 1])
+    col_logo, col_espacio = st.columns([5, 7])
 
     with col_logo:
         st.image("logo.png", width=420)
