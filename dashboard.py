@@ -433,6 +433,16 @@ with tab2:
 
     # -------------------------------------------------
     # MOSTRAR FECHA Y HORA DE LA ÚLTIMA ACTUALIZACIÓN
+    # -------------------------------------------------
+# DIAGNÓSTICO TEMPORAL DE GRUPOS (NO FILTRA)
+# -------------------------------------------------
+if "GRUPO" in df_bitacora.columns:
+    st.caption(
+        f"Grupos detectados en bitácora: "
+        f"{sorted(df_bitacora['GRUPO'].astype(str).str.upper().str.strip().unique())}"
+    )
+
+    
     # (FORMA SEGURA – NO ROMPE TAB 2)
     # -------------------------------------------------
     import json
