@@ -313,8 +313,8 @@ with tab1:
 # LEE BITACORA.xlsx DESDE EL REPOSITORIO
 # ===================================================
 with tab2:
-    st.subheader("🕒 Control de horario de inspectores")
-
+    st.subheader("🕒 Control Operativo e&c")
+    st.subheader("Eje Cafetero")
     # -------------------------------------------------
     # VALIDAR QUE EXISTA BITÁCORA COMPARTIDA
     # -------------------------------------------------
