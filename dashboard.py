@@ -40,7 +40,7 @@ if st.session_state.usuario is None:
                 st.session_state.usuario = usuario_ingresado
                 st.session_state.rol = usuarios[usuario_ingresado]["rol"]
                 st.success("✅ Acceso autorizado")
-                st.experimental_rerun()
+                st.rerun()   # ✅ MÉTODO CORRECTO
             else:
                 st.error("❌ PIN incorrecto")
         else:
