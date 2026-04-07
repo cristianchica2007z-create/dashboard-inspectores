@@ -50,7 +50,8 @@ inspectores_lista = sorted([
 # ✅ CONFIGURACIÓN GENERAL DEL DASHBOARD
 # ---------------------------------------------------
 st.set_page_config(      
-    page_title="Dashboard Inspectores",
+    page_title="DASHBOARD INSPECTORES e&c",
+    page_title="Eje Cafetero",
     layout="wide"
 )
 
