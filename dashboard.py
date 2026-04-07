@@ -670,29 +670,41 @@ with tab2:
     df2 = df_bitacora[df_bitacora["fecha"] == fecha_sel]
 
    # -------------------------------------------------
-# FILTRO DE SUPERVISORES (MULTI-SELECCIÓN)
+# -------------------------------------------------
+# FILTRO DE SUPERVISORES (LISTA TIPO EXCEL)
 # -------------------------------------------------
 supervisores_disponibles = sorted(df2["supervisor"].unique())
 
 supervisores_sel = st.multiselect(
     "Selecciona supervisor(es):",
     supervisores_disponibles,
-    default=supervisores_disponibles  # ✅ todos activos por defecto
+    default=supervisores_disponibles,
+    help="Selecciona uno, varios o desmarca para comparar"
 )
 
 if supervisores_sel:
     df2 = df2[df2["supervisor"].isin(supervisores_sel)]
-else:
-    st.warning("⚠️ Selecciona al menos un supervisor.")
-    st.stop()
+
+# Si después del filtro no hay datos, avisar pero NO detener
+if df2.empty:
+    st.warning("⚠️ No hay datos para los supervisores seleccionados.")
+
     
 
-    inspectores_sel = st.multiselect(
-        "Selecciona inspectores:",
-        sorted(df2["inspector"].unique()),
-        default=sorted(df2["inspector"].unique())
-    )
+inspectores_disponibles = sorted(df2["inspector"].unique())
+
+inspectores_sel = st.multiselect(
+    "Selecciona inspectores:",
+    inspectores_disponibles,
+    default=inspectores_disponibles
+)
+
+if inspectores_sel:
     df2 = df2[df2["inspector"].isin(inspectores_sel)]
+
+if df2.empty:
+    st.warning("⚠️ No hay datos con estos inspectores.")
+
 # ===================================================
 # ===================================================
     # ✅ TAB 2 — PARTE 3 / 4
