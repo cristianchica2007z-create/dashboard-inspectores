@@ -5,11 +5,10 @@ import plotly.express as px
 
 
 # -------------------------------------------------
-# LOGIN DE USUARIO (PIN 4 DÍGITOS)
+# LOGIN DE USUARIO (ESTILO CORPORATIVO)
 # -------------------------------------------------
 import json
 
-# Inicializar sesión
 if "usuario" not in st.session_state:
     st.session_state.usuario = None
     st.session_state.rol = None
@@ -20,34 +19,78 @@ def cargar_usuarios():
             return json.load(f)
     return {}
 
-# Si NO está autenticado, mostrar login
 if st.session_state.usuario is None:
 
-    st.title("🔐 Acceso al Dashboard")
+    # ====== ESTILOS CSS ======
+    st.markdown("""
+        <style>
+        .login-container {
+            max-width: 420px;
+            margin: 4rem auto;
+            background: #ffffff;
+            padding: 2.5rem;
+            border-radius: 16px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+        }
+        .login-title {
+            text-align: center;
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-top: 1rem;
+            margin-bottom: 2rem;
+            color: #0d3b66;
+        }
+        .login-logo {
+            display: flex;
+            justify-content: center;
+        }
+        </style>
+    """, unsafe_allow_html=True)
 
+    # ====== CONTENEDOR ======
+    st.markdown('<div class="login-container">', unsafe_allow_html=True)
+
+    # Logo
+    st.markdown(
+        '<div class="login-logo"><img src="logo.png" width="120"></div>',
+        unsafe_allow_html=True
+    )
+
+    st.markdown(
+        '<div class="login-title">INICIAR SESIÓN</div>',
+        unsafe_allow_html=True
+    )
+
+    # Inputs reales de Streamlit
     usuarios = cargar_usuarios()
 
-    usuario_ingresado = st.text_input("Usuario")
+    usuario_ingresado = st.text_input(
+        "Usuario",
+        placeholder="Ingresa tu usuario",
+    )
+
     pin_ingresado = st.text_input(
         "PIN (4 dígitos)",
         type="password",
-        max_chars=4
+        max_chars=4,
+        placeholder="••••"
     )
 
-    if st.button("Ingresar"):
+    if st.button("🔐 INICIAR SESIÓN", use_container_width=True):
         if usuario_ingresado in usuarios:
             if pin_ingresado == usuarios[usuario_ingresado]["pin"]:
                 st.session_state.usuario = usuario_ingresado
                 st.session_state.rol = usuarios[usuario_ingresado]["rol"]
                 st.success("✅ Acceso autorizado")
-                st.rerun()   # ✅ MÉTODO CORRECTO
+                st.rerun()
             else:
                 st.error("❌ PIN incorrecto")
         else:
             st.error("❌ Usuario no encontrado")
 
-    st.stop()
+    st.markdown('</div>', unsafe_allow_html=True)
 
+    st.stop()
 # ---------------------------------------------------
 # ✅ LISTA MAESTRA DE INSPECTORES
 # ---------------------------------------------------
