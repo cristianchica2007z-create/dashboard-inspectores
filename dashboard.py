@@ -6,7 +6,7 @@ import plotly.express as px
 
 # -------------------------------------------------
 # -------------------------------------------------
-# LOGIN DE USUARIO – DISEÑO LIMPIO Y ESTABLE
+# LOGIN DE USUARIO – DISEÑO FINAL LIMPIO (STREAMLIT)
 # -------------------------------------------------
 import json
 
@@ -22,14 +22,14 @@ def cargar_usuarios():
 
 if st.session_state.usuario is None:
 
-    st.markdown(
-        """
+    # -------- ESTILOS --------
+    st.markdown("""
         <style>
         .login-card {
             max-width: 420px;
-            margin: 2rem auto;
-            padding: 2rem;
-            border-radius: 16px;
+            margin: 2rem auto 4rem auto;
+            padding: 2.5rem;
+            border-radius: 18px;
             background-color: #ffffff;
             box-shadow: 0 10px 30px rgba(0,0,0,0.15);
         }
@@ -37,17 +37,18 @@ if st.session_state.usuario is None:
             text-align: center;
             font-size: 1.4rem;
             font-weight: 600;
-            margin-bottom: 1.5rem;
+            margin-bottom: 2rem;
             color: #0d3b66;
         }
         </style>
-        """,
-        unsafe_allow_html=True
-    )
+    """, unsafe_allow_html=True)
 
-    # LOGO CENTRADO Y GRANDE
-    st.image("logo.png", width=200)
+    # -------- LOGO CENTRADO --------
+    st.markdown("<div style='text-align:center;'>", unsafe_allow_html=True)
+    st.image("logo.png", width=220)
+    st.markdown("</div>", unsafe_allow_html=True)
 
+    # -------- CARD --------
     st.markdown('<div class="login-card">', unsafe_allow_html=True)
     st.markdown('<div class="login-title">INICIAR SESIÓN</div>', unsafe_allow_html=True)
 
@@ -77,8 +78,9 @@ if st.session_state.usuario is None:
         else:
             st.error("❌ Usuario no encontrado")
 
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
+
     
 # ---------------------------------------------------
 # ✅ LISTA MAESTRA DE INSPECTORES
