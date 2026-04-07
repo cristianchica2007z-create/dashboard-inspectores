@@ -446,7 +446,7 @@ with tab2:
         )
 
         df_bitacora = df_bitacora[
-            ~df_bitacora["grupo"].isin(
+            ~df_bitacora["GRUPO"].isin(
                 ["INSP-CALDAS", "INSP-RIS"]
             )
         ]
