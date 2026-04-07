@@ -38,7 +38,7 @@ if st.session_state.usuario is None:
         <style>
         .login-card {
             max-width: 420px;
-            margin: 5.5rem auto 3rem auto;
+            margin: 0.5rem auto 3rem auto;
             padding: 2.5rem;
             border-radius: 18px;
             background-color: #ffffff;
