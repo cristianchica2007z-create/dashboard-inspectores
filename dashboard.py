@@ -474,7 +474,16 @@ with tab2:
     # -------------------------------------------------
     # MOSTRAR FECHA Y HORA DE LA ÚLTIMA ACTUALIZACIÓN
     # -------------------------------------------------
+# -------------------------------------------------
+    # MOSTRAR FECHA Y HORA DE LA ÚLTIMA ACTUALIZACIÓN
+    # (CONVERSIÓN A HORA COLOMBIA)
+    # -------------------------------------------------
     import json
+    from zoneinfo import ZoneInfo
+    import datetime
+
+    TZ_UTC = ZoneInfo("UTC")
+    TZ_CO = ZoneInfo("America/Bogota")
 
     info_path = "BITACORA_INFO.json"
     ultima_actualizacion = "—"
@@ -483,7 +492,19 @@ with tab2:
         if os.path.exists(info_path):
             with open(info_path, "r", encoding="utf-8") as f:
                 info = json.load(f)
-                ultima_actualizacion = info.get("ultima_actualizacion", "—")
+
+                # La hora se guardó en UTC sin tz → asumir UTC
+                fecha_utc = datetime.datetime.strptime(
+                    info.get("ultima_actualizacion"),
+                    "%Y-%m-%d %H:%M:%S"
+                ).replace(tzinfo=TZ_UTC)
+
+                # Convertir a hora Colombia
+                fecha_colombia = fecha_utc.astimezone(TZ_CO)
+
+                ultima_actualizacion = fecha_colombia.strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                )
     except Exception:
         ultima_actualizacion = "—"
 
