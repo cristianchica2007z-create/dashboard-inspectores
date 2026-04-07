@@ -308,22 +308,35 @@ with tab1:
 # ===================================================
 # ===================================================
 # ===================================================
+# ===================================================
 # ✅ TAB 2 — PARTE 1 / 4
 # Carga + funciones + normalización
+# LEE BITACORA.xlsx DESDE EL REPOSITORIO
 # ===================================================
 with tab2:
     st.subheader("🕒 Control de horario de inspectores")
-    st.write("### Cargar archivo de bitácora (formato XLSX recomendado)")
 
-    archivo = st.file_uploader(
-        "Sube el archivo de bitácora",
-        type=["xls", "xlsx"]
-    )
+    archivo_bitacora = "BITACORA.xlsx"
 
-    if archivo is None:
-        st.info("ℹ️ Carga un archivo de bitácora para iniciar el análisis.")
+    # -------------------------------------------------
+    # VALIDAR QUE EXISTA BITÁCORA COMPARTIDA
+    # -------------------------------------------------
+    if not os.path.exists(archivo_bitacora):
+        st.warning(
+            "⚠️ No hay una bitácora cargada.\n\n"
+            "Un administrador debe subir el archivo en la pestaña "
+            "📂 Administración de Bitácora."
+        )
         st.stop()
 
+    # -------------------------------------------------
+    # CARGAR BITÁCORA COMPARTIDA
+    # -------------------------------------------------
+    df_bitacora = pd.read_excel(archivo_bitacora)
+
+    # -------------------------------------------------
+    # FUNCIONES UTILITARIAS
+    # -------------------------------------------------
     import datetime
 
     def parse_hora(valor):
@@ -350,7 +363,7 @@ with tab2:
         if d is None or pd.isna(d):
             return None
         h = int(d)
-        m = int((d-h)*60)
+        m = int((d - h) * 60)
         return datetime.time(h, m)
 
     def hora_to_string(h):
@@ -365,40 +378,54 @@ with tab2:
         s2 = s % 60
         return f"{h}h {m}m {s2}s" if h > 0 else f"{m}m {s2}s"
 
-    df_bitacora = pd.read_excel(archivo)
+    # -------------------------------------------------
+    # NORMALIZAR COLUMNAS
+    # -------------------------------------------------
     df_bitacora.columns = df_bitacora.columns.str.strip().str.lower()
 
     columnas_necesarias = [
-        "fecha de ejecucion","hora inicio","hora final",
-        "inspector","localidad","cierre","tiempo de tarea"
+        "fecha de ejecucion", "hora inicio", "hora final",
+        "inspector", "localidad", "cierre", "tiempo de tarea"
     ]
 
     for col in columnas_necesarias:
         if col not in df_bitacora.columns:
-            st.error(f"❌ Falta la columna: {col}")
+            st.error(f"❌ Falta la columna requerida: {col}")
             st.stop()
 
+    # -------------------------------------------------
+    # NORMALIZAR TEXTO
+    # -------------------------------------------------
     df_bitacora["inspector"] = (
         df_bitacora["inspector"]
-        .astype(str).str.upper().str.strip()
+        .astype(str)
+        .str.upper()
+        .str.strip()
         .str.replace(r"\s+", " ", regex=True)
     )
 
     df_bitacora["localidad"] = (
         df_bitacora["localidad"]
-        .astype(str).str.upper().str.strip()
+        .astype(str)
+        .str.upper()
+        .str.strip()
     )
 
+    # -------------------------------------------------
+    # CONVERTIR FECHAS Y HORAS
+    # -------------------------------------------------
     df_bitacora["fecha"] = pd.to_datetime(
         df_bitacora["fecha de ejecucion"], errors="coerce"
     ).dt.date
 
     df_bitacora["hora_inicio"] = df_bitacora["hora inicio"].apply(parse_hora)
     df_bitacora["hora_final"] = df_bitacora["hora final"].apply(parse_hora)
+
     df_bitacora["tiempo_tarea_td"] = (
         df_bitacora["tiempo de tarea"].apply(parse_tiempo_tarea)
     )
 
+    # Mantener registros sin hora (SIN HORA)
     df_bitacora["hora_inicio"] = df_bitacora["hora_inicio"].apply(
         lambda x: x if pd.notna(x) else "SIN HORA"
     )
