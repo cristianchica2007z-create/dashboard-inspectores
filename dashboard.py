@@ -6,8 +6,7 @@ import plotly.express as px
 
 # -------------------------------------------------
 # -------------------------------------------------
-# -------------------------------------------------
-# LOGIN DE USUARIO – DISEÑO LIMPIO Y ORGANIZADO
+# LOGIN DE USUARIO – DISEÑO FINAL LIMPIO
 # -------------------------------------------------
 import json
 
@@ -27,7 +26,6 @@ def cargar_usuarios():
             return json.load(f)
     return {}
 
-
 # =================================================
 # LOGIN
 # =================================================
@@ -40,7 +38,7 @@ if st.session_state.usuario is None:
         <style>
         .login-card {
             max-width: 420px;
-            margin: 2rem auto 4rem auto;
+            margin: 1.5rem auto 3rem auto;
             padding: 2.5rem;
             border-radius: 18px;
             background-color: #ffffff;
@@ -57,7 +55,7 @@ if st.session_state.usuario is None:
     """, unsafe_allow_html=True)
 
     # -----------------------------
-    # LOGO (DESPLAZADO A LA DERECHA)
+    # LOGO ALINEADO (CON COLUMNAS)
     # -----------------------------
     col_espacio, col_logo, col_espacio2 = st.columns([2.5, 4, 1])
 
@@ -65,7 +63,7 @@ if st.session_state.usuario is None:
         st.image("logo.png", width=420)
 
     # -----------------------------
-    # CARD LOGIN
+    # CARD DE LOGIN
     # -----------------------------
     st.markdown('<div class="login-card">', unsafe_allow_html=True)
     st.markdown('<div class="login-title">INICIAR SESIÓN</div>', unsafe_allow_html=True)
@@ -98,6 +96,7 @@ if st.session_state.usuario is None:
 
     st.markdown('</div>', unsafe_allow_html=True)
     st.stop()
+
 
     
 # ---------------------------------------------------
