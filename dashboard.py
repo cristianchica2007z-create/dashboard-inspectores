@@ -407,6 +407,7 @@ with tab1:
 
 # ===================================================
 # ===================================================
+# ===================================================
 # ✅ TAB 2 — PARTE 1 / 4
 # Carga + funciones + normalización
 # LEE BITACORA.xlsx DESDE EL REPOSITORIO
@@ -414,6 +415,7 @@ with tab1:
 with tab2:
     st.subheader("🕒 Control Operativo e&c")
     st.subheader("Eje Cafetero")
+
     # -------------------------------------------------
     # VALIDAR QUE EXISTA BITÁCORA COMPARTIDA
     # -------------------------------------------------
@@ -433,10 +435,26 @@ with tab2:
     df_bitacora = pd.read_excel(archivo_bitacora)
 
     # -------------------------------------------------
+    # ✅ EXCLUIR GRUPOS NO OPERATIVOS
+    # -------------------------------------------------
+    if "grupo" in df_bitacora.columns:
+        df_bitacora["grupo"] = (
+            df_bitacora["grupo"]
+            .astype(str)
+            .str.upper()
+            .str.strip()
+        )
+
+        df_bitacora = df_bitacora[
+            ~df_bitacora["grupo"].isin(
+                ["INSP-CALDAS", "INSP-RIS"]
+            )
+        ]
+
+    # -------------------------------------------------
     # MOSTRAR FECHA Y HORA DE LA ÚLTIMA ACTUALIZACIÓN
     # (FORMA SEGURA – NO ROMPE TAB 2)
-
-
+    # -------------------------------------------------
     import json
 
     info_path = "BITACORA_INFO.json"
