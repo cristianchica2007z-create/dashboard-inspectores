@@ -54,7 +54,6 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("📊 Dashboard Inspectores")
 
 # -------------------------------------------------
 # LOGO SUPERIOR DERECHO
