@@ -50,6 +50,22 @@ inspectores_lista = sorted([
 # ✅ CONFIGURACIÓN GENERAL DEL DASHBOARD
 # ---------------------------------------------------
 st.set_page_config(
+
+    # -------------------------------------------------
+# LOGO SUPERIOR DERECHO
+# -------------------------------------------------
+col_logo, col_titulo = st.columns([1, 6])
+
+with col_logo:
+    st.image("logo.png", use_container_width=True)
+
+with col_titulo:
+    st.markdown(
+        "<h1 style='text-align:left;'>📊 Dashboard Inspectores</h1>",
+        unsafe_allow_html=True
+    )
+
+    
     page_title="Dashboard Inspectores",
     layout="wide"
 )
