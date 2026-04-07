@@ -665,27 +665,27 @@ with tab2:
         .fillna("SIN SUPERVISOR")
     )
 
-    fechas_validas = sorted(df_bitacora["fecha"].dropna().unique())
-    fecha_sel = st.selectbox("Selecciona fecha:", fechas_validas)
-    df2 = df_bitacora[df_bitacora["fecha"] == fecha_sel]
+ 
+# FILTRO DE FECHA
+# ------------------------------
+fechas_validas = sorted(df_bitacora["fecha"].dropna().unique())
+fecha_sel = st.selectbox("Selecciona fecha:", fechas_validas)
+df2 = df_bitacora[df_bitacora["fecha"] == fecha_sel]
 
-   # -------------------------------------------------
-# -------------------------------------------------
-# -------------------------------------------------
+# ------------------------------
 # FILTRO DE SUPERVISORES (CHECKLIST TIPO EXCEL)
-# -------------------------------------------------
+# ------------------------------
 supervisores_disponibles = sorted(
     df2["supervisor"].dropna().unique()
 )
 
 with st.expander("Seleccionar supervisores", expanded=True):
     supervisores_sel = []
-
     for sup in supervisores_disponibles:
         if st.checkbox(
             sup,
-            value=True,           # ✅ todos activos por defecto
-            key=f"sup_{sup}"
+            value=True,
+            key=f"sup_{fecha_sel}_{sup}"  # 👈 clave dependiente de fecha
         ):
             supervisores_sel.append(sup)
 
@@ -695,11 +695,13 @@ else:
     st.warning("⚠️ Selecciona al menos un supervisor.")
     st.stop()
 
+if df2.empty:
+    st.warning("⚠️ No hay datos con los supervisores seleccionados.")
+    st.stop()
 
-
-    # -------------------------------------------------
-    # FILTRO DE INSPECTORES (DEPENDIENTE DE SUPERVISOR)
-    # -------------------------------------------------
+# ------------------------------
+# FILTRO DE INSPECTORES (SINCRONIZADO)
+# ------------------------------
 inspectores_disponibles = sorted(
     df2["inspector"].dropna().unique()
 )
@@ -707,14 +709,17 @@ inspectores_disponibles = sorted(
 inspectores_sel = st.multiselect(
     "Selecciona inspectores:",
     inspectores_disponibles,
-    default=inspectores_disponibles
+    default=inspectores_disponibles,
+    key=f"inspectores_{fecha_sel}_{'_'.join(supervisores_sel)}"
 )
 
 if inspectores_sel:
     df2 = df2[df2["inspector"].isin(inspectores_sel)]
-else:
-    st.warning("⚠️ Selecciona al menos un inspector.")
+
+if df2.empty:
+    st.warning("⚠️ No hay datos con los inspectores seleccionados.")
     st.stop()
+
 
 # ===================================================
 # ===================================================
