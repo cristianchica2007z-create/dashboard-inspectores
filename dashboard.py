@@ -442,7 +442,7 @@ with tab2:
 
     try:
         if os.path.exists(info_path):
-            with open(info_path, "r", encoding="utf-8") as f:
+            with open(info_path, "r", encoding="utc-5") as f:
                 info = json.load(f)
                 ultima_actualizacion = info.get(
                     "ultima_actualizacion", "—"
