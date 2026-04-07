@@ -669,11 +669,23 @@ with tab2:
     fecha_sel = st.selectbox("Selecciona fecha:", fechas_validas)
     df2 = df_bitacora[df_bitacora["fecha"] == fecha_sel]
 
-    supervisor_sel = st.selectbox(
-        "Selecciona supervisor:",
-        sorted(df2["supervisor"].unique())
-    )
-    df2 = df2[df2["supervisor"] == supervisor_sel]
+   # -------------------------------------------------
+# FILTRO DE SUPERVISORES (MULTI-SELECCIÓN)
+# -------------------------------------------------
+supervisores_disponibles = sorted(df2["supervisor"].unique())
+
+supervisores_sel = st.multiselect(
+    "Selecciona supervisor(es):",
+    supervisores_disponibles,
+    default=supervisores_disponibles  # ✅ todos activos por defecto
+)
+
+if supervisores_sel:
+    df2 = df2[df2["supervisor"].isin(supervisores_sel)]
+else:
+    st.warning("⚠️ Selecciona al menos un supervisor.")
+    st.stop()
+    
 
     inspectores_sel = st.multiselect(
         "Selecciona inspectores:",
