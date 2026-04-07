@@ -2,7 +2,9 @@ import streamlit as st
 import pandas as pd
 import os
 import plotly.express as px
-
+import json
+import datetime
+from zoneinfo import ZoneInfo
 
 # -------------------------------------------------
 # -------------------------------------------------
@@ -482,10 +484,7 @@ with tab2:
     # MOSTRAR FECHA, HORA Y USUARIO DE ÚLTIMA ACTUALIZACIÓN
     # (CONVERSIÓN A HORA COLOMBIA)
     # -------------------------------------------------
-    import json
-    import datetime
-    from zoneinfo import ZoneInfo
-
+   
     TZ_UTC = ZoneInfo("UTC")
     TZ_CO = ZoneInfo("America/Bogota")
 
