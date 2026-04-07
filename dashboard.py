@@ -440,7 +440,8 @@ with tab1:
     df_bitacora.columns = df_bitacora.columns.str.strip().str.lower()
 
     # -------------------------------------------------
-    # ✅ EXCLUIR GRUPOS NO OPERATIVOS
+  # -------------------------------------------------
+    # ✅ FILTRO OPERATIVO POR GRUPO (ROBUSTO)
     # -------------------------------------------------
     if "grupo" in df_bitacora.columns:
         df_bitacora["grupo"] = (
@@ -450,17 +451,9 @@ with tab1:
             .str.strip()
         )
 
-        grupos_excluir = [
-            "SST-NAL",
-            "INSP-ANT",
-            "INSP_ANT_PREV_CW287728",
-            "INSP-VALLE",
-            "SUSP-ANT",
-            "SUPERVISIONES"
-        ]
-
+        # Incluir únicamente grupos operativos reales
         df_bitacora = df_bitacora[
-            ~df_bitacora["grupo"].isin(grupos_excluir)
+            df_bitacora["grupo"].str.startswith("INSP-")
         ]
     else:
         st.error(
