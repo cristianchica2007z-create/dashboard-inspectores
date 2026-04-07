@@ -620,12 +620,13 @@ with tab2:
     )
     df2 = df2[df2["inspector"].isin(inspectores_sel)]
 # ===================================================
-  # ✅ TAB 2 — PARTE 3 / 4
+# ===================================================
+    # ✅ TAB 2 — PARTE 3 / 4
     # Agrupación diaria, puntualidad, producción y KPIs
     # ===================================================
 
     # ---------------------------------------------------
-    # AGRUPACIÓN DIARIA (primera y última hora)
+    # AGRUPACIÓN DIARIA (solo para puntualidad y tabla)
     # ---------------------------------------------------
     primeras = (
         df2.sort_values("hora_inicio")
@@ -646,7 +647,7 @@ with tab2:
     )
 
     # ---------------------------------------------------
-    # PUNTUALIDAD
+    # PUNTUALIDAD (usa SOLO la primera hora del día)
     # ---------------------------------------------------
     hora_oficial = datetime.time(7, 30)
 
@@ -671,7 +672,7 @@ with tab2:
     df_agrupado["estado"] = df_agrupado["minutos_tarde"].apply(estado)
 
     # ---------------------------------------------------
-    # PRODUCCIÓN (MARCAR EFECTIVAS)
+    # PRODUCCIÓN (MARCAR ÓRDENES EFECTIVAS)
     # ---------------------------------------------------
     valores_efectivos = [
         "INSPECCIONADA",
@@ -684,7 +685,7 @@ with tab2:
     df2["efectiva"] = df2["cierre"].isin(valores_efectivos)
 
     total_ordenes = df2.shape[0]
-    total_efectivas = df2[df2["efectiva"]].shape[0]
+    total_efectivas = df2["efectiva"].sum()
 
     porcentaje = (
         round((total_efectivas / total_ordenes) * 100, 1)
@@ -700,40 +701,32 @@ with tab2:
     ]
 
     # ---------------------------------------------------
-    # KPI: PROMEDIO HORA DE INICIO (SOLO EFECTIVAS)
+    # ✅ KPI: PROMEDIO HORA DE INICIO (TODAS LAS ÓRDENES)
     # ---------------------------------------------------
     df_ini = df2[
-        (df2["efectiva"] == True) &
         (df2["hora_inicio"] != "SIN HORA") &
         (df2["hora_inicio"].notna())
-    ].copy()
+    ]
 
-    df_ini["ini_dec"] = df_ini["hora_inicio"].apply(hora_to_decimal)
-
-    prom_ini = df_ini["ini_dec"].mean()
+    prom_ini = df_ini["hora_inicio"].apply(hora_to_decimal).mean()
     hora_prom_ini = (
         hora_to_string(decimal_to_hora(prom_ini))
         if pd.notna(prom_ini) else "—"
     )
 
     # ---------------------------------------------------
-    # KPI: PROMEDIO HORA DE FIN (SOLO EFECTIVAS)
+    # ✅ KPI: PROMEDIO HORA DE FIN (TODAS LAS ÓRDENES)
     # ---------------------------------------------------
-    df_fin = df2[
-        (df2["efectiva"] == True) &
-        (df2["hora_final"].notna())
-    ].copy()
+    df_fin = df2[df2["hora_final"].notna()]
 
-    df_fin["fin_dec"] = df_fin["hora_final"].apply(hora_to_decimal)
-
-    prom_fin = df_fin["fin_dec"].mean()
+    prom_fin = df_fin["hora_final"].apply(hora_to_decimal).mean()
     hora_prom_fin = (
         hora_to_string(decimal_to_hora(prom_fin))
         if pd.notna(prom_fin) else "—"
     )
 
     # ---------------------------------------------------
-    # KPI: PROMEDIO TIEMPO POR TAREA (SOLO EFECTIVAS)
+    # ✅ KPI: PROMEDIO TIEMPO POR TAREA (SOLO EFECTIVAS)
     # ---------------------------------------------------
     tiempo_prom_str = (
         td_to_str(df_eff["tiempo_tarea_td"].mean())
@@ -741,7 +734,7 @@ with tab2:
     )
 
     # ---------------------------------------------------
-    # KPIs EN PANTALLA
+    # KPIs EN PANTALLA (ORDEN ORIGINAL)
     # ---------------------------------------------------
     st.markdown("## ⭐ KPIs del día")
 
@@ -751,21 +744,12 @@ with tab2:
     c3.metric("🕓 Prom. tiempo por tarea", tiempo_prom_str)
 
     c4, c5, c6 = st.columns(3)
-    c4.metric("📋 Tareas", total_ordenes)
+    c4.metric("📋 Total tareas", total_ordenes)
     c5.metric("✅ Efectivas", total_efectivas)
     c6.metric("📈 % Efectividad", f"{porcentaje}%")
 
-
-    # ✅ TAB 2 — PARTE 4 / 4
-    # Tablas finales y gráficas
-    # ===================================================
-
     # ---------------------------------------------------
-# ---------------------------------------------------
-    # RESUMEN POR INSPECTOR
-    # ---------------------------------------------------
- # ---------------------------------------------------
-    # RESUMEN POR INSPECTOR
+    # RESUMEN POR INSPECTOR (SOLO PARA CÁLCULO)
     # ---------------------------------------------------
     resumen = (
         df2.groupby("inspector")
@@ -777,14 +761,14 @@ with tab2:
                    if x.shape[0] > 0 else 0,
                "promedio_tiempo_tarea":
                    td_to_str(
-                       x.loc[x["efectiva"] == True, "tiempo_tarea_td"].mean()
+                       x.loc[x["efectiva"], "tiempo_tarea_td"].mean()
                    )
            }))
            .reset_index()
     )
 
     # ---------------------------------------------------
-    # ARMAR TABLA COMPLETA DEL DÍA
+    # TABLA CONSOLIDADA DEL DÍA (UNA SOLA)
     # ---------------------------------------------------
     df_tabla = df_agrupado.merge(
         resumen,
@@ -824,19 +808,11 @@ with tab2:
         use_container_width=True
     )
 
-    st.markdown("### 📋 Tabla de inspecciones del día")
-    st.dataframe(
-        df_tabla[
-            [
-                "inspector", "supervisor", "fecha",
-                "hora_inicio", "hora_final", "localidad",
-                "estado", "total_ordenes",
-                "ordenes_efectivas", "porcentaje_efectividad",
-                "promedio_tiempo_tarea"
-            ]
-        ],
-        use_container_width=True
-    )
+
+  # ===================================================
+    # ✅ TAB 2 — PARTE 4 / 4
+    # Gráficas finales
+    # ===================================================
 
     # ---------------------------------------------------
     # PRODUCCIÓN POR INSPECTOR
@@ -846,8 +822,8 @@ with tab2:
     df_prod = (
         df2.groupby("inspector")
            .apply(lambda x: pd.Series({
-               "efectivas": x["efectiva"].sum(),
-               "no_efectivas": (~x["efectiva"]).sum()
+               "Efectivas": x["efectiva"].sum(),
+               "No efectivas": (~x["efectiva"]).sum()
            }))
            .reset_index()
     )
@@ -855,27 +831,26 @@ with tab2:
     fig_prod = px.bar(
         df_prod,
         y="inspector",
-        x=["efectivas", "no_efectivas"],
+        x=["Efectivas", "No efectivas"],
         orientation="h",
         barmode="group",
         color_discrete_map={
-            "efectivas": "green",
-            "no_efectivas": "red"
-        },
-        title="Producción por inspector"
+            "Efectivas": "green",
+            "No efectivas": "red"
+        }
     )
 
     fig_prod.update_traces(texttemplate="%{x}", textposition="outside")
     st.plotly_chart(fig_prod, use_container_width=True)
 
     # ---------------------------------------------------
-    # TOP 5 EFECTIVIDAD
+    # TOP 5 EFECTIVIDAD (USA 'resumen' DE PARTE 3)
     # ---------------------------------------------------
     st.markdown("## 🏆 TOP 5 Inspectores por efectividad")
 
     df_rank = (
         resumen.sort_values("porcentaje_efectividad", ascending=False)
-                .head(5)
+               .head(5)
     )
 
     fig_rank = px.bar(
@@ -884,15 +859,14 @@ with tab2:
         y="inspector",
         orientation="h",
         text="porcentaje_efectividad",
-        color="porcentaje_efectividad",
-        title="TOP 5 Efectividad"
+        color="porcentaje_efectividad"
     )
 
     fig_rank.update_traces(texttemplate="%{x}%")
     st.plotly_chart(fig_rank, use_container_width=True)
 
     # ---------------------------------------------------
-    # PRODUCTIVIDAD POR HORA
+    # PRODUCTIVIDAD POR HORA (EFECTIVAS)
     # ---------------------------------------------------
     st.markdown("## ⏱️ Productividad por hora (tareas efectivas)")
 
@@ -901,6 +875,7 @@ with tab2:
     if df_horas.empty:
         st.info("⚠️ No hay tareas efectivas para esta fecha.")
     else:
+        df_horas = df_horas.copy()
         df_horas["hora_str"] = df_horas["hora_inicio"].astype(str)
 
         horas_prod = (
@@ -914,16 +889,11 @@ with tab2:
             x="hora_str",
             y="cantidad",
             text="cantidad",
-            title="Productividad por hora",
             color="cantidad"
         )
 
         fig_horas.update_traces(textposition="outside")
         st.plotly_chart(fig_horas, use_container_width=True)
-
-
-
-
 # ---------------------------------------------------
 # ===================================================
 # ===================================================
