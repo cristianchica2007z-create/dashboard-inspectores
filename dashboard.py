@@ -13,6 +13,21 @@ import json
 import os
 import streamlit as st
 
+
+# -------------------------------------------------
+# ZONA HORARIA COLOMBIA
+# -------------------------------------------------
+from zoneinfo import ZoneInfo
+import datetime
+
+TZ_CO = ZoneInfo("America/Bogota")
+
+def ahora_colombia():
+    return datetime.datetime.now(TZ_CO)
+
+
+
+
 if "usuario" not in st.session_state:
     st.session_state.usuario = None
     st.session_state.rol = None
@@ -420,18 +435,8 @@ with tab2:
     # -------------------------------------------------
     # MOSTRAR FECHA Y HORA DE LA ÚLTIMA ACTUALIZACIÓN
     # (FORMA SEGURA – NO ROMPE TAB 2)
-    # -------------------------------------------------
-
-    # -------------------------------------------------
-# EXCLUIR GRUPOS NO OPERATIVOS
-# -------------------------------------------------
-if "grupo" in df_bitacora.columns:
-    df_bitacora = df_bitacora[
-        ~df_bitacora["grupo"].isin(["INSP-CALDAS", "INSP-RIS"])
-    ]
 
 
-    # -------------------------------------------------
     import json
 
     info_path = "BITACORA_INFO.json"
