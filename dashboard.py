@@ -61,7 +61,7 @@ col_titulo, col_logo = st.columns([8, 2])
 
 with col_titulo:
     st.markdown(
-        "<h1 style='margin-bottom: 0;'>📊 Dashboard Inspectores</h1>",
+        "<h1 style='margin-bottom: 0;'>📊 DASHBOARD INSPECTORES e&c</h1>",
         unsafe_allow_html=True
     )
 
