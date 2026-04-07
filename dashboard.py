@@ -54,9 +54,8 @@ st.set_page_config(
     layout="wide"
 )
 
-
 # -------------------------------------------------
-# HEADER CON LOGO A LA DERECHA
+# HEADER CON LOGO A LA DERECHA (CORRECTO)
 # -------------------------------------------------
 col_titulo, col_logo = st.columns([8, 2])
 
@@ -67,15 +66,11 @@ with col_titulo:
     )
 
 with col_logo:
-    st.markdown(
-        """
-        <div style="display: flex; justify-content: flex-end;">
-            <img src="logo.png" style="max-height:80px;">
-        </div>
-        """,
-        unsafe_allow_html=True
+    st.image(
+        "logo.png",
+        use_container_width=True,
+        caption=""
     )
-
 # ---------------------------------------------------
 # ✅ CREAR PESTAÑAS
 # ---------------------------------------------------
