@@ -66,7 +66,16 @@ if st.session_state.usuario is None:
     st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
 
+# -------------------------------------------------
+# BOTÓN CERRAR SESIÓN
+# -------------------------------------------------
+col_vacio, col_logout = st.columns([8, 1])
 
+with col_logout:
+    if st.button("🚪 Cerrar sesión"):
+        st.session_state.usuario = None
+        st.session_state.rol = None
+        st.rerun()
 
     
 # ---------------------------------------------------
