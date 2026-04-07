@@ -49,9 +49,14 @@ inspectores_lista = sorted([
 # ---------------------------------------------------
 # ✅ CONFIGURACIÓN GENERAL DEL DASHBOARD
 # ---------------------------------------------------
-st.set_page_config(
+st.set_page_config(      
+    page_title="Dashboard Inspectores",
+    layout="wide"
+)
 
-    # -------------------------------------------------
+st.title("📊 Dashboard Inspectores")
+
+# -------------------------------------------------
 # LOGO SUPERIOR DERECHO
 # -------------------------------------------------
 col_logo, col_titulo = st.columns([1, 6])
@@ -65,12 +70,6 @@ with col_titulo:
         unsafe_allow_html=True
     )
 
-    
-    page_title="Dashboard Inspectores",
-    layout="wide"
-)
-
-st.title("📊 Dashboard Inspectores")
 
 # ---------------------------------------------------
 # ✅ CREAR PESTAÑAS
