@@ -421,6 +421,17 @@ with tab2:
     # MOSTRAR FECHA Y HORA DE LA ÚLTIMA ACTUALIZACIÓN
     # (FORMA SEGURA – NO ROMPE TAB 2)
     # -------------------------------------------------
+
+    # -------------------------------------------------
+# EXCLUIR GRUPOS NO OPERATIVOS
+# -------------------------------------------------
+if "grupo" in df_bitacora.columns:
+    df_bitacora = df_bitacora[
+        ~df_bitacora["grupo"].isin(["INSP-CALDAS", "INSP-RIS"])
+    ]
+
+
+    # -------------------------------------------------
     import json
 
     info_path = "BITACORA_INFO.json"
