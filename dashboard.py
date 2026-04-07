@@ -478,22 +478,27 @@ with tab2:
     # MOSTRAR FECHA Y HORA DE LA ÚLTIMA ACTUALIZACIÓN
     # (CONVERSIÓN A HORA COLOMBIA)
     # -------------------------------------------------
+# -------------------------------------------------
+    # MOSTRAR FECHA, HORA Y USUARIO DE ÚLTIMA ACTUALIZACIÓN
+    # (CONVERSIÓN A HORA COLOMBIA)
+    # -------------------------------------------------
     import json
-    from zoneinfo import ZoneInfo
     import datetime
+    from zoneinfo import ZoneInfo
 
     TZ_UTC = ZoneInfo("UTC")
     TZ_CO = ZoneInfo("America/Bogota")
 
     info_path = "BITACORA_INFO.json"
     ultima_actualizacion = "—"
+    usuario_actualizo = "—"
 
     try:
         if os.path.exists(info_path):
             with open(info_path, "r", encoding="utf-8") as f:
                 info = json.load(f)
 
-                # La hora se guardó en UTC sin tz → asumir UTC
+                # Hora guardada como UTC
                 fecha_utc = datetime.datetime.strptime(
                     info.get("ultima_actualizacion"),
                     "%Y-%m-%d %H:%M:%S"
@@ -505,11 +510,16 @@ with tab2:
                 ultima_actualizacion = fecha_colombia.strftime(
                     "%Y-%m-%d %H:%M:%S"
                 )
+
+                usuario_actualizo = info.get("usuario_actualizo", "—")
+
     except Exception:
         ultima_actualizacion = "—"
+        usuario_actualizo = "—"
 
     st.caption(
-        f"🕓 Última actualización de la bitácora: {ultima_actualizacion}"
+        f"🕓 Última actualización: {ultima_actualizacion} "
+        f"| 👤 Actualizó: {usuario_actualizo}"
     )
 
     # -------------------------------------------------
