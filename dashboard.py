@@ -164,8 +164,7 @@ with tab1:
 
         items_def = [
             "Stickers 🔵", "Cepo 🔒", "Guantes 🧤", "Piernera 🦿",
-            "Monogafas 🥽", "Llaves de cepo 🗝️", "Formatos 📄",
-            "Sellos 🕹️", "Papelería general 📦"
+            "Monogafas 🥽", "Llaves de cepo 🗝️","Papelería general 📦"
         ]
 
         items_seleccionados = []
