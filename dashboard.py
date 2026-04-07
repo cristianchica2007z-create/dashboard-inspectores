@@ -993,7 +993,7 @@ with tab3:
         "Desde aquí se sube la bitácora OFICIAL.\n\n"
         "Al cargar un nuevo archivo, este reemplazará el anterior y "
         "todos los usuarios verán la MISMA información en la pestaña "
-        "🕒 Seguimiento Diario (TAB 2), sin volver a cargar archivos."
+        "🕒 Seguimiento Diario (TAB 2)."
     )
 
     archivo = st.file_uploader(
@@ -1005,7 +1005,13 @@ with tab3:
         import base64
         import requests
         import json
-        from datetime import datetime
+        import datetime
+        from zoneinfo import ZoneInfo
+
+        # -----------------------------
+        # ZONA HORARIA
+        # -----------------------------
+        TZ_UTC = ZoneInfo("UTC")
 
         # -----------------------------
         # LEER SECRETS DE GITHUB
@@ -1030,9 +1036,7 @@ with tab3:
         url_excel = f"https://api.github.com/repos/{repo}/contents/BITACORA.xlsx"
 
         r_excel = requests.get(url_excel, headers=headers)
-        sha_excel = None
-        if r_excel.status_code == 200:
-            sha_excel = r_excel.json().get("sha")
+        sha_excel = r_excel.json().get("sha") if r_excel.status_code == 200 else None
 
         payload_excel = {
             "message": "Actualización de BITACORA.xlsx desde Streamlit",
@@ -1055,20 +1059,14 @@ with tab3:
             st.stop()
 
         # =================================================
-        # 2️⃣ GUARDAR FECHA Y HORA (BITACORA_INFO.json)
+        # 2️⃣ GUARDAR FECHA, HORA Y USUARIO (BITACORA_INFO.json)
         # =================================================
-
-
-TZ_UTC = ZoneInfo("UTC")
-
-info = {
-    # Se guarda en UTC (estándar)
-    "ultima_actualizacion": datetime.datetime.now(TZ_UTC).strftime(
-        "%Y-%m-%d %H:%M:%S"
-    ),
-    # Usuario autenticado
-    "usuario_actualizo": st.session_state.usuario
-}
+        info = {
+            "ultima_actualizacion": datetime.datetime.now(TZ_UTC).strftime(
+                "%Y-%m-%d %H:%M:%S"
+            ),
+            "usuario_actualizo": st.session_state.usuario
+        }
 
         contenido_info_b64 = base64.b64encode(
             json.dumps(info, indent=2).encode("utf-8")
@@ -1077,12 +1075,10 @@ info = {
         url_info = f"https://api.github.com/repos/{repo}/contents/BITACORA_INFO.json"
 
         r_info = requests.get(url_info, headers=headers)
-        sha_info = None
-        if r_info.status_code == 200:
-            sha_info = r_info.json().get("sha")
+        sha_info = r_info.json().get("sha") if r_info.status_code == 200 else None
 
         payload_info = {
-            "message": "Actualización de fecha y hora de BITACORA",
+            "message": "Actualización de BITACORA_INFO.json",
             "content": contenido_info_b64,
             "branch": branch
         }
@@ -1100,10 +1096,4 @@ info = {
         # ✅ CONFIRMACIÓN FINAL
         # =================================================
         st.success("✅ Bitácora actualizada correctamente")
-        st.caption(
-            f"🕓 Última actualización: {info['ultima_actualizacion']}"
-        )
-        st.info(
-            "La pestaña 🕒 Seguimiento Diario se actualizará automáticamente "
-            "para todos los usuarios."
-        )
+        st.caption(f"🕓 Hora UTC guardada: {info['ultima_actualizacion']}")
