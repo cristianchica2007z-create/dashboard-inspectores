@@ -23,6 +23,18 @@
 "CAMI": {
     "pin": "1234",
     "rol": "usuario"
+  },
+
+"JUAND": {
+    "pin": "1234",
+    "rol": "usuario"
+  },
+
+"YEISONG": {
+    "pin": "1234",
+    "rol": "usuario"
   }
+
+
 
 }
