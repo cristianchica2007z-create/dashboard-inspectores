@@ -3,8 +3,26 @@
     "pin": "2007",
     "rol": "admin"
   },
+
+
   "aarroyave": {
     "pin": "1234",
     "rol": "usuario"
+  },
+
+"JANIER": {
+    "pin": "1234",
+    "rol": "usuario"
+  },
+
+"DANNY": {
+    "pin": "1234",
+    "rol": "usuario"
+  },
+
+"CAMI": {
+    "pin": "1234",
+    "rol": "usuario"
   }
+
 }
