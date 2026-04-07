@@ -672,33 +672,37 @@ with tab2:
    # -------------------------------------------------
 # -------------------------------------------------
 # -------------------------------------------------
-   # -------------------------------------------------
-# FILTRO DE SUPERVISOR (DESPLEGABLE TIPO EXCEL)
+# FILTRO DE SUPERVISORES (CHECKLIST TIPO EXCEL)
 # -------------------------------------------------
 supervisores_disponibles = sorted(
     df2["supervisor"].dropna().unique()
 )
 
-# Agregar opción TODOS
-opciones_supervisor = ["TODOS"] + supervisores_disponibles
+with st.expander("Seleccionar supervisores", expanded=True):
+    supervisores_sel = []
 
-supervisor_sel = st.selectbox(
-    "Selecciona supervisor:",
-    opciones_supervisor
-)
+    for sup in supervisores_disponibles:
+        if st.checkbox(
+            sup,
+            value=True,           # ✅ todos activos por defecto
+            key=f"sup_{sup}"
+        ):
+            supervisores_sel.append(sup)
 
-if supervisor_sel != "TODOS":
-    df2 = df2[df2["supervisor"] == supervisor_sel]
-
-if df2.empty:
-    st.warning("⚠️ No hay datos para el supervisor seleccionado.")
+if supervisores_sel:
+    df2 = df2[df2["supervisor"].isin(supervisores_sel)]
+else:
+    st.warning("⚠️ Selecciona al menos un supervisor.")
     st.stop()
+
 
 
     # -------------------------------------------------
     # FILTRO DE INSPECTORES (DEPENDIENTE DE SUPERVISOR)
     # -------------------------------------------------
-inspectores_disponibles = sorted(df2["inspector"].dropna().unique())
+inspectores_disponibles = sorted(
+    df2["inspector"].dropna().unique()
+)
 
 inspectores_sel = st.multiselect(
     "Selecciona inspectores:",
@@ -708,9 +712,8 @@ inspectores_sel = st.multiselect(
 
 if inspectores_sel:
     df2 = df2[df2["inspector"].isin(inspectores_sel)]
-
-if df2.empty:
-    st.warning("⚠️ No hay datos con los inspectores seleccionados.")
+else:
+    st.warning("⚠️ Selecciona al menos un inspector.")
     st.stop()
 
 # ===================================================
