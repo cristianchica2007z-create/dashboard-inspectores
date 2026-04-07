@@ -486,25 +486,35 @@ with tab2:
     )
     df2 = df2[df2["inspector"].isin(inspectores_sel)]
     # ===================================================
+ # ===================================================
     # ✅ TAB 2 — PARTE 3 / 4
-    # Agrupación diaria, puntualidad y KPIs
+    # Agrupación diaria, puntualidad, producción y KPIs
     # ===================================================
+
+    # ---------------------------------------------------
+    # AGRUPACIÓN DIARIA (primera y última hora)
+    # ---------------------------------------------------
     primeras = (
         df2.sort_values("hora_inicio")
-        .groupby(["inspector", "fecha"], as_index=False)
-        .first()[["inspector","supervisor","fecha","hora_inicio","localidad"]]
+           .groupby(["inspector", "fecha"], as_index=False)
+           .first()[["inspector", "supervisor", "fecha", "hora_inicio", "localidad"]]
     )
 
     ultimas = (
         df2.sort_values("hora_final")
-        .groupby(["inspector", "fecha"], as_index=False)
-        .last()[["inspector","fecha","hora_final"]]
+           .groupby(["inspector", "fecha"], as_index=False)
+           .last()[["inspector", "fecha", "hora_final"]]
     )
 
     df_agrupado = primeras.merge(
-        ultimas, on=["inspector","fecha"], how="left"
+        ultimas,
+        on=["inspector", "fecha"],
+        how="left"
     )
 
+    # ---------------------------------------------------
+    # PUNTUALIDAD
+    # ---------------------------------------------------
     hora_oficial = datetime.time(7, 30)
 
     def mins_tarde(h):
@@ -527,28 +537,91 @@ with tab2:
 
     df_agrupado["estado"] = df_agrupado["minutos_tarde"].apply(estado)
 
+    # ---------------------------------------------------
+    # PRODUCCIÓN (MARCAR EFECTIVAS)
+    # ---------------------------------------------------
     valores_efectivos = [
-        "INSPECCIONADA","INSPECCIONADA CON DEFECTO NO CRITICO",
+        "INSPECCIONADA",
+        "INSPECCIONADA CON DEFECTO NO CRITICO",
         "INSPECCIONADA CON DEFECTO CRITICO",
-        "CERTIFICADA","CERTIFICADA CON NOVEDAD"
+        "CERTIFICADA",
+        "CERTIFICADA CON NOVEDAD"
     ]
 
     df2["efectiva"] = df2["cierre"].isin(valores_efectivos)
 
     total_ordenes = df2.shape[0]
     total_efectivas = df2[df2["efectiva"]].shape[0]
-    porcentaje = round((total_efectivas / total_ordenes) * 100, 1) if total_ordenes else 0
 
-    df_eff = df2[(df2["efectiva"]) & df2["tiempo_tarea_td"].notna()]
-    tiempo_prom_str = td_to_str(df_eff["tiempo_tarea_td"].mean()) if not df_eff.empty else "—"
+    porcentaje = (
+        round((total_efectivas / total_ordenes) * 100, 1)
+        if total_ordenes > 0 else 0
+    )
 
+    # ---------------------------------------------------
+    # ÓRDENES EFECTIVAS CON TIEMPO VÁLIDO
+    # ---------------------------------------------------
+    df_eff = df2[
+        (df2["efectiva"] == True) &
+        (df2["tiempo_tarea_td"].notna())
+    ]
+
+    # ---------------------------------------------------
+    # KPI: PROMEDIO HORA DE INICIO (SOLO EFECTIVAS)
+    # ---------------------------------------------------
+    df_ini = df2[
+        (df2["efectiva"] == True) &
+        (df2["hora_inicio"] != "SIN HORA") &
+        (df2["hora_inicio"].notna())
+    ].copy()
+
+    df_ini["ini_dec"] = df_ini["hora_inicio"].apply(hora_to_decimal)
+
+    prom_ini = df_ini["ini_dec"].mean()
+    hora_prom_ini = (
+        hora_to_string(decimal_to_hora(prom_ini))
+        if pd.notna(prom_ini) else "—"
+    )
+
+    # ---------------------------------------------------
+    # KPI: PROMEDIO HORA DE FIN (SOLO EFECTIVAS)
+    # ---------------------------------------------------
+    df_fin = df2[
+        (df2["efectiva"] == True) &
+        (df2["hora_final"].notna())
+    ].copy()
+
+    df_fin["fin_dec"] = df_fin["hora_final"].apply(hora_to_decimal)
+
+    prom_fin = df_fin["fin_dec"].mean()
+    hora_prom_fin = (
+        hora_to_string(decimal_to_hora(prom_fin))
+        if pd.notna(prom_fin) else "—"
+    )
+
+    # ---------------------------------------------------
+    # KPI: PROMEDIO TIEMPO POR TAREA (SOLO EFECTIVAS)
+    # ---------------------------------------------------
+    tiempo_prom_str = (
+        td_to_str(df_eff["tiempo_tarea_td"].mean())
+        if not df_eff.empty else "—"
+    )
+
+    # ---------------------------------------------------
+    # KPIs EN PANTALLA
+    # ---------------------------------------------------
     st.markdown("## ⭐ KPIs del día")
 
-    c1,c2,c3 = st.columns(3)
-    c1.metric("📋 Tareas", total_ordenes)
-    c2.metric("✅ Efectivas", total_efectivas)
-    c3.metric("📈 % Efectividad", f"{porcentaje}%")
-    # ===================================================
+    c1, c2, c3 = st.columns(3)
+    c1.metric("⏰ Promedio inicio", hora_prom_ini)
+    c2.metric("🕒 Promedio fin", hora_prom_fin)
+    c3.metric("🕓 Prom. tiempo por tarea", tiempo_prom_str)
+
+    c4, c5, c6 = st.columns(3)
+    c4.metric("📋 Tareas", total_ordenes)
+    c5.metric("✅ Efectivas", total_efectivas)
+    c6.metric("📈 % Efectividad", f"{porcentaje}%")
+
    # ===================================================
     # ✅ TAB 2 — PARTE 4 / 4
     # Tablas finales y gráficas
