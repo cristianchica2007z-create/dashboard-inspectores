@@ -5,6 +5,9 @@ import plotly.express as px
 import json
 import datetime
 from zoneinfo import ZoneInfo
+import base64
+import requests
+import io
 
 
 
@@ -300,9 +303,7 @@ with tab1:
             )
 
 # Guardar en github
-import base64
-import requests
-import io
+
 
 # Guardar el DataFrame en un buffer en memoria
 buffer = io.BytesIO()
