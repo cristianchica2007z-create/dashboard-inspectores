@@ -174,24 +174,35 @@ tab1, tab2, tab3 = st.tabs([
 with tab1:
     st.subheader("📦 Control de entrega de papelería e inventario")
 
-    archivo_inventario = "inventario.xlsx"
+ import requests
+import base64
+import io
 
-    # Crear archivo si no existe
-    if not os.path.exists(archivo_inventario):
-        df_inv = pd.DataFrame(columns=[
-            "Fecha", "Sede", "Inspector",
-            "Responsable", "Observación", "Ítems"
-        ])
-        df_inv.to_excel(
-            archivo_inventario,
-            index=False,
-            engine="openpyxl"
-        )
-    else:
-        df_inv = pd.read_excel(
-            archivo_inventario,
-            engine="openpyxl"
-        )
+archivo_inventario = "inventario.xlsx"
+
+token = st.secrets["github"]["token"]
+repo = st.secrets["github"]["repo"]
+branch = st.secrets["github"].get("branch", "main")
+
+headers = {
+    "Authorization": f"Bearer {token}",
+    "Accept": "application/vnd.github+json"
+}
+
+url_inv = f"https://api.github.com/repos/{repo}/contents/{archivo_inventario}"
+
+r = requests.get(url_inv, headers=headers)
+
+if r.status_code == 200:
+    contenido = r.json()["content"]
+    binario = base64.b64decode(contenido)
+    buffer = io.BytesIO(binario)
+    df_inv = pd.read_excel(buffer, engine="openpyxl")
+else:
+    df_inv = pd.DataFrame(columns=[
+        "Fecha", "Sede", "Inspector",
+        "Responsable", "Observación", "Ítems"
+    ])
 
     # Normalizar nombres de columnas
     df_inv.columns = df_inv.columns.str.strip()
