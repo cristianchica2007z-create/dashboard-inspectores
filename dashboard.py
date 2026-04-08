@@ -341,6 +341,13 @@ r_put = requests.put(url_inv, headers=headers, json=payload)
 
 if r_put.status_code in (200, 201):
     st.success("✅ Entrega registrada y guardada correctamente")
+
+# 🔄 RECARGAR INVENTARIO DESDE EL ARCHIVO (POST-GUARDADO)
+    df_inv = pd.read_excel(
+        archivo_inventario,
+        engine="openpyxl"
+    )
+
 else:
     st.error("❌ Error al guardar el inventario en GitHub")
     st.json(r_put.json())
