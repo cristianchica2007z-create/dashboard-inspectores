@@ -168,93 +168,68 @@ tab1, tab2, tab3 = st.tabs([
 ])
 
 # ===================================================
-# ✅ TAB 1 — INVENTARIO DE PAPELERÍA (PARTE 1/4)
-# Carga y preparación del inventario
+# ===================================================
+# ✅ TAB 1 — INVENTARIO DE PAPELERÍA
 # ===================================================
 with tab1:
     st.subheader("📦 Control de entrega de papelería e inventario")
 
+    # ==============================
+    # LEER INVENTARIO DESDE GITHUB
+    # ==============================
+    archivo_inventario = "inventario.xlsx"
 
-archivo_inventario = "inventario.xlsx"
+    token = st.secrets["github"]["token"]
+    repo = st.secrets["github"]["repo"]
+    branch = st.secrets["github"].get("branch", "main")
 
-token = st.secrets["github"]["token"]
-repo = st.secrets["github"]["repo"]
-branch = st.secrets["github"].get("branch", "main")
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json"
+    }
 
-headers = {
-    "Authorization": f"Bearer {token}",
-    "Accept": "application/vnd.github+json"
-}
+    url_inv = f"https://api.github.com/repos/{repo}/contents/{archivo_inventario}"
+    r = requests.get(url_inv, headers=headers)
 
-url_inv = f"https://api.github.com/repos/{repo}/contents/{archivo_inventario}"
+    if r.status_code == 200:
+        contenido = r.json()["content"]
+        binario = base64.b64decode(contenido)
+        buffer = io.BytesIO(binario)
+        df_inv = pd.read_excel(buffer, engine="openpyxl")
+    else:
+        df_inv = pd.DataFrame(columns=[
+            "Fecha", "Sede", "Inspector",
+            "Responsable", "Observación", "Ítems"
+        ])
 
-r = requests.get(url_inv, headers=headers)
-
-if r.status_code == 200:
-    contenido = r.json()["content"]
-    binario = base64.b64decode(contenido)
-    buffer = io.BytesIO(binario)
-    df_inv = pd.read_excel(buffer, engine="openpyxl")
-else:
-    df_inv = pd.DataFrame(columns=[
-        "Fecha", "Sede", "Inspector",
-        "Responsable", "Observación", "Ítems"
-    ])
-
-    # Normalizar nombres de columnas
     df_inv.columns = df_inv.columns.str.strip()
+
     # ===================================================
-# ✅ TAB 1 — PARTE 2/4
-# Formulario de registro de entrega
-# ===================================================
+    # FORMULARIO DE REGISTRO
+    # ===================================================
     with st.form("form_entrega", clear_on_submit=True):
         st.markdown("### Registrar entrega")
 
         col1, col2, col3 = st.columns(3)
 
-        with col1:
-            sede = st.selectbox(
-                "Sede",
-                ["CALDAS", "RISARALDA"],
-                key="inv_sede"
-            )
+        sede = col1.selectbox("Sede", ["CALDAS", "RISARALDA"])
+        inspector = col2.selectbox("Inspector", inspectores_lista)
+        fecha = col3.date_input("Fecha")
 
-        with col2:
-            inspector = st.selectbox(
-                "Inspector",
-                inspectores_lista,
-                key="inv_inspector"
-            )
+        responsable = st.selectbox(
+            "Responsable",
+            [
+                "JUAN DIEGO SANCHEZ",
+                "CRISTIAN CHICA",
+                "ANDRES ARROYAVE",
+                "MARIA CAMILA",
+                "JANIER",
+                "DANNY DE LA CRUZ"
+            ]
+        )
 
-        with col3:
-            fecha = st.date_input(
-                "Fecha",
-                key="inv_fecha"
-            )
+        observacion = st.text_input("Observación (opcional)")
 
-        col4, col5 = st.columns([1, 2])
-
-        with col4:
-            responsable = st.selectbox(
-                "Responsable",
-                [
-                    "JUAN DIEGO SANCHEZ",
-                    "CRISTIAN CHICA",
-                    "ANDRES ARROYAVE",
-                    "MARIA CAMILA",
-                    "JANIER",
-                    "DANNY DE LA CRUZ"
-                ],
-                key="inv_responsable"
-            )
-
-        with col5:
-            observacion = st.text_input(
-                "Observación (opcional)",
-                key="inv_obs"
-            )
-
-        # ---------- ÍTEMS ----------
         st.markdown("### Ítems entregados")
 
         items_def = [
@@ -263,38 +238,30 @@ else:
         ]
 
         items_seleccionados = []
-        filas = [items_def[i:i+4] for i in range(0, len(items_def), 4)]
 
+        filas = [items_def[i:i+4] for i in range(0, len(items_def), 4)]
         for f_idx, fila in enumerate(filas):
             cols = st.columns(4)
             for c_idx, item in enumerate(fila):
-                marcar = cols[c_idx].checkbox(
-                    item,
-                    key=f"item_chk_{f_idx}_{c_idx}"
-                )
+                marcar = cols[c_idx].checkbox(item, key=f"item_{f_idx}_{c_idx}")
                 cantidad = cols[c_idx].number_input(
                     "Cantidad",
                     min_value=0,
                     step=1,
                     label_visibility="collapsed",
-                    key=f"item_qty_{f_idx}_{c_idx}"
+                    key=f"qty_{f_idx}_{c_idx}"
                 )
-
                 if marcar and cantidad > 0:
-                    items_seleccionados.append(
-                        f"{item} x{cantidad}"
-                    )
+                    items_seleccionados.append(f"{item} x{cantidad}")
 
         submitted = st.form_submit_button("✅ Guardar entrega")
-        # ===================================================
-# ✅ TAB 1 — PARTE 3/4
-# Guardado y historial
-# ===================================================
+
+    # ===================================================
+    # GUARDAR ENTREGA (SOLO CUANDO SUBMITTED)
+    # ===================================================
     if submitted:
         if not items_seleccionados:
-            st.warning(
-                "⚠️ Debes seleccionar al menos un ítem con cantidad."
-            )
+            st.warning("⚠️ Debes seleccionar al menos un ítem con cantidad")
         else:
             nueva_fila = pd.DataFrame([{
                 "Fecha": fecha.strftime("%Y-%m-%d"),
@@ -305,97 +272,67 @@ else:
                 "Ítems": ", ".join(items_seleccionados)
             }])
 
-            df_inv = pd.concat(
-                [df_inv, nueva_fila],
-                ignore_index=True
-            )
+            df_inv = pd.concat([df_inv, nueva_fila], ignore_index=True)
 
-# Guardar en github
+            buffer = io.BytesIO()
+            df_inv.to_excel(buffer, index=False, engine="openpyxl")
+            buffer.seek(0)
 
+            contenido_b64 = base64.b64encode(buffer.read()).decode("utf-8")
+            sha = r.json().get("sha") if r.status_code == 200 else None
 
-# Guardar el DataFrame en un buffer en memoria
-buffer = io.BytesIO()
-df_inv.to_excel(buffer, index=False, engine="openpyxl")
-buffer.seek(0)
+            payload = {
+                "message": "Registro de entrega de papelería",
+                "content": contenido_b64,
+                "branch": branch
+            }
 
-contenido_b64 = base64.b64encode(buffer.read()).decode("utf-8")
+            if sha:
+                payload["sha"] = sha
 
-# GitHub
-token = st.secrets["github"]["token"]
-repo = st.secrets["github"]["repo"]
-branch = st.secrets["github"].get("branch", "main")
+            requests.put(url_inv, headers=headers, json=payload)
 
-headers = {
-    "Authorization": f"Bearer {token}",
-    "Accept": "application/vnd.github+json"
-}
+            st.success("✅ Entrega registrada y guardada correctamente")
 
-url_inv = f"https://api.github.com/repos/{repo}/contents/inventario.xlsx"
-
-# Obtener SHA si existe
-r = requests.get(url_inv, headers=headers)
-sha_inv = r.json().get("sha") if r.status_code == 200 else None
-
-payload = {
-    "message": "Registro de entrega de papelería",
-    "content": contenido_b64,
-    "branch": branch
-}
-
-if sha_inv:
-    payload["sha"] = sha_inv
-
-r_put = requests.put(url_inv, headers=headers, json=payload)
-
-if r_put.status_code in (200, 201):
-    st.success("✅ Entrega registrada y guardada correctamente")
-
-# 🔄 RECARGAR INVENTARIO DESDE EL ARCHIVO (POST-GUARDADO)
-    df_inv = pd.read_excel(
-        archivo_inventario,
-        engine="openpyxl"
-    )
-
-else:
-    st.error("❌ Error al guardar el inventario en GitHub")
-    st.json(r_put.json())
-
-    # ---------- HISTORIAL ----------
+    # ===================================================
+    # HISTORIAL (SIEMPRE SE MUESTRA)
+    # ===================================================
     st.markdown("### 📋 Historial de entregas")
 
     filtro_inspector = st.selectbox(
         "Filtrar por inspector",
-        ["TODOS"] + inspectores_lista,
-        key="inv_filtro_inspector"
+        ["TODOS"] + inspectores_lista
     )
 
     df_hist = df_inv.copy()
     if filtro_inspector != "TODOS":
-        df_hist = df_hist[
-            df_hist["Inspector"] == filtro_inspector
-        ]
+        df_hist = df_hist[df_hist["Inspector"] == filtro_inspector]
 
     st.dataframe(df_hist, use_container_width=True)
 
-
-        # ===================================================
-# ✅ TAB 1 — PARTE 4/4
-# Consumo mensual consolidado por ítem
-# ===================================================
+    # ===================================================
+    # CONSUMO MENSUAL
+    # ===================================================
     st.markdown("## 📊 Consumo mensual consolidado por ítem")
 
     df_cons = df_inv.copy()
-    df_cons["Fecha"] = pd.to_datetime(
-        df_cons["Fecha"],
-        errors="coerce"
-    )
-    df_cons["Mes"] = (
-        df_cons["Fecha"]
-        .dt.to_period("M")
-        .astype(str)
-    )
+    df_cons["Fecha"] = pd.to_datetime(df_cons["Fecha"], errors="coerce")
+    df_cons["Mes"] = df_cons["Fecha"].dt.to_period("M").astype(str)
 
     registros = []
+    for _, row in df_cons.iterrows():
+        if pd.isna(row["Ítems"]):
+            continue
+        for it in row["Ítems"].split(","):
+            it = it.strip()
+            nombre, cantidad = it.rsplit(" x", 1) if " x" in it else (it, 1)
+            registros.append({"Mes": row["Mes"], "Ítem": nombre, "Cantidad": int(cantidad)})
+
+    df_plot = pd.DataFrame(registros)
+    if not df_plot.empty:
+        df_plot = df_plot.groupby(["Mes", "Ítem"], as_index=False).sum()
+        fig = px.bar(df_plot, x="Mes", y="Cantidad", color="Ítem", barmode="group")
+        st.plotly_chart(fig, use_container_width=True)
 
     for _, row in df_cons.iterrows():
         if pd.isna(row["Ítems"]):
