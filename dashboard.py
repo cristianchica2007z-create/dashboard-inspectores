@@ -164,7 +164,8 @@ with col_logo:
 tab1, tab2, tab3 = st.tabs([
     "📦 Inventario Papelería",
     "🕒 Seguimiento Diario",
-    "📈 Subir Archivos"
+    "📈 Subir Archivos",
+    "Seguimiento agendas"
 ])
 
 # ===================================================
