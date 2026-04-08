@@ -174,9 +174,6 @@ tab1, tab2, tab3 = st.tabs([
 with tab1:
     st.subheader("📦 Control de entrega de papelería e inventario")
 
- import requests
-import base64
-import io
 
 archivo_inventario = "inventario.xlsx"
 
