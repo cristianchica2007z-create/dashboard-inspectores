@@ -299,13 +299,50 @@ with tab1:
                 ignore_index=True
             )
 
-            df_inv.to_excel(
-                archivo_inventario,
-                index=False,
-                engine="openpyxl"
-            )
+# Guardar en github
+import base64
+import requests
+import io
 
-            st.success("✅ Entrega registrada correctamente")
+# Guardar el DataFrame en un buffer en memoria
+buffer = io.BytesIO()
+df_inv.to_excel(buffer, index=False, engine="openpyxl")
+buffer.seek(0)
+
+contenido_b64 = base64.b64encode(buffer.read()).decode("utf-8")
+
+# GitHub
+token = st.secrets["github"]["token"]
+repo = st.secrets["github"]["repo"]
+branch = st.secrets["github"].get("branch", "main")
+
+headers = {
+    "Authorization": f"Bearer {token}",
+    "Accept": "application/vnd.github+json"
+}
+
+url_inv = f"https://api.github.com/repos/{repo}/contents/inventario.xlsx"
+
+# Obtener SHA si existe
+r = requests.get(url_inv, headers=headers)
+sha_inv = r.json().get("sha") if r.status_code == 200 else None
+
+payload = {
+    "message": "Registro de entrega de papelería",
+    "content": contenido_b64,
+    "branch": branch
+}
+
+if sha_inv:
+    payload["sha"] = sha_inv
+
+r_put = requests.put(url_inv, headers=headers, json=payload)
+
+if r_put.status_code in (200, 201):
+    st.success("✅ Entrega registrada y guardada correctamente")
+else:
+    st.error("❌ Error al guardar el inventario en GitHub")
+    st.json(r_put.json())
 
     # ---------- HISTORIAL ----------
     st.markdown("### 📋 Historial de entregas")
@@ -324,16 +361,7 @@ with tab1:
 
     st.dataframe(df_hist, use_container_width=True)
 
-    if st.button(
-        "💾 Guardar cambios del historial",
-        key="inv_guardar_hist"
-    ):
-        df_inv.to_excel(
-            archivo_inventario,
-            index=False,
-            engine="openpyxl"
-        )
-        st.success("✅ Cambios del historial guardados")
+
         # ===================================================
 # ✅ TAB 1 — PARTE 4/4
 # Consumo mensual consolidado por ítem
