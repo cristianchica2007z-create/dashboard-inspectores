@@ -1148,18 +1148,36 @@ with tab3:
 with tab4:
     st.subheader("📅 Seguimiento de agendas prioritarias")
 
+    # ---------------------------------------
+    # CARGAR BITÁCORA DESDE GITHUB
+    # ---------------------------------------
     archivo_bitacora = "BITACORA.xlsx"
 
-    if not os.path.exists(archivo_bitacora):
-        st.warning("⚠️ No se encontró la bitácora.")
+    token = st.secrets["github"]["token"]
+    repo = st.secrets["github"]["repo"]
+    branch = st.secrets["github"].get("branch", "main")
+
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json"
+    }
+
+    url_bit = f"https://api.github.com/repos/{repo}/contents/{archivo_bitacora}"
+    r = requests.get(url_bit, headers=headers)
+
+    if r.status_code != 200:
+        st.error("❌ No se pudo cargar la bitácora desde GitHub.")
         st.stop()
 
-    # ---------------------------------------
-    # CARGAR BITÁCORA
-    # ---------------------------------------
-    df_agenda = pd.read_excel(archivo_bitacora)
+    contenido = r.json()["content"]
+    binario = base64.b64decode(contenido)
+    buffer = io.BytesIO(binario)
 
-    # Normalizar columnas
+    df_agenda = pd.read_excel(buffer, engine="openpyxl")
+
+    # ---------------------------------------
+    # NORMALIZAR COLUMNAS
+    # ---------------------------------------
     df_agenda.columns = df_agenda.columns.str.strip().str.lower()
 
     columnas_requeridas = ["prioridad", "estado", "fecha de visita"]
@@ -1176,23 +1194,44 @@ with tab4:
         (df_agenda["estado"].astype(str).str.upper() == "ASIGNADA")
     ].copy()
 
-   # ---------------------------------------
-# CONVERSIÓN DE FECHA DE VISITA
-# ---------------------------------------
-df_agenda["fecha de visita"] = pd.to_datetime(
-    df_agenda["fecha de visita"],
-    errors="coerce"
-)
+    # ---------------------------------------
+    # FECHA DE VISITA
+    # ---------------------------------------
+    df_agenda["fecha de visita"] = pd.to_datetime(
+        df_agenda["fecha de visita"],
+        errors="coerce"
+    )
 
-# Hora actual Colombia (naive para comparación)
-ahora_colombia = (
-    datetime.datetime.now(ZoneInfo("America/Bogota"))
-    .replace(tzinfo=None)
-)
+    ahora_colombia = (
+        datetime.datetime.now(ZoneInfo("America/Bogota"))
+        .replace(tzinfo=None)
+    )
 
-# ---------------------------------------
-# ESTADO DE ALERTA
-# ---------------------------------------
-df_agenda["estado_alerta"] = df_agenda["fecha de visita"].apply(
-    lambda x: "ALERTA" if pd.notna(x) and x <= ahora_colombia else "OK"
-)
+    # ---------------------------------------
+    # ESTADO DE ALERTA
+    # ---------------------------------------
+    df_agenda["estado_alerta"] = df_agenda["fecha de visita"].apply(
+        lambda x: "ALERTA" if pd.notna(x) and x <= ahora_colombia else "OK"
+    )
+
+    # ---------------------------------------
+    # MOSTRAR TABLA (SIEMPRE)
+    # ---------------------------------------
+    st.markdown("### 📋 Agendas prioritarias")
+
+    st.dataframe(
+        df_agenda.sort_values("fecha de visita") if not df_agenda.empty else df_agenda,
+        use_container_width=True
+    )
+
+    # ---------------------------------------
+    # MENSAJES DE ESTADO
+    # ---------------------------------------
+    if df_agenda.empty:
+        st.info("✅ No hay agendas con prioridad ALTA y estado ASIGNADA.")
+    else:
+        total_alertas = (df_agenda["estado_alerta"] == "ALERTA").sum()
+        if total_alertas > 0:
+            st.error(f"🚨 {total_alertas} agendas en estado ALERTA")
+        else:
+            st.success("✅ Todas las agendas están dentro del tiempo esperado")
