@@ -1146,14 +1146,18 @@ with tab3:
 #PESTAÑA 4 SEGUIMIENTO AGENDAS
 
 with tab4:
-    # =========================================
+    # ======================================================
     # TÍTULO PRINCIPAL
-    # =========================================
+    # ======================================================
     st.markdown("## 🗂️ Control agendas")
 
-    # =========================================
-    # CARGAR BITÁCORA DESDE GITHUB
-    # =========================================
+    # Botón manual de refresco (MUY IMPORTANTE para multiusuario)
+    if st.button("🔄 Actualizar agendas"):
+        st.rerun()
+
+    # ======================================================
+    # CARGAR BITÁCORA DESDE GITHUB (SIEMPRE ACTUAL)
+    # ======================================================
     archivo_bitacora = "BITACORA.xlsx"
 
     token = st.secrets["github"]["token"]
@@ -1162,7 +1166,8 @@ with tab4:
 
     headers = {
         "Authorization": f"Bearer {token}",
-        "Accept": "application/vnd.github+json"
+        "Accept": "application/vnd.github+json",
+        "Cache-Control": "no-cache"
     }
 
     url_bit = f"https://api.github.com/repos/{repo}/contents/{archivo_bitacora}"
@@ -1172,23 +1177,39 @@ with tab4:
         st.error("❌ No se pudo cargar la bitácora desde GitHub.")
         st.stop()
 
+    # Detectar cambios reales del archivo (SHA)
+    sha_actual = r.json().get("sha")
+    if st.session_state.get("sha_bitacora_tab4") != sha_actual:
+        st.session_state["sha_bitacora_tab4"] = sha_actual
+
     contenido = r.json()["content"]
     binario = base64.b64decode(contenido)
     buffer = io.BytesIO(binario)
 
     df_agenda = pd.read_excel(buffer, engine="openpyxl")
 
-    # Normalizar columnas
+    # ======================================================
+    # NORMALIZAR DATOS
+    # ======================================================
     df_agenda.columns = df_agenda.columns.str.strip().str.lower()
 
-    # =========================================
-    # FILTROS BASE DE NEGOCIO
-    # =========================================
+    columnas_requeridas = ["prioridad", "estado", "fecha de visita", "sede"]
+    for col in columnas_requeridas:
+        if col not in df_agenda.columns:
+            st.error(f"❌ Falta la columna requerida: {col}")
+            st.stop()
+
+    # ======================================================
+    # FILTROS BASE (PRIORIDAD ALTA + ASIGNADA)
+    # ======================================================
     df_agenda = df_agenda[
         (df_agenda["prioridad"].astype(str).str.upper() == "ALTA") &
         (df_agenda["estado"].astype(str).str.upper() == "ASIGNADA")
     ].copy()
 
+    # ======================================================
+    # FECHA DE VISITA Y ALERTAS
+    # ======================================================
     df_agenda["fecha de visita"] = pd.to_datetime(
         df_agenda["fecha de visita"],
         errors="coerce"
@@ -1203,30 +1224,30 @@ with tab4:
         lambda x: "ALERTA" if pd.notna(x) and x <= ahora_colombia else "OK"
     )
 
-    # =========================================
+    # ======================================================
     # MENÚ PRINCIPAL: GENERAL / CALDAS / RISARALDA
-    # =========================================
+    # ======================================================
     tab_gral, tab_caldas, tab_ris = st.tabs(
         ["📊 General", "📍 Caldas", "📍 Risaralda"]
     )
 
-    # =========================================================
-    # -------------------- GENERAL -----------------------------
-    # =========================================================
+    # ======================================================
+    # --------------------- GENERAL -------------------------
+    # ======================================================
     with tab_gral:
         sub_final, sub_prox, sub_pend = st.tabs(
             ["✅ Finalizadas", "⏳ Próximas", "🚨 Pendientes"]
         )
 
-        # ---------------- FINALIZADAS ----------------
+        # FINALIZADAS (futuro)
         with sub_final:
-            st.info("Aquí se mostrarán agendas finalizadas (pendiente lógica).")
+            st.info("Aquí se mostrarán agendas finalizadas.")
 
-        # ---------------- PROXIMAS ----------------
+        # PROXIMAS (futuro)
         with sub_prox:
-            st.info("Aquí se mostrarán agendas próximas (pendiente lógica).")
+            st.info("Aquí se mostrarán agendas próximas.")
 
-        # ---------------- PENDIENTES ----------------
+        # PENDIENTES (ACTIVAS)
         with sub_pend:
             st.markdown("### 🚨 Agendas pendientes prioritarias")
 
@@ -1236,23 +1257,25 @@ with tab4:
                 use_container_width=True
             )
 
-            total_alertas = (df_agenda["estado_alerta"] == "ALERTA").sum()
-
             if df_agenda.empty:
                 st.info("✅ No hay agendas pendientes.")
-            elif total_alertas > 0:
-                st.error(f"🚨 {total_alertas} agendas en estado ALERTA")
             else:
-                st.success("✅ Todas las agendas están dentro del tiempo esperado")
+                total_alertas = (df_agenda["estado_alerta"] == "ALERTA").sum()
+                if total_alertas > 0:
+                    st.error(f"🚨 {total_alertas} agendas en estado ALERTA")
+                else:
+                    st.success("✅ Todas las agendas están dentro del tiempo esperado")
 
-    # =========================================================
-    # -------------------- CALDAS ------------------------------
-    # =========================================================
+    # ======================================================
+    # --------------------- CALDAS --------------------------
+    # ======================================================
     with tab_caldas:
-        st.info("Vista por sede CALDAS (pendiente lógica).")
+        df_caldas = df_agenda[df_agenda["sede"].str.upper() == "CALDAS"]
+        st.dataframe(df_caldas, use_container_width=True)
 
-    # =========================================================
-    # -------------------- RISARALDA ---------------------------
-    # =========================================================
+    # ======================================================
+    # --------------------- RISARALDA -----------------------
+    # ======================================================
     with tab_ris:
-        st.info("Vista por sede RISARALDA (pendiente lógica).")
+        df_ris = df_agenda[df_agenda["sede"].str.upper() == "RISARALDA"]
+        st.dataframe(df_ris, use_container_width=True)
