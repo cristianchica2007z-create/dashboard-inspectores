@@ -1176,44 +1176,23 @@ with tab4:
         (df_agenda["estado"].astype(str).str.upper() == "ASIGNADA")
     ].copy()
 
-    # ---------------------------------------
-    # CONVERSIÓN DE FECHA DE VISITA
-    # ---------------------------------------
-    df_agenda["fecha de visita"] = pd.to_datetime(
-        df_agenda["fecha de visita"],
-        errors="coerce"
-    )
+   # ---------------------------------------
+# CONVERSIÓN DE FECHA DE VISITA
+# ---------------------------------------
+df_agenda["fecha de visita"] = pd.to_datetime(
+    df_agenda["fecha de visita"],
+    errors="coerce"
+)
 
- ahora_colombia = (
+# Hora actual Colombia (naive para comparación)
+ahora_colombia = (
     datetime.datetime.now(ZoneInfo("America/Bogota"))
     .replace(tzinfo=None)
 )
-    # ---------------------------------------
-    # ESTADO DE ALERTA
-    # ---------------------------------------
-    df_agenda["estado_alerta"] = df_agenda["fecha de visita"].apply(
-        lambda x: "ALERTA" if pd.notna(x) and x <= ahora_colombia else "OK"
-    )
 
-    # ---------------------------------------
-    # VISUALIZACIÓN (SIEMPRE)
-    # ---------------------------------------
-    st.markdown("### 📋 Agendas Prioritarias")
-
-    st.dataframe(
-        df_agenda.sort_values("fecha de visita") if not df_agenda.empty else df_agenda,
-        use_container_width=True
-    )
-
-    # ---------------------------------------
-    # MENSAJES DE ESTADO
-    # ---------------------------------------
-    total_registros = len(df_agenda)
-    total_alertas = (df_agenda["estado_alerta"] == "ALERTA").sum() if total_registros > 0 else 0
-
-    if total_registros == 0:
-        st.info("✅ No hay agendas con PRIORIDAD ALTA y ESTADO ASIGNADA.")
-    elif total_alertas > 0:
-        st.error(f"🚨 {total_alertas} agendas en estado ALERTA")
-    else:
-        st.success("✅ Todas las agendas están dentro del tiempo esperado")
+# ---------------------------------------
+# ESTADO DE ALERTA
+# ---------------------------------------
+df_agenda["estado_alerta"] = df_agenda["fecha de visita"].apply(
+    lambda x: "ALERTA" if pd.notna(x) and x <= ahora_colombia else "OK"
+)
