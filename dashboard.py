@@ -1184,10 +1184,10 @@ with tab4:
         errors="coerce"
     )
 
-    ahora_colombia = datetime.datetime.now(
-        ZoneInfo("America/Bogota")
-    )
-
+ ahora_colombia = (
+    datetime.datetime.now(ZoneInfo("America/Bogota"))
+    .replace(tzinfo=None)
+)
     # ---------------------------------------
     # ESTADO DE ALERTA
     # ---------------------------------------
