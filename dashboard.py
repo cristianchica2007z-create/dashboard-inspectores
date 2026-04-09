@@ -1151,18 +1151,16 @@ with tab4:
     # ======================================================
     st.markdown("## 🗂️ Control agendas")
 
-    # Botón de actualización manual (multiusuario)
     if st.button("🔄 Actualizar agendas"):
         st.rerun()
 
     # ======================================================
-    # CARGAR BITÁCORA DESDE GITHUB (FUENTE ÚNICA DE VERDAD)
+    # CARGAR BITÁCORA DESDE GITHUB
     # ======================================================
     archivo_bitacora = "BITACORA.xlsx"
 
     token = st.secrets["github"]["token"]
     repo = st.secrets["github"]["repo"]
-    branch = st.secrets["github"].get("branch", "main")
 
     headers = {
         "Authorization": f"Bearer {token}",
@@ -1177,10 +1175,10 @@ with tab4:
         st.error("❌ No se pudo cargar la bitácora desde GitHub.")
         st.stop()
 
+    # Leer archivo
     contenido = r.json()["content"]
     binario = base64.b64decode(contenido)
     buffer = io.BytesIO(binario)
-
     df_agenda = pd.read_excel(buffer, engine="openpyxl")
 
     # ======================================================
@@ -1188,7 +1186,17 @@ with tab4:
     # ======================================================
     df_agenda.columns = df_agenda.columns.str.strip().str.lower()
 
-    columnas_requeridas = ["prioridad", "estado", "fecha de visita", "localidad"]
+    # ✅ COMPATIBILIDAD: localidad / sede
+    if "localidad" in df_agenda.columns:
+        col_region = "localidad"
+    elif "sede" in df_agenda.columns:
+        col_region = "sede"
+    else:
+        st.error("❌ La bitácora no tiene columna de región (localidad / sede).")
+        st.stop()
+
+    # Columnas mínimas reales
+    columnas_requeridas = ["prioridad", "estado", "fecha de visita"]
     for col in columnas_requeridas:
         if col not in df_agenda.columns:
             st.error(f"❌ Falta la columna requerida: {col}")
@@ -1203,7 +1211,7 @@ with tab4:
     ].copy()
 
     # ======================================================
-    # FECHA DE VISITA Y ALERTAS (HORA COLOMBIA)
+    # FECHAS Y ALERTAS
     # ======================================================
     df_agenda["fecha de visita"] = pd.to_datetime(
         df_agenda["fecha de visita"],
@@ -1220,32 +1228,25 @@ with tab4:
     )
 
     # ======================================================
-    # MENÚ PRINCIPAL: GENERAL / CALDAS / RISARALDA
+    # MENÚ PRINCIPAL
     # ======================================================
     tab_gral, tab_caldas, tab_ris = st.tabs(
         ["📊 General", "📍 Caldas", "📍 Risaralda"]
     )
 
-    # ======================================================
-    # --------------------- GENERAL -------------------------
-    # ======================================================
+    # ---------------- GENERAL ----------------
     with tab_gral:
-        sub_final, sub_prox, sub_pend = st.tabs(
+        t_f, t_p, t_pen = st.tabs(
             ["✅ Finalizadas", "⏳ Próximas", "🚨 Pendientes"]
         )
 
-        # FINALIZADAS (RESERVADO)
-        with sub_final:
+        with t_f:
             st.info("Aquí se mostrarán agendas finalizadas.")
 
-        # PRÓXIMAS (RESERVADO)
-        with sub_prox:
+        with t_p:
             st.info("Aquí se mostrarán agendas próximas.")
 
-        # PENDIENTES (ACTIVO)
-        with sub_pend:
-            st.markdown("### 🚨 Agendas pendientes prioritarias")
-
+        with t_pen:
             st.dataframe(
                 df_agenda.sort_values("fecha de visita")
                 if not df_agenda.empty else df_agenda,
@@ -1256,35 +1257,21 @@ with tab4:
                 st.info("✅ No hay agendas pendientes.")
             else:
                 total_alertas = (df_agenda["estado_alerta"] == "ALERTA").sum()
-                if total_alertas > 0:
-                    st.error(f"🚨 {total_alertas} agendas en estado ALERTA")
+                if total_alertas:
+                    st.error(f"🚨 {total_alertas} agendas en ALERTA")
                 else:
-                    st.success("✅ Todas las agendas están dentro del tiempo esperado")
+                    st.success("✅ Todas las agendas están a tiempo")
 
-    # ======================================================
-    # --------------------- CALDAS --------------------------
-    # ======================================================
+    # ---------------- CALDAS ----------------
     with tab_caldas:
         df_caldas = df_agenda[
-            df_agenda["localidad"]
-            .astype(str)
-            .str.upper()
-            .str.contains("CALDAS")
+            df_agenda[col_region].astype(str).str.upper().str.contains("CALDAS")
         ]
-
-        st.markdown("### 📍 Agendas CALDAS")
         st.dataframe(df_caldas, use_container_width=True)
 
-    # ======================================================
-    # --------------------- RISARALDA -----------------------
-    # ======================================================
+    # ---------------- RISARALDA ----------------
     with tab_ris:
         df_ris = df_agenda[
-            df_agenda["localidad"]
-            .astype(str)
-            .str.upper()
-            .str.contains("RISARALDA")
+            df_agenda[col_region].astype(str).str.upper().str.contains("RISARALDA")
         ]
-
-        st.markdown("### 📍 Agendas RISARALDA")
         st.dataframe(df_ris, use_container_width=True)
