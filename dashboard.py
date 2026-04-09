@@ -1146,11 +1146,14 @@ with tab3:
 #PESTAÑA 4 SEGUIMIENTO AGENDAS
 
 with tab4:
-    st.subheader("📅 Seguimiento de agendas prioritarias")
+    # =========================================
+    # TÍTULO PRINCIPAL
+    # =========================================
+    st.markdown("## 🗂️ Control agendas")
 
-    # ---------------------------------------
+    # =========================================
     # CARGAR BITÁCORA DESDE GITHUB
-    # ---------------------------------------
+    # =========================================
     archivo_bitacora = "BITACORA.xlsx"
 
     token = st.secrets["github"]["token"]
@@ -1175,28 +1178,17 @@ with tab4:
 
     df_agenda = pd.read_excel(buffer, engine="openpyxl")
 
-    # ---------------------------------------
-    # NORMALIZAR COLUMNAS
-    # ---------------------------------------
+    # Normalizar columnas
     df_agenda.columns = df_agenda.columns.str.strip().str.lower()
 
-    columnas_requeridas = ["prioridad", "estado", "fecha de visita"]
-    for col in columnas_requeridas:
-        if col not in df_agenda.columns:
-            st.error(f"❌ Falta la columna requerida: {col}")
-            st.stop()
-
-    # ---------------------------------------
-    # FILTROS DE NEGOCIO
-    # ---------------------------------------
+    # =========================================
+    # FILTROS BASE DE NEGOCIO
+    # =========================================
     df_agenda = df_agenda[
         (df_agenda["prioridad"].astype(str).str.upper() == "ALTA") &
         (df_agenda["estado"].astype(str).str.upper() == "ASIGNADA")
     ].copy()
 
-    # ---------------------------------------
-    # FECHA DE VISITA
-    # ---------------------------------------
     df_agenda["fecha de visita"] = pd.to_datetime(
         df_agenda["fecha de visita"],
         errors="coerce"
@@ -1207,31 +1199,60 @@ with tab4:
         .replace(tzinfo=None)
     )
 
-    # ---------------------------------------
-    # ESTADO DE ALERTA
-    # ---------------------------------------
     df_agenda["estado_alerta"] = df_agenda["fecha de visita"].apply(
         lambda x: "ALERTA" if pd.notna(x) and x <= ahora_colombia else "OK"
     )
 
-    # ---------------------------------------
-    # MOSTRAR TABLA (SIEMPRE)
-    # ---------------------------------------
-    st.markdown("### 📋 Agendas prioritarias")
-
-    st.dataframe(
-        df_agenda.sort_values("fecha de visita") if not df_agenda.empty else df_agenda,
-        use_container_width=True
+    # =========================================
+    # MENÚ PRINCIPAL: GENERAL / CALDAS / RISARALDA
+    # =========================================
+    tab_gral, tab_caldas, tab_ris = st.tabs(
+        ["📊 General", "📍 Caldas", "📍 Risaralda"]
     )
 
-    # ---------------------------------------
-    # MENSAJES DE ESTADO
-    # ---------------------------------------
-    if df_agenda.empty:
-        st.info("✅ No hay agendas con prioridad ALTA y estado ASIGNADA.")
-    else:
-        total_alertas = (df_agenda["estado_alerta"] == "ALERTA").sum()
-        if total_alertas > 0:
-            st.error(f"🚨 {total_alertas} agendas en estado ALERTA")
-        else:
-            st.success("✅ Todas las agendas están dentro del tiempo esperado")
+    # =========================================================
+    # -------------------- GENERAL -----------------------------
+    # =========================================================
+    with tab_gral:
+        sub_final, sub_prox, sub_pend = st.tabs(
+            ["✅ Finalizadas", "⏳ Próximas", "🚨 Pendientes"]
+        )
+
+        # ---------------- FINALIZADAS ----------------
+        with sub_final:
+            st.info("Aquí se mostrarán agendas finalizadas (pendiente lógica).")
+
+        # ---------------- PROXIMAS ----------------
+        with sub_prox:
+            st.info("Aquí se mostrarán agendas próximas (pendiente lógica).")
+
+        # ---------------- PENDIENTES ----------------
+        with sub_pend:
+            st.markdown("### 🚨 Agendas pendientes prioritarias")
+
+            st.dataframe(
+                df_agenda.sort_values("fecha de visita")
+                if not df_agenda.empty else df_agenda,
+                use_container_width=True
+            )
+
+            total_alertas = (df_agenda["estado_alerta"] == "ALERTA").sum()
+
+            if df_agenda.empty:
+                st.info("✅ No hay agendas pendientes.")
+            elif total_alertas > 0:
+                st.error(f"🚨 {total_alertas} agendas en estado ALERTA")
+            else:
+                st.success("✅ Todas las agendas están dentro del tiempo esperado")
+
+    # =========================================================
+    # -------------------- CALDAS ------------------------------
+    # =========================================================
+    with tab_caldas:
+        st.info("Vista por sede CALDAS (pendiente lógica).")
+
+    # =========================================================
+    # -------------------- RISARALDA ---------------------------
+    # =========================================================
+    with tab_ris:
+        st.info("Vista por sede RISARALDA (pendiente lógica).")
