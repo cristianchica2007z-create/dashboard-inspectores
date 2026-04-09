@@ -1141,3 +1141,82 @@ with tab3:
         # =================================================
         st.success("✅ Bitácora actualizada correctamente")
         st.caption(f"🕓 Hora UTC guardada: {info['ultima_actualizacion']}")
+
+  # =================================================
+#PESTAÑA 4 SEGUIMIENTO AGENDAS
+
+with tab4:
+    st.subheader("📅 Seguimiento de agendas prioritarias")
+
+    archivo_bitacora = "BITACORA.xlsx"
+
+    if not os.path.exists(archivo_bitacora):
+        st.warning("⚠️ No se encontró la bitácora.")
+        st.stop()
+
+    # ---------------------------------------
+    # CARGAR BITÁCORA
+    # ---------------------------------------
+    df_agenda = pd.read_excel(archivo_bitacora)
+
+    # Normalizar nombres de columnas
+    df_agenda.columns = df_agenda.columns.str.strip().str.lower()
+
+    columnas_requeridas = ["prioridad", "estado", "fecha de visita"]
+
+    for col in columnas_requeridas:
+        if col not in df_agenda.columns:
+            st.error(f"❌ Falta la columna requerida: {col}")
+            st.stop()
+
+    # ---------------------------------------
+    # FILTROS DE NEGOCIO
+    # ---------------------------------------
+    df_agenda = df_agenda[
+        (df_agenda["prioridad"].str.upper() == "ALTA") &
+        (df_agenda["estado"].str.upper() == "ASIGNADA")
+    ].copy()
+
+    if df_agenda.empty:
+        st.info("✅ No hay agendas en estado crítico.")
+        st.stop()
+
+    # ---------------------------------------
+    # CONVERSIÓN DE FECHA DE VISITA
+    # ---------------------------------------
+    df_agenda["fecha de visita"] = pd.to_datetime(
+        df_agenda["fecha de visita"],
+        errors="coerce"
+    )
+
+    # Hora actual Colombia
+    ahora_colombia = datetime.datetime.now(
+        ZoneInfo("America/Bogota")
+    )
+
+    # ---------------------------------------
+    # CREAR ESTADO DE ALERTA
+    # ---------------------------------------
+    df_agenda["estado_alerta"] = df_agenda["fecha de visita"].apply(
+        lambda x: "ALERTA" if pd.notna(x) and x <= ahora_colombia else "OK"
+    )
+
+    # ---------------------------------------
+    # VISUALIZACIÓN
+    # ---------------------------------------
+    st.dataframe(
+        df_agenda.sort_values("fecha de visita"),
+        use_container_width=True
+    )
+
+    # ---------------------------------------
+    # RESUMEN RÁPIDO
+    # ---------------------------------------
+    total_alertas = (df_agenda["estado_alerta"] == "ALERTA").sum()
+
+    if total_alertas > 0:
+        st.error(f"🚨 {total_alertas} agendas en estado ALERTA")
+    else:
+        st.success("✅ No hay agendas vencidas")
+
+
