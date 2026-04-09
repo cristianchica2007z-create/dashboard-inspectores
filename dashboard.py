@@ -1159,11 +1159,10 @@ with tab4:
     # ---------------------------------------
     df_agenda = pd.read_excel(archivo_bitacora)
 
-    # Normalizar nombres de columnas
+    # Normalizar columnas
     df_agenda.columns = df_agenda.columns.str.strip().str.lower()
 
     columnas_requeridas = ["prioridad", "estado", "fecha de visita"]
-
     for col in columnas_requeridas:
         if col not in df_agenda.columns:
             st.error(f"❌ Falta la columna requerida: {col}")
@@ -1173,13 +1172,9 @@ with tab4:
     # FILTROS DE NEGOCIO
     # ---------------------------------------
     df_agenda = df_agenda[
-        (df_agenda["prioridad"].str.upper() == "ALTA") &
-        (df_agenda["estado"].str.upper() == "ASIGNADA")
+        (df_agenda["prioridad"].astype(str).str.upper() == "ALTA") &
+        (df_agenda["estado"].astype(str).str.upper() == "ASIGNADA")
     ].copy()
-
-    if df_agenda.empty:
-        st.info("✅ No hay agendas en estado crítico.")
-        st.stop()
 
     # ---------------------------------------
     # CONVERSIÓN DE FECHA DE VISITA
@@ -1189,34 +1184,36 @@ with tab4:
         errors="coerce"
     )
 
-    # Hora actual Colombia
     ahora_colombia = datetime.datetime.now(
         ZoneInfo("America/Bogota")
     )
 
     # ---------------------------------------
-    # CREAR ESTADO DE ALERTA
+    # ESTADO DE ALERTA
     # ---------------------------------------
     df_agenda["estado_alerta"] = df_agenda["fecha de visita"].apply(
         lambda x: "ALERTA" if pd.notna(x) and x <= ahora_colombia else "OK"
     )
 
     # ---------------------------------------
-    # VISUALIZACIÓN
+    # VISUALIZACIÓN (SIEMPRE)
     # ---------------------------------------
+    st.markdown("### 📋 Agendas Prioritarias")
+
     st.dataframe(
-        df_agenda.sort_values("fecha de visita"),
+        df_agenda.sort_values("fecha de visita") if not df_agenda.empty else df_agenda,
         use_container_width=True
     )
 
     # ---------------------------------------
-    # RESUMEN RÁPIDO
+    # MENSAJES DE ESTADO
     # ---------------------------------------
-    total_alertas = (df_agenda["estado_alerta"] == "ALERTA").sum()
+    total_registros = len(df_agenda)
+    total_alertas = (df_agenda["estado_alerta"] == "ALERTA").sum() if total_registros > 0 else 0
 
-    if total_alertas > 0:
+    if total_registros == 0:
+        st.info("✅ No hay agendas con PRIORIDAD ALTA y ESTADO ASIGNADA.")
+    elif total_alertas > 0:
         st.error(f"🚨 {total_alertas} agendas en estado ALERTA")
     else:
-        st.success("✅ No hay agendas vencidas")
-
-
+        st.success("✅ Todas las agendas están dentro del tiempo esperado")
