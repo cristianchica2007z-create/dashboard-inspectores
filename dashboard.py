@@ -1194,9 +1194,6 @@ with tab4:
         st.error("❌ No se pudo cargar la bitácora desde GitHub.")
         st.stop()
 
-    # --------------------------------------------------
-    # LEER ARCHIVO
-    # --------------------------------------------------
     contenido = r.json()["content"]
     binario = base64.b64decode(contenido)
     buffer = io.BytesIO(binario)
@@ -1213,10 +1210,9 @@ with tab4:
     elif "sede" in df_agenda.columns:
         col_region = "sede"
     else:
-        st.error("❌ La bitácora no tiene columna de región (localidad / sede).")
+        st.error("❌ La bitácora no tiene columna de región.")
         st.stop()
 
-    # Validación mínima obligatoria
     columnas_minimas = ["prioridad", "estado", "fecha de visita", "grupo"]
     for col in columnas_minimas:
         if col not in df_agenda.columns:
@@ -1224,7 +1220,7 @@ with tab4:
             st.stop()
 
     # ======================================================
-    # ✅ FILTRO FIJO DE GRUPO (REGLA GLOBAL)
+    # FILTRO FIJO DE GRUPO
     # ======================================================
     grupos_validos = ["INSP-CALDAS", "INSP-RIS"]
 
@@ -1235,22 +1231,18 @@ with tab4:
         .str.upper()
     )
 
-    df_agenda = df_agenda[
-        df_agenda["grupo"].isin(grupos_validos)
-    ].copy()
+    df_agenda = df_agenda[df_agenda["grupo"].isin(grupos_validos)].copy()
 
     # ======================================================
     # FILTROS BASE DE NEGOCIO
     # ======================================================
     df_agenda = df_agenda[
         (df_agenda["prioridad"].astype(str).str.upper() == "ALTA") &
-        (df_agenda["estado"].astype(str).str.upper() == "ASIGNADA") &
-        (df_agenda["estado_alerta"].astype(str).str.upper() == "ALERTA")
-    
+        (df_agenda["estado"].astype(str).str.upper() == "ASIGNADA")
     ].copy()
 
     # ======================================================
-    # FECHAS Y ALERTAS (HORA COLOMBIA)
+    # FECHAS Y ALERTAS
     # ======================================================
     df_agenda["fecha de visita"] = pd.to_datetime(
         df_agenda["fecha de visita"],
@@ -1267,7 +1259,16 @@ with tab4:
     )
 
     # ======================================================
-    # MENÚ PRINCIPAL: GENERAL / CALDAS / RISARALDA
+    # 🔴 FILTRO DE ALERTA (NUEVO)
+    # ======================================================
+    solo_alertas = st.checkbox("🚨 Mostrar solo agendas en ALERTA")
+
+    df_vista = df_agenda.copy()
+    if solo_alertas:
+        df_vista = df_vista[df_vista["estado_alerta"] == "ALERTA"]
+
+    # ======================================================
+    # MENÚ PRINCIPAL
     # ======================================================
     tab_gral, tab_caldas, tab_ris = st.tabs(
         ["📊 General", "📍 Caldas", "📍 Risaralda"]
@@ -1275,48 +1276,33 @@ with tab4:
 
     # ---------------- GENERAL ----------------
     with tab_gral:
-        t_f, t_p, t_pen = st.tabs(
+        _, _, t_pen = st.tabs(
             ["✅ Finalizadas", "⏳ Próximas", "🚨 Pendientes"]
         )
 
-        with t_f:
-            st.info("Aquí se mostrarán agendas finalizadas.")
-
-        with t_p:
-            st.info("Aquí se mostrarán agendas próximas.")
-
         with t_pen:
             st.dataframe(
-                df_agenda.sort_values("fecha de visita")
-                if not df_agenda.empty else df_agenda,
+                df_vista.sort_values("fecha de visita")
+                if not df_vista.empty else df_vista,
                 use_container_width=True
             )
 
-            if df_agenda.empty:
-                st.info("✅ No hay agendas pendientes.")
+            if df_vista.empty:
+                st.info("✅ No hay agendas que cumplan el filtro.")
             else:
-                total_alertas = (df_agenda["estado_alerta"] == "ALERTA").sum()
-                if total_alertas:
-                    st.error(f"🚨 {total_alertas} agendas en ALERTA")
-                else:
-                    st.success("✅ Todas las agendas están a tiempo")
+                total_alertas = (df_vista["estado_alerta"] == "ALERTA").sum()
+                st.error(f"🚨 Total agendas en ALERTA: {total_alertas}")
 
     # ---------------- CALDAS ----------------
     with tab_caldas:
-        df_caldas = df_agenda[
-            df_agenda[col_region]
-            .astype(str)
-            .str.upper()
-            .str.contains("CALDAS")
+        df_caldas = df_vista[
+            df_vista[col_region].astype(str).str.upper().str.contains("CALDAS")
         ]
         st.dataframe(df_caldas, use_container_width=True)
 
     # ---------------- RISARALDA ----------------
     with tab_ris:
-        df_ris = df_agenda[
-            df_agenda[col_region]
-            .astype(str)
-            .str.upper()
-            .str.contains("RISARALDA")
+        df_ris = df_vista[
+            df_vista[col_region].astype(str).str.upper().str.contains("RISARALDA")
         ]
         st.dataframe(df_ris, use_container_width=True)
