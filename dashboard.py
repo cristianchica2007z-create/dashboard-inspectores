@@ -1259,13 +1259,10 @@ with tab4:
     )
 
     # ======================================================
-    # 🔴 FILTRO DE ALERTA (NUEVO)
-    # ======================================================
-    solo_alertas = st.checkbox("🚨 Mostrar solo agendas en ALERTA")
-
-    df_vista = df_agenda.copy()
-    if solo_alertas:
-        df_vista = df_vista[df_vista["estado_alerta"] == "ALERTA"]
+  # ======================================================
+# 🔴 FILTRO FIJO: SOLO AGENDAS EN ALERTA
+# ======================================================
+df_vista = df_agenda[df_agenda["estado_alerta"] == "ALERTA"].copy()
 
     # ======================================================
     # MENÚ PRINCIPAL
