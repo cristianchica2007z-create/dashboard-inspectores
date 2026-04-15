@@ -1194,7 +1194,9 @@ with tab4:
         st.error("❌ No se pudo cargar la bitácora desde GitHub.")
         st.stop()
 
-    # Leer archivo
+    # --------------------------------------------------
+    # LEER ARCHIVO
+    # --------------------------------------------------
     contenido = r.json()["content"]
     binario = base64.b64decode(contenido)
     buffer = io.BytesIO(binario)
@@ -1205,7 +1207,7 @@ with tab4:
     # ======================================================
     df_agenda.columns = df_agenda.columns.str.strip().str.lower()
 
-    # ✅ COMPATIBILIDAD: localidad / sede
+    # Compatibilidad ubicación
     if "localidad" in df_agenda.columns:
         col_region = "localidad"
     elif "sede" in df_agenda.columns:
@@ -1214,12 +1216,28 @@ with tab4:
         st.error("❌ La bitácora no tiene columna de región (localidad / sede).")
         st.stop()
 
-    # Columnas mínimas reales
-    columnas_requeridas = ["prioridad", "estado", "fecha de visita"]
-    for col in columnas_requeridas:
+    # Validación mínima obligatoria
+    columnas_minimas = ["prioridad", "estado", "fecha de visita", "grupo"]
+    for col in columnas_minimas:
         if col not in df_agenda.columns:
             st.error(f"❌ Falta la columna requerida: {col}")
             st.stop()
+
+    # ======================================================
+    # ✅ FILTRO FIJO DE GRUPO (REGLA GLOBAL)
+    # ======================================================
+    grupos_validos = ["INSP-CALDAS", "INSP-RIS"]
+
+    df_agenda["grupo"] = (
+        df_agenda["grupo"]
+        .astype(str)
+        .str.strip()
+        .str.upper()
+    )
+
+    df_agenda = df_agenda[
+        df_agenda["grupo"].isin(grupos_validos)
+    ].copy()
 
     # ======================================================
     # FILTROS BASE DE NEGOCIO
@@ -1230,7 +1248,7 @@ with tab4:
     ].copy()
 
     # ======================================================
-    # FECHAS Y ALERTAS
+    # FECHAS Y ALERTAS (HORA COLOMBIA)
     # ======================================================
     df_agenda["fecha de visita"] = pd.to_datetime(
         df_agenda["fecha de visita"],
@@ -1247,7 +1265,7 @@ with tab4:
     )
 
     # ======================================================
-    # MENÚ PRINCIPAL
+    # MENÚ PRINCIPAL: GENERAL / CALDAS / RISARALDA
     # ======================================================
     tab_gral, tab_caldas, tab_ris = st.tabs(
         ["📊 General", "📍 Caldas", "📍 Risaralda"]
@@ -1284,13 +1302,19 @@ with tab4:
     # ---------------- CALDAS ----------------
     with tab_caldas:
         df_caldas = df_agenda[
-            df_agenda[col_region].astype(str).str.upper().str.contains("CALDAS")
+            df_agenda[col_region]
+            .astype(str)
+            .str.upper()
+            .str.contains("CALDAS")
         ]
         st.dataframe(df_caldas, use_container_width=True)
 
     # ---------------- RISARALDA ----------------
     with tab_ris:
         df_ris = df_agenda[
-            df_agenda[col_region].astype(str).str.upper().str.contains("RISARALDA")
+            df_agenda[col_region]
+            .astype(str)
+            .str.upper()
+            .str.contains("RISARALDA")
         ]
         st.dataframe(df_ris, use_container_width=True)
