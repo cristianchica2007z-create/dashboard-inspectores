@@ -1244,7 +1244,9 @@ with tab4:
     # ======================================================
     df_agenda = df_agenda[
         (df_agenda["prioridad"].astype(str).str.upper() == "ALTA") &
-        (df_agenda["estado"].astype(str).str.upper() == "ASIGNADA")
+        (df_agenda["estado"].astype(str).str.upper() == "ASIGNADA") &
+        (df_agenda["estado_alerta"].astype(str).str.upper() == "ALERTA")
+    
     ].copy()
 
     # ======================================================
