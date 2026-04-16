@@ -1264,7 +1264,7 @@ with tab4:
 # ======================================================
 df_vista = df_agenda[df_agenda["estado_alerta"] == "ALERTA"].copy()
 
-    # ======================================================
+  # ======================================================
     # MENÚ PRINCIPAL
     # ======================================================
     tab_gral, tab_caldas, tab_ris = st.tabs(
@@ -1273,9 +1273,15 @@ df_vista = df_agenda[df_agenda["estado_alerta"] == "ALERTA"].copy()
 
     # ---------------- GENERAL ----------------
     with tab_gral:
-        _, _, t_pen = st.tabs(
+        t_f, t_p, t_pen = st.tabs(
             ["✅ Finalizadas", "⏳ Próximas", "🚨 Pendientes"]
         )
+
+        with t_f:
+            st.info("Aquí se mostrarán agendas finalizadas.")
+
+        with t_p:
+            st.info("Aquí se mostrarán agendas próximas.")
 
         with t_pen:
             st.dataframe(
@@ -1287,19 +1293,25 @@ df_vista = df_agenda[df_agenda["estado_alerta"] == "ALERTA"].copy()
             if df_vista.empty:
                 st.info("✅ No hay agendas que cumplan el filtro.")
             else:
-                total_alertas = (df_vista["estado_alerta"] == "ALERTA").sum()
+                total_alertas = len(df_vista)
                 st.error(f"🚨 Total agendas en ALERTA: {total_alertas}")
 
     # ---------------- CALDAS ----------------
     with tab_caldas:
         df_caldas = df_vista[
-            df_vista[col_region].astype(str).str.upper().str.contains("CALDAS")
+            df_vista[col_region]
+            .astype(str)
+            .str.upper()
+            .str.contains("CALDAS")
         ]
         st.dataframe(df_caldas, use_container_width=True)
 
     # ---------------- RISARALDA ----------------
     with tab_ris:
         df_ris = df_vista[
-            df_vista[col_region].astype(str).str.upper().str.contains("RISARALDA")
+            df_vista[col_region]
+            .astype(str)
+            .str.upper()
+            .str.contains("RISARALDA")
         ]
         st.dataframe(df_ris, use_container_width=True)
