@@ -1165,153 +1165,26 @@ with tab3:
 #PESTAÑA 4 SEGUIMIENTO AGENDAS
 
 with tab4:
-    # ======================================================
-    # TÍTULO PRINCIPAL
-    # ======================================================
     st.markdown("## 🗂️ Control agendas")
 
+    # --- cualquier código aquí ---
     if st.button("🔄 Actualizar agendas"):
         st.rerun()
 
-    # ======================================================
-    # CARGAR BITÁCORA DESDE GITHUB
-    # ======================================================
-    archivo_bitacora = "BITACORA.xlsx"
+    # --- cargar bitácora ---
+    # --- filtros ---
+    # --- dataframe ---
+    # --- alertas ---
 
-    token = st.secrets["github"]["token"]
-    repo = st.secrets["github"]["repo"]
-
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Accept": "application/vnd.github+json",
-        "Cache-Control": "no-cache"
-    }
-
-    url_bit = f"https://api.github.com/repos/{repo}/contents/{archivo_bitacora}"
-    r = requests.get(url_bit, headers=headers)
-
-    if r.status_code != 200:
-        st.error("❌ No se pudo cargar la bitácora desde GitHub.")
-        st.stop()
-
-    contenido = r.json()["content"]
-    binario = base64.b64decode(contenido)
-    buffer = io.BytesIO(binario)
-    df_agenda = pd.read_excel(buffer, engine="openpyxl")
-
-    # ======================================================
-    # NORMALIZAR COLUMNAS
-    # ======================================================
-    df_agenda.columns = df_agenda.columns.str.strip().str.lower()
-
-    # Compatibilidad ubicación
-    if "localidad" in df_agenda.columns:
-        col_region = "localidad"
-    elif "sede" in df_agenda.columns:
-        col_region = "sede"
-    else:
-        st.error("❌ La bitácora no tiene columna de región.")
-        st.stop()
-
-    columnas_minimas = ["prioridad", "estado", "fecha de visita", "grupo"]
-    for col in columnas_minimas:
-        if col not in df_agenda.columns:
-            st.error(f"❌ Falta la columna requerida: {col}")
-            st.stop()
-
-    # ======================================================
-    # FILTRO FIJO DE GRUPO
-    # ======================================================
-    grupos_validos = ["INSP-CALDAS", "INSP-RIS"]
-
-    df_agenda["grupo"] = (
-        df_agenda["grupo"]
-        .astype(str)
-        .str.strip()
-        .str.upper()
-    )
-
-    df_agenda = df_agenda[df_agenda["grupo"].isin(grupos_validos)].copy()
-
-    # ======================================================
-    # FILTROS BASE DE NEGOCIO
-    # ======================================================
-    df_agenda = df_agenda[
-        (df_agenda["prioridad"].astype(str).str.upper() == "ALTA") &
-        (df_agenda["estado"].astype(str).str.upper() == "ASIGNADA")
-    ].copy()
-
-    # ======================================================
-    # FECHAS Y ALERTAS
-    # ======================================================
-    df_agenda["fecha de visita"] = pd.to_datetime(
-        df_agenda["fecha de visita"],
-        errors="coerce"
-    )
-
-    ahora_colombia = (
-        datetime.datetime.now(ZoneInfo("America/Bogota"))
-        .replace(tzinfo=None)
-    )
-
-    df_agenda["estado_alerta"] = df_agenda["fecha de visita"].apply(
-        lambda x: "ALERTA" if pd.notna(x) and x <= ahora_colombia else "OK"
-    )
-
-    # ======================================================
-  # ======================================================
-# 🔴 FILTRO FIJO: SOLO AGENDAS EN ALERTA
-# ======================================================
-df_vista = df_agenda[df_agenda["estado_alerta"] == "ALERTA"].copy()
-
-  # ======================================================
-    # MENÚ PRINCIPAL
-    # ======================================================
     tab_gral, tab_caldas, tab_ris = st.tabs(
         ["📊 General", "📍 Caldas", "📍 Risaralda"]
     )
 
-    # ---------------- GENERAL ----------------
     with tab_gral:
-        t_f, t_p, t_pen = st.tabs(
-            ["✅ Finalizadas", "⏳ Próximas", "🚨 Pendientes"]
-        )
+        st.write("Contenido General")
 
-        with t_f:
-            st.info("Aquí se mostrarán agendas finalizadas.")
-
-        with t_p:
-            st.info("Aquí se mostrarán agendas próximas.")
-
-        with t_pen:
-            st.dataframe(
-                df_vista.sort_values("fecha de visita")
-                if not df_vista.empty else df_vista,
-                use_container_width=True
-            )
-
-            if df_vista.empty:
-                st.info("✅ No hay agendas que cumplan el filtro.")
-            else:
-                total_alertas = len(df_vista)
-                st.error(f"🚨 Total agendas en ALERTA: {total_alertas}")
-
-    # ---------------- CALDAS ----------------
     with tab_caldas:
-        df_caldas = df_vista[
-            df_vista[col_region]
-            .astype(str)
-            .str.upper()
-            .str.contains("CALDAS")
-        ]
-        st.dataframe(df_caldas, use_container_width=True)
+        st.write("Contenido Caldas")
 
-    # ---------------- RISARALDA ----------------
     with tab_ris:
-        df_ris = df_vista[
-            df_vista[col_region]
-            .astype(str)
-            .str.upper()
-            .str.contains("RISARALDA")
-        ]
-        st.dataframe(df_ris, use_container_width=True)
+        st.write("Contenido Risaralda")
