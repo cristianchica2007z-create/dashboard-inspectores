@@ -1165,12 +1165,17 @@ with tab3:
 #PESTAÑA 4 SEGUIMIENTO AGENDAS
 
 with tab4:
+    # ======================================================
+    # TÍTULO PRINCIPAL
+    # ======================================================
     st.markdown("## 🗂️ Control agendas")
 
     if st.button("🔄 Actualizar agendas"):
         st.rerun()
 
-    # ================== CARGAR BITÁCORA ==================
+    # ======================================================
+    # CARGAR BITÁCORA DESDE GITHUB
+    # ======================================================
     archivo_bitacora = "BITACORA.xlsx"
     token = st.secrets["github"]["token"]
     repo = st.secrets["github"]["repo"]
@@ -1188,60 +1193,114 @@ with tab4:
         st.error("❌ No se pudo cargar la bitácora.")
         st.stop()
 
-    contenido = r.json()["content"]
-    buffer = io.BytesIO(base64.b64decode(contenido))
+    buffer = io.BytesIO(base64.b64decode(r.json()["content"]))
     df = pd.read_excel(buffer, engine="openpyxl")
 
-    # ================== NORMALIZAR ==================
+    # ======================================================
+    # NORMALIZAR Y VALIDAR COLUMNAS
+    # ======================================================
     df.columns = df.columns.str.strip().str.lower()
 
-    # Filtro fijo GRUPO
-    df["grupo"] = df["grupo"].astype(str).str.upper().str.strip()
-    df = df[df["grupo"].isin(["INSP-CALDAS", "INSP-RIS"])]
+    columnas_req = [
+        "grupo", "prioridad", "estado", "fecha de visita",
+        "inspector", "contrato", "direccion",
+        "localidad", "detalle de tarea"
+    ]
 
-    # Filtros de negocio
+    for c in columnas_req:
+        if c not in df.columns:
+            st.error(f"❌ Falta la columna requerida: {c}")
+            st.stop()
+
+    # ======================================================
+    # FILTRO FIJO DE GRUPO + NEGOCIO
+    # ======================================================
+    df["grupo"] = df["grupo"].astype(str).str.upper().str.strip()
+
     df = df[
+        (df["grupo"].isin(["INSP-CALDAS", "INSP-RIS"])) &
         (df["prioridad"].str.upper() == "ALTA") &
         (df["estado"].str.upper() == "ASIGNADA")
     ].copy()
 
-    # Fechas y alerta
+    # ======================================================
+    # ALERTAS (HORA COLOMBIA)
+    # ======================================================
     df["fecha de visita"] = pd.to_datetime(df["fecha de visita"], errors="coerce")
-    ahora = datetime.datetime.now(ZoneInfo("America/Bogota")).replace(tzinfo=None)
+    ahora = datetime.datetime.now(
+        ZoneInfo("America/Bogota")
+    ).replace(tzinfo=None)
+
     df["estado_alerta"] = df["fecha de visita"].apply(
         lambda x: "ALERTA" if pd.notna(x) and x <= ahora else "OK"
     )
 
-    # 🔴 SOLO ALERTA
+    # 🔴 SOLO ALERTAS
     df = df[df["estado_alerta"] == "ALERTA"].copy()
 
-    # ================== MENÚ PRINCIPAL ==================
-    tab_gral, tab_caldas, tab_ris = st.tabs(
-        ["📊 General", "📍 Caldas", "📍 Risaralda"]
+    # ======================================================
+    # MENÚ: FINALIZADAS / PRÓXIMAS / PENDIENTES
+    # ======================================================
+    t_fin, t_prox, t_pen = st.tabs(
+        ["✅ Finalizadas", "⏳ Próximas", "🚨 Pendientes"]
     )
 
-    # ---------------- GENERAL ----------------
-    with tab_gral:
-        _, _, t_pen = st.tabs(
-            ["✅ Finalizadas", "⏳ Próximas", "🚨 Pendientes"]
+    columnas_mostrar = [
+        "inspector",
+        "contrato",
+        "direccion",
+        "estado",
+        "fecha de visita",
+        "localidad",
+        "detalle de tarea",
+        "estado_alerta"
+    ]
+
+    # ---------------- FINALIZADAS ----------------
+    with t_fin:
+        zona = st.selectbox(
+            "Zona",
+            ["TODAS", "INSP-CALDAS", "INSP-RIS"],
+            key="zona_fin"
         )
 
-        with t_pen:
-            if df.empty:
-                st.info("✅ No hay agendas en ALERTA.")
-            else:
-                st.dataframe(
-                    df.sort_values("fecha de visita"),
-                    use_container_width=True
-                )
-                st.error(f"🚨 TOTAL ALERTAS: {len(df)}")
+        df_v = df.copy()
+        if zona != "TODAS":
+            df_v = df_v[df_v["grupo"] == zona]
 
-    # ---------------- CALDAS ----------------
-    with tab_caldas:
-        df_caldas = df[df["localidad"].str.upper().str.contains("CALDAS")]
-        st.dataframe(df_caldas, use_container_width=True)
+        st.dataframe(df_v[columnas_mostrar], use_container_width=True)
 
-    # ---------------- RISARALDA ----------------
-    with tab_ris:
-        df_ris = df[df["localidad"].str.upper().str.contains("RISARALDA")]
-        st.dataframe(df_ris, use_container_width=True)
+    # ---------------- PRÓXIMAS ----------------
+    with t_prox:
+        zona = st.selectbox(
+            "Zona",
+            ["TODAS", "INSP-CALDAS", "INSP-RIS"],
+            key="zona_prox"
+        )
+
+        df_v = df.copy()
+        if zona != "TODAS":
+            df_v = df_v[df_v["grupo"] == zona]
+
+        st.dataframe(df_v[columnas_mostrar], use_container_width=True)
+
+    # ---------------- PENDIENTES ----------------
+    with t_pen:
+        zona = st.selectbox(
+            "Zona",
+            ["TODAS", "INSP-CALDAS", "INSP-RIS"],
+            key="zona_pen"
+        )
+
+        df_v = df.copy()
+        if zona != "TODAS":
+            df_v = df_v[df_v["grupo"] == zona]
+
+        if df_v.empty:
+            st.info("✅ No hay agendas en alerta para la zona seleccionada.")
+        else:
+            st.dataframe(
+                df_v[columnas_mostrar].sort_values("fecha de visita"),
+                use_container_width=True
+            )
+            st.error(f"🚨 TOTAL ALERTAS: {len(df_v)}")
