@@ -705,25 +705,33 @@ with tab2:
 
     # -------------------------------------------
    # -------------------------------------------
-# FILTRO DE INSPECTORES (CHECKLIST TIPO EXCEL ✅)
+# -------------------------------------------
+# FILTRO DE INSPECTORES (CHECKLIST ESTABLE ✅)
 # -------------------------------------------
 inspectores_disponibles = sorted(df2["inspector"].unique())
 
 with st.expander("Seleccionar inspectores", expanded=True):
     inspectores_sel = []
+
     for insp in inspectores_disponibles:
+        key_chk = f"insp_{fecha_sel}_{insp}"
+
+        # Inicializar estado (la clave está aquí)
+        if key_chk not in st.session_state:
+            st.session_state[key_chk] = True
+
         if st.checkbox(
             insp,
-            value=True,
-            key=f"insp_{fecha_sel}_{insp}"
+            key=key_chk
         ):
             inspectores_sel.append(insp)
 
+# ✅ APLICAR FILTRO SOLO SI HAY SELECCIÓN
 if inspectores_sel:
     df2 = df2[df2["inspector"].isin(inspectores_sel)]
 else:
-    st.warning("⚠️ Selecciona al menos un inspector.")
-    st.stop()
+    st.warning("⚠️ No hay inspectores seleccionados (se muestran todos).")
+    # NO st.stop() — se continúa con df2 completo
 # ===================================================
 # ===================================================
     # ✅ TAB 2 — PARTE 3 / 4
