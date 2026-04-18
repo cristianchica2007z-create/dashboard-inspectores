@@ -1167,24 +1167,81 @@ with tab3:
 with tab4:
     st.markdown("## 🗂️ Control agendas")
 
-    # --- cualquier código aquí ---
     if st.button("🔄 Actualizar agendas"):
         st.rerun()
 
-    # --- cargar bitácora ---
-    # --- filtros ---
-    # --- dataframe ---
-    # --- alertas ---
+    # ================== CARGAR BITÁCORA ==================
+    archivo_bitacora = "BITACORA.xlsx"
+    token = st.secrets["github"]["token"]
+    repo = st.secrets["github"]["repo"]
 
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+        "Cache-Control": "no-cache"
+    }
+
+    url_bit = f"https://api.github.com/repos/{repo}/contents/{archivo_bitacora}"
+    r = requests.get(url_bit, headers=headers)
+
+    if r.status_code != 200:
+        st.error("❌ No se pudo cargar la bitácora.")
+        st.stop()
+
+    contenido = r.json()["content"]
+    buffer = io.BytesIO(base64.b64decode(contenido))
+    df = pd.read_excel(buffer, engine="openpyxl")
+
+    # ================== NORMALIZAR ==================
+    df.columns = df.columns.str.strip().str.lower()
+
+    # Filtro fijo GRUPO
+    df["grupo"] = df["grupo"].astype(str).str.upper().str.strip()
+    df = df[df["grupo"].isin(["INSP-CALDAS", "INSP-RIS"])]
+
+    # Filtros de negocio
+    df = df[
+        (df["prioridad"].str.upper() == "ALTA") &
+        (df["estado"].str.upper() == "ASIGNADA")
+    ].copy()
+
+    # Fechas y alerta
+    df["fecha de visita"] = pd.to_datetime(df["fecha de visita"], errors="coerce")
+    ahora = datetime.datetime.now(ZoneInfo("America/Bogota")).replace(tzinfo=None)
+    df["estado_alerta"] = df["fecha de visita"].apply(
+        lambda x: "ALERTA" if pd.notna(x) and x <= ahora else "OK"
+    )
+
+    # 🔴 SOLO ALERTA
+    df = df[df["estado_alerta"] == "ALERTA"].copy()
+
+    # ================== MENÚ PRINCIPAL ==================
     tab_gral, tab_caldas, tab_ris = st.tabs(
         ["📊 General", "📍 Caldas", "📍 Risaralda"]
     )
 
+    # ---------------- GENERAL ----------------
     with tab_gral:
-        st.write("Contenido General")
+        _, _, t_pen = st.tabs(
+            ["✅ Finalizadas", "⏳ Próximas", "🚨 Pendientes"]
+        )
 
+        with t_pen:
+            if df.empty:
+                st.info("✅ No hay agendas en ALERTA.")
+            else:
+                st.dataframe(
+                    df.sort_values("fecha de visita"),
+                    use_container_width=True
+                )
+                st.error(f"🚨 TOTAL ALERTAS: {len(df)}")
+
+    # ---------------- CALDAS ----------------
     with tab_caldas:
-        st.write("Contenido Caldas")
+        df_caldas = df[df["localidad"].str.upper().str.contains("CALDAS")]
+        st.dataframe(df_caldas, use_container_width=True)
 
+    # ---------------- RISARALDA ----------------
     with tab_ris:
-        st.write("Contenido Risaralda")
+        df_ris = df[df["localidad"].str.upper().str.contains("RISARALDA")]
+        st.dataframe(df_ris, use_container_width=True)
