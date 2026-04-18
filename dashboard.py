@@ -1170,9 +1170,6 @@ with tab4:
     # ======================================================
     st.markdown("## 🗂️ Control agendas")
 
-    if st.button("🔄 Actualizar agendas"):
-        st.rerun()
-
     # ======================================================
     # CARGAR BITÁCORA DESDE GITHUB
     # ======================================================
@@ -1190,7 +1187,7 @@ with tab4:
     r = requests.get(url_bit, headers=headers)
 
     if r.status_code != 200:
-        st.error("❌ No se pudo cargar la bitácora.")
+        st.error("❌ No se pudo cargar la bitácora desde GitHub.")
         st.stop()
 
     buffer = io.BytesIO(base64.b64decode(r.json()["content"]))
@@ -1202,7 +1199,8 @@ with tab4:
     df.columns = df.columns.str.strip().str.lower()
 
     columnas_req = [
-        "grupo", "prioridad", "estado", "fecha de visita",
+        "grupo", "prioridad", "estado",
+        "fecha de visita", "fecha de ejecucion",
         "inspector", "contrato", "direccion",
         "localidad", "detalle de tarea"
     ]
@@ -1213,38 +1211,31 @@ with tab4:
             st.stop()
 
     # ======================================================
-    # FILTRO FIJO DE GRUPO + NEGOCIO
+    # FILTRO FIJO DE GRUPO
     # ======================================================
     df["grupo"] = df["grupo"].astype(str).str.upper().str.strip()
-
-    df = df[
-        (df["grupo"].isin(["INSP-CALDAS", "INSP-RIS"])) &
-        (df["prioridad"].str.upper() == "ALTA") &
-        (df["estado"].str.upper() == "ASIGNADA")
-    ].copy()
+    df = df[df["grupo"].isin(["INSP-CALDAS", "INSP-RIS"])].copy()
 
     # ======================================================
-    # ALERTAS (HORA COLOMBIA)
+    # FECHAS
     # ======================================================
     df["fecha de visita"] = pd.to_datetime(df["fecha de visita"], errors="coerce")
-    ahora = datetime.datetime.now(
+    df["fecha de ejecucion"] = pd.to_datetime(df["fecha de ejecucion"], errors="coerce")
+
+    ahora_colombia = datetime.datetime.now(
         ZoneInfo("America/Bogota")
     ).replace(tzinfo=None)
 
+    # ======================================================
+    # COLUMNA ESTADO_ALERTA
+    # ======================================================
     df["estado_alerta"] = df["fecha de visita"].apply(
-        lambda x: "ALERTA" if pd.notna(x) and x <= ahora else "OK"
+        lambda x: "ALERTA" if pd.notna(x) and x <= ahora_colombia else "OK"
     )
 
-    # 🔴 SOLO ALERTAS
-    df = df[df["estado_alerta"] == "ALERTA"].copy()
-
     # ======================================================
-    # MENÚ: FINALIZADAS / PRÓXIMAS / PENDIENTES
+    # COLUMNAS A MOSTRAR
     # ======================================================
-    t_fin, t_prox, t_pen = st.tabs(
-        ["✅ Finalizadas", "⏳ Próximas", "🚨 Pendientes"]
-    )
-
     columnas_mostrar = [
         "inspector",
         "contrato",
@@ -1256,51 +1247,82 @@ with tab4:
         "estado_alerta"
     ]
 
-    # ---------------- FINALIZADAS ----------------
+    # ======================================================
+    # SUBPESTAÑAS PRINCIPALES
+    # ======================================================
+    t_fin, t_prox, t_pen = st.tabs(
+        ["✅ Finalizadas", "⏳ Próximas", "🚨 Pendientes"]
+    )
+
+    # ======================================================
+    # ✅ FINALIZADAS
+    # ======================================================
     with t_fin:
+        st.markdown("### ✅ Agendas finalizadas")
+
         zona = st.selectbox(
             "Zona",
             ["TODAS", "INSP-CALDAS", "INSP-RIS"],
-            key="zona_fin"
+            key="zona_finalizadas"
         )
 
-        df_v = df.copy()
+        df_final = df[df["estado"].astype(str).str.upper() == "FINALIZADA"].copy()
+
         if zona != "TODAS":
-            df_v = df_v[df_v["grupo"] == zona]
+            df_final = df_final[df_final["grupo"] == zona]
 
-        st.dataframe(df_v[columnas_mostrar], use_container_width=True)
+        # Evaluar inicio tarde
+        def evaluar_inicio_tarde(row):
+            if pd.isna(row["fecha de ejecucion"]) or pd.isna(row["fecha de visita"]):
+                return "SIN DATO"
+            limite = row["fecha de visita"] + pd.Timedelta(minutes=15)
+            return "INICIO TARDE" if row["fecha de ejecucion"] > limite else "INICIO A TIEMPO"
 
-    # ---------------- PRÓXIMAS ----------------
-    with t_prox:
-        zona = st.selectbox(
-            "Zona",
-            ["TODAS", "INSP-CALDAS", "INSP-RIS"],
-            key="zona_prox"
-        )
+        df_final["inicio_tarea"] = df_final.apply(evaluar_inicio_tarde, axis=1)
 
-        df_v = df.copy()
-        if zona != "TODAS":
-            df_v = df_v[df_v["grupo"] == zona]
+        columnas_finalizadas = columnas_mostrar[:-1] + ["inicio_tarea"]
 
-        st.dataframe(df_v[columnas_mostrar], use_container_width=True)
-
-    # ---------------- PENDIENTES ----------------
-    with t_pen:
-        zona = st.selectbox(
-            "Zona",
-            ["TODAS", "INSP-CALDAS", "INSP-RIS"],
-            key="zona_pen"
-        )
-
-        df_v = df.copy()
-        if zona != "TODAS":
-            df_v = df_v[df_v["grupo"] == zona]
-
-        if df_v.empty:
-            st.info("✅ No hay agendas en alerta para la zona seleccionada.")
+        if df_final.empty:
+            st.info("✅ No hay agendas finalizadas para esta zona.")
         else:
             st.dataframe(
-                df_v[columnas_mostrar].sort_values("fecha de visita"),
+                df_final[columnas_finalizadas].sort_values("fecha de visita"),
                 use_container_width=True
             )
-            st.error(f"🚨 TOTAL ALERTAS: {len(df_v)}")
+
+    # ======================================================
+    # ⏳ PRÓXIMAS (RESERVADO)
+    # ======================================================
+    with t_prox:
+        st.markdown("### ⏳ Agendas próximas")
+        st.info("Pendiente de implementación.")
+
+    # ======================================================
+    # 🚨 PENDIENTES (SOLO ALERTA)
+    # ======================================================
+    with t_pen:
+        st.markdown("### 🚨 Agendas en ALERTA")
+
+        zona = st.selectbox(
+            "Zona",
+            ["TODAS", "INSP-CALDAS", "INSP-RIS"],
+            key="zona_pendientes"
+        )
+
+        df_alerta = df[
+            (df["prioridad"].astype(str).str.upper() == "ALTA") &
+            (df["estado"].astype(str).str.upper() == "ASIGNADA") &
+            (df["estado_alerta"] == "ALERTA")
+        ].copy()
+
+        if zona != "TODAS":
+            df_alerta = df_alerta[df_alerta["grupo"] == zona]
+
+        if df_alerta.empty:
+            st.info("✅ No hay agendas en ALERTA para la zona seleccionada.")
+        else:
+            st.dataframe(
+                df_alerta[columnas_mostrar].sort_values("fecha de visita"),
+                use_container_width=True
+            )
+            st.error(f"🚨 TOTAL ALERTAS: {len(df_alerta)}")
