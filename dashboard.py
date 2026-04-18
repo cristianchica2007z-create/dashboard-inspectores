@@ -1227,7 +1227,7 @@ with tab4:
     ).replace(tzinfo=None)
 
     # ======================================================
-    # COLUMNA ESTADO_ALERTA
+    # ESTADO ALERTA (BASE)
     # ======================================================
     df["estado_alerta"] = df["fecha de visita"].apply(
         lambda x: "ALERTA" if pd.notna(x) and x <= ahora_colombia else "OK"
@@ -1236,7 +1236,7 @@ with tab4:
     # ======================================================
     # COLUMNAS A MOSTRAR
     # ======================================================
-    columnas_mostrar = [
+    columnas_base = [
         "inspector",
         "contrato",
         "direccion",
@@ -1258,15 +1258,15 @@ with tab4:
     # ✅ FINALIZADAS
     # ======================================================
     with t_fin:
-        st.markdown("### ✅ Agendas finalizadas")
-
         zona = st.selectbox(
             "Zona",
             ["TODAS", "INSP-CALDAS", "INSP-RIS"],
             key="zona_finalizadas"
         )
 
-        df_final = df[df["estado"].astype(str).str.upper() == "FINALIZADA"].copy()
+        df_final = df[
+            df["estado"].astype(str).str.upper() == "FINALIZADA"
+        ].copy()
 
         if zona != "TODAS":
             df_final = df_final[df_final["grupo"] == zona]
@@ -1279,22 +1279,20 @@ with tab4:
 
         df_final["inicio_tarea"] = df_final.apply(evaluar_inicio_tarde, axis=1)
 
-        columnas_finalizadas = columnas_mostrar[:-1] + ["inicio_tarea"]
+        columnas_final = columnas_base[:-1] + ["inicio_tarea"]
 
         if df_final.empty:
-            st.info("✅ No hay agendas finalizadas para esta zona.")
+            st.info("✅ No hay agendas finalizadas.")
         else:
             st.dataframe(
-                df_final[columnas_finalizadas].sort_values("fecha de visita"),
+                df_final[columnas_final].sort_values("fecha de visita"),
                 use_container_width=True
             )
 
     # ======================================================
-    # ⏳ PRÓXIMAS (NO INICIADAS)
+    # ⏳ PRÓXIMAS (ASIGNADAS, NO INICIADAS, FUTURAS)
     # ======================================================
     with t_prox:
-        st.markdown("### ⏳ Agendas próximas (no iniciadas)")
-
         zona = st.selectbox(
             "Zona",
             ["TODAS", "INSP-CALDAS", "INSP-RIS"],
@@ -1311,19 +1309,17 @@ with tab4:
             df_prox = df_prox[df_prox["grupo"] == zona]
 
         if df_prox.empty:
-            st.info("✅ No hay agendas próximas para la zona seleccionada.")
+            st.info("✅ No hay agendas próximas.")
         else:
             st.dataframe(
-                df_prox[columnas_mostrar].sort_values("fecha de visita"),
+                df_prox[columnas_base].sort_values("fecha de visita"),
                 use_container_width=True
             )
 
     # ======================================================
-    # 🚨 PENDIENTES (SOLO ALERTA)
+    # 🚨 PENDIENTES (ALERTAS REALES)
     # ======================================================
     with t_pen:
-        st.markdown("### 🚨 Agendas en ALERTA")
-
         zona = st.selectbox(
             "Zona",
             ["TODAS", "INSP-CALDAS", "INSP-RIS"],
@@ -1332,6 +1328,7 @@ with tab4:
 
         df_alerta = df[
             (df["estado"].astype(str).str.upper() == "ASIGNADA") &
+            (df["prioridad"].astype(str).str.upper() == "ALTA") &   # ✅ FILTRO RESTAURADO
             (df["estado_alerta"] == "ALERTA")
         ].copy()
 
@@ -1339,10 +1336,10 @@ with tab4:
             df_alerta = df_alerta[df_alerta["grupo"] == zona]
 
         if df_alerta.empty:
-            st.info("✅ No hay agendas en ALERTA para la zona seleccionada.")
+            st.info("✅ No hay agendas en ALERTA.")
         else:
             st.dataframe(
-                df_alerta[columnas_mostrar].sort_values("fecha de visita"),
+                df_alerta[columnas_base].sort_values("fecha de visita"),
                 use_container_width=True
             )
             st.error(f"🚨 TOTAL ALERTAS: {len(df_alerta)}")
