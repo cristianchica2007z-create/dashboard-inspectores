@@ -1187,7 +1187,7 @@ with tab4:
     r = requests.get(url_bit, headers=headers)
 
     if r.status_code != 200:
-        st.error("❌ No se pudo cargar la bitácora desde GitHub.")
+        st.error("❌ No se pudo cargar la bitácora.")
         st.stop()
 
     buffer = io.BytesIO(base64.b64decode(r.json()["content"]))
@@ -1248,7 +1248,7 @@ with tab4:
     ]
 
     # ======================================================
-    # SUBPESTAÑAS PRINCIPALES
+    # SUBPESTAÑAS
     # ======================================================
     t_fin, t_prox, t_pen = st.tabs(
         ["✅ Finalizadas", "⏳ Próximas", "🚨 Pendientes"]
@@ -1271,7 +1271,6 @@ with tab4:
         if zona != "TODAS":
             df_final = df_final[df_final["grupo"] == zona]
 
-        # Evaluar inicio tarde
         def evaluar_inicio_tarde(row):
             if pd.isna(row["fecha de ejecucion"]) or pd.isna(row["fecha de visita"]):
                 return "SIN DATO"
@@ -1291,11 +1290,33 @@ with tab4:
             )
 
     # ======================================================
-    # ⏳ PRÓXIMAS (RESERVADO)
+    # ⏳ PRÓXIMAS (NO INICIADAS)
     # ======================================================
     with t_prox:
-        st.markdown("### ⏳ Agendas próximas")
-        st.info("Pendiente de implementación.")
+        st.markdown("### ⏳ Agendas próximas (no iniciadas)")
+
+        zona = st.selectbox(
+            "Zona",
+            ["TODAS", "INSP-CALDAS", "INSP-RIS"],
+            key="zona_proximas"
+        )
+
+        df_prox = df[
+            (df["estado"].astype(str).str.upper() == "ASIGNADA") &
+            (df["fecha de ejecucion"].isna()) &
+            (df["fecha de visita"] > ahora_colombia)
+        ].copy()
+
+        if zona != "TODAS":
+            df_prox = df_prox[df_prox["grupo"] == zona]
+
+        if df_prox.empty:
+            st.info("✅ No hay agendas próximas para la zona seleccionada.")
+        else:
+            st.dataframe(
+                df_prox[columnas_mostrar].sort_values("fecha de visita"),
+                use_container_width=True
+            )
 
     # ======================================================
     # 🚨 PENDIENTES (SOLO ALERTA)
@@ -1310,7 +1331,6 @@ with tab4:
         )
 
         df_alerta = df[
-            (df["prioridad"].astype(str).str.upper() == "ALTA") &
             (df["estado"].astype(str).str.upper() == "ASIGNADA") &
             (df["estado_alerta"] == "ALERTA")
         ].copy()
