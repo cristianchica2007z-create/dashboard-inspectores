@@ -706,6 +706,7 @@ with tab2:
     # -------------------------------------------
    # -------------------------------------------
 # -------------------------------------------
+# -------------------------------------------
 # FILTRO DE INSPECTORES (CHECKLIST ESTABLE ✅)
 # -------------------------------------------
 inspectores_disponibles = sorted(df2["inspector"].unique())
@@ -714,15 +715,15 @@ with st.expander("Seleccionar inspectores", expanded=True):
     inspectores_sel = []
 
     for insp in inspectores_disponibles:
-        key_chk = f"insp_{fecha_sel}_{insp}"
+        chk_key = f"insp_{fecha_sel}_{insp}"
 
-        # Inicializar estado (la clave está aquí)
-        if key_chk not in st.session_state:
-            st.session_state[key_chk] = True
+        # Inicializar estado UNA SOLA VEZ
+        if chk_key not in st.session_state:
+            st.session_state[chk_key] = True
 
         if st.checkbox(
             insp,
-            key=key_chk
+            key=chk_key
         ):
             inspectores_sel.append(insp)
 
@@ -730,8 +731,8 @@ with st.expander("Seleccionar inspectores", expanded=True):
 if inspectores_sel:
     df2 = df2[df2["inspector"].isin(inspectores_sel)]
 else:
-    st.warning("⚠️ No hay inspectores seleccionados (se muestran todos).")
-    # NO st.stop() — se continúa con df2 completo
+    st.warning("⚠️ No hay inspectores seleccionados. Se muestran todos.")
+    # ❌ NO st.stop()
 # ===================================================
 # ===================================================
     # ✅ TAB 2 — PARTE 3 / 4
