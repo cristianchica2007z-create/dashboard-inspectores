@@ -707,32 +707,21 @@ with tab2:
    # -------------------------------------------
 # -------------------------------------------
 # -------------------------------------------
-# FILTRO DE INSPECTORES (CHECKLIST ESTABLE ✅)
-# -------------------------------------------
-inspectores_disponibles = sorted(df2["inspector"].unique())
+# FILTRO DE INSPECTORES (DEPENDIENTE)
+    # -------------------------------------------
+    inspectores_disponibles = sorted(df2["inspector"].unique())
 
-with st.expander("Seleccionar inspectores", expanded=True):
-    inspectores_sel = []
+    inspectores_sel = st.multiselect(
+        "Selecciona inspectores:",
+        inspectores_disponibles,
+        default=inspectores_disponibles
+    )
 
-    for insp in inspectores_disponibles:
-        chk_key = f"insp_{fecha_sel}_{insp}"
-
-        # Inicializar estado UNA SOLA VEZ
-        if chk_key not in st.session_state:
-            st.session_state[chk_key] = True
-
-        if st.checkbox(
-            insp,
-            key=chk_key
-        ):
-            inspectores_sel.append(insp)
-
-# ✅ APLICAR FILTRO SOLO SI HAY SELECCIÓN
-if inspectores_sel:
-    df2 = df2[df2["inspector"].isin(inspectores_sel)]
-else:
-    st.warning("⚠️ No hay inspectores seleccionados. Se muestran todos.")
-    # ❌ NO st.stop()
+    if inspectores_sel:
+        df2 = df2[df2["inspector"].isin(inspectores_sel)]
+    else:
+        st.warning("⚠️ Selecciona al menos un inspector.")
+        st.stop()
 # ===================================================
 # ===================================================
     # ✅ TAB 2 — PARTE 3 / 4
