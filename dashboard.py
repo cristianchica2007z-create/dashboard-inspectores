@@ -1022,12 +1022,13 @@ df2["prioridad_norm"] = (
 # ---------------------------------------------------
 # ---------------------------------------------------
 # ---------------------------------------------------
-# 📊 ÓRDENES ASIGNADAS POR INSPECTOR (POR PRIORIDAD)
-# ---------------------------------------------------
+# ===================================================
+# 📊 ÓRDENES ASIGNADAS (ROBUSTO)
+# ===================================================
 st.markdown("## 📌 Órdenes ASIGNADAS por inspector (según prioridad)")
 
 # ---------------------------------------------------
-# DETECTAR COLUMNA DE ESTADO OPERATIVO (Asignada / Finalizada)
+# DETECTAR COLUMNA DE ESTADO OPERATIVO REAL
 # ---------------------------------------------------
 col_estado_operativo = None
 
@@ -1043,9 +1044,7 @@ for col in df2.columns:
         break
 
 if col_estado_operativo is None:
-    st.warning(
-        "⚠️ No se encontró ninguna columna con estado ASIGNADA en la bitácora."
-    )
+    st.warning("⚠️ No se encontró una columna con estado ASIGNADA en la bitácora.")
 else:
     # ---------------------------------------------------
     # NORMALIZAR PRIORIDAD
@@ -1073,14 +1072,29 @@ else:
         # ---------------------------------------------------
         # AGRUPAR POR INSPECTOR Y PRIORIDAD
         # ---------------------------------------------------
-        df_prio = (
+        df_prio_raw = (
             df_asignadas
             .groupby(["inspector", "prioridad_norm"])
             .size()
             .reset_index(name="cantidad")
         )
 
-        # Ordenar inspectores por carga total
+        # 🧠 FORZAR TODAS LAS PRIORIDADES (aunque sean 0)
+        todas_prioridades = ["CRITICA", "ALTA", "MEDIA", "BAJA", "PRIORIDAD"]
+
+        df_prio = (
+            df_prio_raw
+            .set_index(["inspector", "prioridad_norm"])
+            .unstack(fill_value=0)
+            .stack()
+            .reset_index(name="cantidad")
+        )
+
+        df_prio = df_prio[df_prio["prioridad_norm"].isin(todas_prioridades)]
+
+        # ---------------------------------------------------
+        # ORDENAR INSPECTORES POR CARGA TOTAL
+        # ---------------------------------------------------
         orden_inspectores = (
             df_prio.groupby("inspector")["cantidad"]
             .sum()
@@ -1090,18 +1104,18 @@ else:
         )
 
         # ---------------------------------------------------
-        # MAPA DE COLORES POR PRIORIDAD
+        # MAPA DE COLORES
         # ---------------------------------------------------
         color_prioridad = {
+            "CRITICA": "#fd7e14",     # naranja
             "ALTA": "#dc3545",        # rojo
             "MEDIA": "#ffc107",       # amarillo
             "BAJA": "#7cd992",        # verde claro
-            "CRITICA": "#fd7e14",     # naranja
             "PRIORIDAD": "#6f4e37"    # café
         }
 
         # ---------------------------------------------------
-        # GRÁFICA ACUMULADA
+        # GRÁFICA 1: ASIGNADAS POR INSPECTOR (ACUMULADA)
         # ---------------------------------------------------
         fig_asignadas = px.bar(
             df_prio,
@@ -1111,7 +1125,7 @@ else:
             orientation="h",
             category_orders={
                 "inspector": orden_inspectores,
-                "prioridad_norm": ["CRITICA", "ALTA", "MEDIA", "BAJA", "PRIORIDAD"]
+                "prioridad_norm": todas_prioridades
             },
             color_discrete_map=color_prioridad,
             text="cantidad",
@@ -1120,7 +1134,7 @@ else:
 
         fig_asignadas.update_traces(
             textposition="inside",
-            textfont_size=18
+            textfont_size=16
         )
 
         fig_asignadas.update_layout(
@@ -1132,6 +1146,43 @@ else:
         )
 
         st.plotly_chart(fig_asignadas, use_container_width=True)
+
+        # ===================================================
+        # 🧩 GRÁFICA 2: PANORAMA GENERAL DE PRIORIDADES
+        # ===================================================
+        st.markdown("## 📊 Panorama general de prioridades ASIGNADAS")
+
+        df_prio_total = (
+            df_asignadas
+            .groupby("prioridad_norm")
+            .size()
+            .reindex(todas_prioridades, fill_value=0)
+            .reset_index(name="cantidad")
+        )
+
+        fig_prio_total = px.bar(
+            df_prio_total,
+            x="prioridad_norm",
+            y="cantidad",
+            color="prioridad_norm",
+            text="cantidad",
+            color_discrete_map=color_prioridad,
+            title="Total de órdenes ASIGNADAS por tipo de prioridad"
+        )
+
+        fig_prio_total.update_traces(
+            textfont_size=22,
+            textposition="outside"
+        )
+
+        fig_prio_total.update_layout(
+            xaxis_title="Prioridad",
+            yaxis_title="Cantidad de órdenes ASIGNADAS",
+            showlegend=False
+        )
+
+        st.plotly_chart(fig_prio_total, use_container_width=True)
+
 
 # ---------------------------------------------------
 # ===================================================
