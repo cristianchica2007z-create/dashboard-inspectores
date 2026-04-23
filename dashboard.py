@@ -1020,50 +1020,57 @@ df2["prioridad_norm"] = (
 )
 
 # ---------------------------------------------------
-# ---------------------------------------------------
 # ===================================================
-# 📊 ÓRDENES ASIGNADAS POR INSPECTOR (DATOS REALES)
+# 📊 ÓRDENES ASIGNADAS POR INSPECTOR (DATOS REALES DEL EXCEL)
 # ===================================================
-st.markdown("## 📌 Órdenes ASIGNADAS por inspector (según prioridad)")
+st.markdown("## 📌 Órdenes ASIGNADAS por inspector (prioridades reales)")
 
-# Detectar columna de estado operativo
+# ---------------------------------------------------
+# IDENTIFICAR COLUMNA OPERATIVA DE ESTADO (NO ESTADO DE PUNTUALIDAD)
+# ---------------------------------------------------
+columnas_estado_posibles = ["estado", "estado orden", "estatus", "estado_operativo"]
+
 col_estado_operativo = None
-for col in df2.columns:
-    if df2[col].astype(str).str.upper().str.contains("ASIGNAD", na=False).any():
+for col in columnas_estado_posibles:
+    if col in df2.columns:
         col_estado_operativo = col
         break
 
 if col_estado_operativo is None:
-    st.warning("⚠️ No se detectó columna de estado ASIGNADA.")
+    st.error("❌ No se encontró una columna de estado operativo en la bitácora.")
 else:
-    # Normalizar PRIORIDAD pero sin inventar valores
-    df2["prioridad_norm"] = (
-        df2["prioridad"]
-        .astype(str)
-        .str.strip()
-        .str.upper()
-    )
-
-    # Filtrar solo ASIGNADAS reales
+    # ---------------------------------------------------
+    # FILTRAR SOLO ÓRDENES ASIGNADAS REALES
+    # ---------------------------------------------------
     df_asignadas = df2[
         df2[col_estado_operativo]
         .astype(str)
-        .str.upper()
-        .str.contains("ASIGNAD", na=False)
+        .str.contains("Asignad", case=False, na=False)
     ].copy()
 
     if df_asignadas.empty:
         st.warning("⚠️ No hay órdenes ASIGNADAS para esta fecha.")
     else:
-        # ✅ AGRUPACIÓN DIRECTA (SIN STACK/UNSTACK)
+        # ---------------------------------------------------
+        # USAR LA PRIORIDAD EXACTA DEL EXCEL (SIN INVENTAR NADA)
+        # ---------------------------------------------------
+        df_asignadas["PRIORIDAD_REAL"] = (
+            df_asignadas["prioridad"]
+            .astype(str)
+            .str.strip()
+        )
+
+        # ---------------------------------------------------
+        # AGRUPAR TAL CUAL EL EXCEL
+        # ---------------------------------------------------
         df_prio = (
             df_asignadas
-            .groupby(["inspector", "prioridad_norm"])
+            .groupby(["inspector", "PRIORIDAD_REAL"])
             .size()
             .reset_index(name="cantidad")
         )
 
-        # Ordenar inspectores por carga total
+        # Ordenar inspectores por total de asignadas
         orden_inspectores = (
             df_prio.groupby("inspector")["cantidad"]
             .sum()
@@ -1072,33 +1079,33 @@ else:
             .tolist()
         )
 
-        # Colores correctos (tal como pediste)
+        # Colores EXACTOS según texto real
         color_prioridad = {
-            "CRITICA": "#fd7e14",     # naranja
-            "ALTA": "#dc3545",        # rojo
-            "MEDIA": "#ffc107",       # amarillo
-            "BAJA": "#7cd992",        # verde claro
-            "PRIORIDAD": "#6f4e37"    # café
+            "Alta": "#dc3545",
+            "Media": "#ffc107",
+            "Baja": "#7cd992",
+            "Critica": "#fd7e14",
+            "Prioridad": "#6f4e37",
         }
 
-        fig_asignadas = px.bar(
+        fig = px.bar(
             df_prio,
             y="inspector",
             x="cantidad",
-            color="prioridad_norm",
+            color="PRIORIDAD_REAL",
             orientation="h",
             category_orders={"inspector": orden_inspectores},
             color_discrete_map=color_prioridad,
             text="cantidad",
-            title="Órdenes ASIGNADAS por inspector (prioridades reales)"
+            title="Órdenes ASIGNADAS por inspector (según prioridad real del Excel)"
         )
 
-        fig_asignadas.update_traces(
+        fig.update_traces(
             textposition="inside",
             textfont_size=16
         )
 
-        fig_asignadas.update_layout(
+        fig.update_layout(
             barmode="stack",
             xaxis_title="Cantidad de órdenes ASIGNADAS",
             yaxis_title="Inspector",
@@ -1106,7 +1113,7 @@ else:
             height=650
         )
 
-        st.plotly_chart(fig_asignadas, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True)
 
 
 
