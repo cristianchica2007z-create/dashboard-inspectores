@@ -180,11 +180,13 @@ with col_logo:
 # ---------------------------------------------------
 # ✅ CREAR PESTAÑAS
 # ---------------------------------------------------
-tab1, tab2, tab3, tab4 = st.tabs([
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "📦 Inventario Papelería",
     "🕒 Seguimiento Diario",
     "📈 Subir Archivos",
-    "Seguimiento agendas"
+    "Seguimiento agendas",
+    "ORDENES ASIGNADAS"
+    
 ])
 
 # ===================================================
