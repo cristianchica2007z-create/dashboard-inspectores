@@ -919,8 +919,8 @@ with tab2:
 
 
     # ---------------------------------------------------
-# 🎨 ESTILO DE PUNTUALIDAD PARA LA TABLA
-# ---------------------------------------------------
+    # 🎨 ESTILO DE PUNTUALIDAD PARA LA TABLA
+    # ---------------------------------------------------
 def estilo_puntualidad(row):
     if row["estado"] == "Muy tarde":
         return ["background-color: #f8d7da; color: #721c24"] * len(row)
@@ -931,30 +931,26 @@ def estilo_puntualidad(row):
 
 
     
-# ---------------------------------------------------
-# 📋 Tabla de inspecciones del día (con colores)
-# ---------------------------------------------------
 st.dataframe(
-    df_tabla[
-        [
-            "inspector",
-            "supervisor",
-            "fecha",
-            "hora_inicio",
-            "hora_final",
-            "localidad",
-            "estado",
-            "total_ordenes",
-            "ordenes_efectivas",
-            "porcentaje_efectividad",
-            "promedio_tiempo_tarea"
+        df_tabla[
+            [
+                "inspector",
+                "supervisor",
+                "fecha",
+                "hora_inicio",
+                "hora_final",
+                "localidad",
+                "estado",
+                "total_ordenes",
+                "ordenes_efectivas",
+                "porcentaje_efectividad",
+                "promedio_tiempo_tarea"
+            ]
         ]
-    ]
-    .style
-    .apply(estilo_puntualidad, axis=1),
-    use_container_width=True
-)
-
+        .style
+        .apply(estilo_puntualidad, axis=1),
+        use_container_width=True
+    )
 
   # ===================================================
     # ✅ TAB 2 — PARTE 4 / 4
@@ -963,47 +959,43 @@ st.dataframe(
 
   # ---------------------------------------------------
 # ---------------------------------------------------
-# ✅ PRODUCCIÓN POR INSPECTOR (SOLO ORDENES EFECTIVAS)
-# ---------------------------------------------------
 st.markdown("## 📊 Producción por inspector (órdenes efectivas)")
 
-df_prod = (
-    df2[df2["efectiva"] == True]
-    .groupby("inspector")
-    .size()
-    .reset_index(name="Órdenes efectivas")
-    .sort_values("Órdenes efectivas", ascending=False)
-)
-
-if df_prod.empty:
-    st.info("⚠️ No hay órdenes efectivas para esta fecha.")
-else:
-    fig_prod = px.bar(
-        df_prod,
-        y="inspector",
-        x="Órdenes efectivas",
-        orientation="h",
-        text="Órdenes efectivas",
-        title="Órdenes efectivas por inspector",
-        color_discrete_sequence=["green"]
+    df_prod = (
+        df2[df2["efectiva"] == True]
+        .groupby("inspector")
+        .size()
+        .reset_index(name="Órdenes efectivas")
+        .sort_values("Órdenes efectivas", ascending=False)
     )
 
-    # 🔥 HACER LOS NÚMEROS MUCHO MÁS GRANDES
-    fig_prod.update_traces(
-        textposition="outside",
-        textfont_size=35,        # ⬅️ AQUÍ el tamaño (ajústalo si quieres)
-        textfont_color="black",
-        cliponaxis=False
-    )
+    if df_prod.empty:
+        st.info("⚠️ No hay órdenes efectivas para esta fecha.")
+    else:
+        fig_prod = px.bar(
+            df_prod,
+            y="inspector",
+            x="Órdenes efectivas",
+            orientation="h",
+            text="Órdenes efectivas",
+            title="Órdenes efectivas por inspector",
+            color_discrete_sequence=["green"]
+        )
 
-    fig_prod.update_layout(
-        xaxis_title="Órdenes efectivas",
-        yaxis_title="Inspector",
-        font=dict(size=18)       # tamaño general del gráfico
-    )
+        fig_prod.update_traces(
+            textposition="outside",
+            textfont_size=35,
+            textfont_color="black",
+            cliponaxis=False
+        )
 
-    st.plotly_chart(fig_prod, use_container_width=True)
+        fig_prod.update_layout(
+            xaxis_title="Órdenes efectivas",
+            yaxis_title="Inspector",
+            font=dict(size=18)
+        )
 
+        st.plotly_chart(fig_prod, use_container_width=True)
 
 
 
