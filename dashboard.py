@@ -1023,12 +1023,13 @@ df2["prioridad_norm"] = (
 # ---------------------------------------------------
 # ---------------------------------------------------
 # ===================================================
-# 📊 ÓRDENES ASIGNADAS (ROBUSTO)
+# ===================================================
+# 📊 ÓRDENES ASIGNADAS (POR INSPECTOR Y PRIORIDAD)
 # ===================================================
 st.markdown("## 📌 Órdenes ASIGNADAS por inspector (según prioridad)")
 
 # ---------------------------------------------------
-# DETECTAR COLUMNA DE ESTADO OPERATIVO REAL
+# DETECTAR COLUMNA DE ESTADO OPERATIVO (ASIGNADA)
 # ---------------------------------------------------
 col_estado_operativo = None
 
@@ -1044,10 +1045,12 @@ for col in df2.columns:
         break
 
 if col_estado_operativo is None:
-    st.warning("⚠️ No se encontró una columna con estado ASIGNADA en la bitácora.")
+    st.warning(
+        "⚠️ No se encontró una columna con estado ASIGNADA en la bitácora."
+    )
 else:
     # ---------------------------------------------------
-    # NORMALIZAR PRIORIDAD
+    # NORMALIZAR PRIORIDAD (ROBUSTO)
     # ---------------------------------------------------
     df2["prioridad_norm"] = (
         df2["prioridad"]
@@ -1079,17 +1082,22 @@ else:
             .reset_index(name="cantidad")
         )
 
-        # 🧠 FORZAR TODAS LAS PRIORIDADES (aunque sean 0)
-        todas_prioridades = ["CRITICA", "ALTA", "MEDIA", "BAJA", "PRIORIDAD"]
+        # ---------------------------------------------------
+        # FORZAR TODAS LAS PRIORIDADES (AUNQUE SEAN 0)
+        # ---------------------------------------------------
+        todas_prioridades = [
+            "CRITICA", "ALTA", "MEDIA", "BAJA", "PRIORIDAD"
+        ]
 
         df_prio = (
             df_prio_raw
             .set_index(["inspector", "prioridad_norm"])
             .unstack(fill_value=0)
             .stack()
-            .reset_index(name="cantidad")
+            .reset_index()
         )
 
+        df_prio.columns = ["inspector", "prioridad_norm", "cantidad"]
         df_prio = df_prio[df_prio["prioridad_norm"].isin(todas_prioridades)]
 
         # ---------------------------------------------------
@@ -1104,14 +1112,14 @@ else:
         )
 
         # ---------------------------------------------------
-        # MAPA DE COLORES
+        # MAPA DE COLORES (SEGÚN LO PEDIDO)
         # ---------------------------------------------------
         color_prioridad = {
-            "CRITICA": "#fd7e14",     # naranja
-            "ALTA": "#dc3545",        # rojo
-            "MEDIA": "#ffc107",       # amarillo
-            "BAJA": "#7cd992",        # verde claro
-            "PRIORIDAD": "#6f4e37"    # café
+            "CRITICA": "#fd7e14",     # 🟠 naranja
+            "ALTA": "#dc3545",        # 🔴 rojo
+            "MEDIA": "#ffc107",       # 🟡 amarillo
+            "BAJA": "#7cd992",        # 🟢 verde claro
+            "PRIORIDAD": "#6f4e37"    # 🟤 café
         }
 
         # ---------------------------------------------------
@@ -1148,7 +1156,7 @@ else:
         st.plotly_chart(fig_asignadas, use_container_width=True)
 
         # ===================================================
-        # 🧩 GRÁFICA 2: PANORAMA GENERAL DE PRIORIDADES
+        # 📊 PANORAMA GENERAL DE PRIORIDADES ASIGNADAS
         # ===================================================
         st.markdown("## 📊 Panorama general de prioridades ASIGNADAS")
 
@@ -1182,6 +1190,7 @@ else:
         )
 
         st.plotly_chart(fig_prio_total, use_container_width=True)
+
 
 
 # ---------------------------------------------------
