@@ -1020,75 +1020,88 @@ df2["prioridad_norm"] = (
 )
 
 # ---------------------------------------------------
+# ---------------------------------------------------
 # 📊 ÓRDENES ASIGNADAS POR INSPECTOR (POR PRIORIDAD)
 # ---------------------------------------------------
 st.markdown("## 📌 Órdenes ASIGNADAS por inspector (según prioridad)")
 
-# Filtrar órdenes ASIGNADAS (robusto)
-df_asignadas = df2[
-    df2["estado_norm"].str.contains("ASIGNAD", na=False)
-].copy()
-
-if df_asignadas.empty:
-    st.warning("⚠️ No hay órdenes ASIGNADAS para esta fecha.")
+if col_estado_operativo is None:
+    st.info("⚠️ No se pudieron determinar órdenes ASIGNADAS.")
 else:
-    # Agrupar por inspector y prioridad
-    df_prio = (
-        df_asignadas
-        .groupby(["inspector", "prioridad_norm"])
-        .size()
-        .reset_index(name="cantidad")
+    # Normalizar prioridad
+    df2["prioridad_norm"] = (
+        df2["prioridad"]
+        .astype(str)
+        .str.strip()
+        .str.upper()
     )
 
-    # Ordenar inspectores por total de órdenes asignadas
-    orden_inspectores = (
-        df_prio.groupby("inspector")["cantidad"]
-        .sum()
-        .sort_values(ascending=False)
-        .index
-        .tolist()
-    )
+    # Filtrar órdenes ASIGNADAS usando columna detectada
+    df_asignadas = df2[
+        df2[col_estado_operativo]
+        .astype(str)
+        .str.upper()
+        .str.contains("ASIGNAD", na=False)
+    ].copy()
 
-    # Mapa de colores EXACTO según prioridad
-    color_prioridad = {
-        "ALTA": "#dc3545",        # 🔴 rojo
-        "MEDIA": "#ffc107",       # 🟡 amarillo
-        "BAJA": "#7cd992",        # 🟢 verde claro
-        "CRITICA": "#fd7e14",     # 🟠 naranja
-        "PRIORIDAD": "#6f4e37"    # 🟤 café
-    }
+    if df_asignadas.empty:
+        st.warning("⚠️ No hay órdenes ASIGNADAS para esta fecha.")
+    else:
+        # Agrupar por inspector y prioridad
+        df_prio = (
+            df_asignadas
+            .groupby(["inspector", "prioridad_norm"])
+            .size()
+            .reset_index(name="cantidad")
+        )
 
-    # Crear gráfica acumulada
-    fig_asignadas = px.bar(
-        df_prio,
-        y="inspector",
-        x="cantidad",
-        color="prioridad_norm",
-        orientation="h",
-        category_orders={
-            "inspector": orden_inspectores,
-            "prioridad_norm": ["CRITICA", "ALTA", "MEDIA", "BAJA", "PRIORIDAD"]
-        },
-        color_discrete_map=color_prioridad,
-        text="cantidad",
-        title="Órdenes ASIGNADAS por inspector (distribución por prioridad)"
-    )
+        # Ordenar inspectores por carga
+        orden_inspectores = (
+            df_prio.groupby("inspector")["cantidad"]
+            .sum()
+            .sort_values(ascending=False)
+            .index
+            .tolist()
+        )
 
-    # Hacer números grandes y legibles
-    fig_asignadas.update_traces(
-        textposition="inside",
-        textfont_size=18
-    )
+        # Colores solicitados
+        color_prioridad = {
+            "ALTA": "#dc3545",        # rojo
+            "MEDIA": "#ffc107",       # amarillo
+            "BAJA": "#7cd992",        # verde claro
+            "CRITICA": "#fd7e14",     # naranja
+            "PRIORIDAD": "#6f4e37"    # café
+        }
 
-    fig_asignadas.update_layout(
-        barmode="stack",
-        xaxis_title="Cantidad de órdenes ASIGNADAS",
-        yaxis_title="Inspector",
-        legend_title="Prioridad",
-        height=650
-    )
+        fig_asignadas = px.bar(
+            df_prio,
+            y="inspector",
+            x="cantidad",
+            color="prioridad_norm",
+            orientation="h",
+            category_orders={
+                "inspector": orden_inspectores,
+                "prioridad_norm": ["CRITICA", "ALTA", "MEDIA", "BAJA", "PRIORIDAD"]
+            },
+            color_discrete_map=color_prioridad,
+            text="cantidad",
+            title="Órdenes ASIGNADAS por inspector (distribución por prioridad)"
+        )
 
-    st.plotly_chart(fig_asignadas, use_container_width=True)
+        fig_asignadas.update_traces(
+            textposition="inside",
+            textfont_size=18
+        )
+
+        fig_asignadas.update_layout(
+            barmode="stack",
+            xaxis_title="Cantidad de órdenes ASIGNADAS",
+            yaxis_title="Inspector",
+            legend_title="Prioridad",
+            height=650
+        )
+
+        st.plotly_chart(fig_asignadas, use_container_width=True)
 
 # ---------------------------------------------------
 # ===================================================
