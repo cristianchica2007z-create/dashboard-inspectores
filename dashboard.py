@@ -1021,37 +1021,22 @@ df2["prioridad_norm"] = (
 
 # ---------------------------------------------------
 # ---------------------------------------------------
-# ---------------------------------------------------
 # ===================================================
-# ===================================================
-# 📊 ÓRDENES ASIGNADAS (POR INSPECTOR Y PRIORIDAD)
+# 📊 ÓRDENES ASIGNADAS POR INSPECTOR (DATOS REALES)
 # ===================================================
 st.markdown("## 📌 Órdenes ASIGNADAS por inspector (según prioridad)")
 
-# ---------------------------------------------------
-# DETECTAR COLUMNA DE ESTADO OPERATIVO (ASIGNADA)
-# ---------------------------------------------------
+# Detectar columna de estado operativo
 col_estado_operativo = None
-
 for col in df2.columns:
-    valores = (
-        df2[col]
-        .astype(str)
-        .str.upper()
-        .str.strip()
-    )
-    if valores.str.contains("ASIGNAD", na=False).any():
+    if df2[col].astype(str).str.upper().str.contains("ASIGNAD", na=False).any():
         col_estado_operativo = col
         break
 
 if col_estado_operativo is None:
-    st.warning(
-        "⚠️ No se encontró una columna con estado ASIGNADA en la bitácora."
-    )
+    st.warning("⚠️ No se detectó columna de estado ASIGNADA.")
 else:
-    # ---------------------------------------------------
-    # NORMALIZAR PRIORIDAD (ROBUSTO)
-    # ---------------------------------------------------
+    # Normalizar PRIORIDAD pero sin inventar valores
     df2["prioridad_norm"] = (
         df2["prioridad"]
         .astype(str)
@@ -1059,9 +1044,7 @@ else:
         .str.upper()
     )
 
-    # ---------------------------------------------------
-    # FILTRAR ÓRDENES ASIGNADAS (ROBUSTO)
-    # ---------------------------------------------------
+    # Filtrar solo ASIGNADAS reales
     df_asignadas = df2[
         df2[col_estado_operativo]
         .astype(str)
@@ -1072,37 +1055,15 @@ else:
     if df_asignadas.empty:
         st.warning("⚠️ No hay órdenes ASIGNADAS para esta fecha.")
     else:
-        # ---------------------------------------------------
-        # AGRUPAR POR INSPECTOR Y PRIORIDAD
-        # ---------------------------------------------------
-        df_prio_raw = (
+        # ✅ AGRUPACIÓN DIRECTA (SIN STACK/UNSTACK)
+        df_prio = (
             df_asignadas
             .groupby(["inspector", "prioridad_norm"])
             .size()
             .reset_index(name="cantidad")
         )
 
-        # ---------------------------------------------------
-        # FORZAR TODAS LAS PRIORIDADES (AUNQUE SEAN 0)
-        # ---------------------------------------------------
-        todas_prioridades = [
-            "CRITICA", "ALTA", "MEDIA", "BAJA", "PRIORIDAD"
-        ]
-
-        df_prio = (
-            df_prio_raw
-            .set_index(["inspector", "prioridad_norm"])
-            .unstack(fill_value=0)
-            .stack()
-            .reset_index()
-        )
-
-        df_prio.columns = ["inspector", "prioridad_norm", "cantidad"]
-        df_prio = df_prio[df_prio["prioridad_norm"].isin(todas_prioridades)]
-
-        # ---------------------------------------------------
-        # ORDENAR INSPECTORES POR CARGA TOTAL
-        # ---------------------------------------------------
+        # Ordenar inspectores por carga total
         orden_inspectores = (
             df_prio.groupby("inspector")["cantidad"]
             .sum()
@@ -1111,33 +1072,25 @@ else:
             .tolist()
         )
 
-        # ---------------------------------------------------
-        # MAPA DE COLORES (SEGÚN LO PEDIDO)
-        # ---------------------------------------------------
+        # Colores correctos (tal como pediste)
         color_prioridad = {
-            "CRITICA": "#fd7e14",     # 🟠 naranja
-            "ALTA": "#dc3545",        # 🔴 rojo
-            "MEDIA": "#ffc107",       # 🟡 amarillo
-            "BAJA": "#7cd992",        # 🟢 verde claro
-            "PRIORIDAD": "#6f4e37"    # 🟤 café
+            "CRITICA": "#fd7e14",     # naranja
+            "ALTA": "#dc3545",        # rojo
+            "MEDIA": "#ffc107",       # amarillo
+            "BAJA": "#7cd992",        # verde claro
+            "PRIORIDAD": "#6f4e37"    # café
         }
 
-        # ---------------------------------------------------
-        # GRÁFICA 1: ASIGNADAS POR INSPECTOR (ACUMULADA)
-        # ---------------------------------------------------
         fig_asignadas = px.bar(
             df_prio,
             y="inspector",
             x="cantidad",
             color="prioridad_norm",
             orientation="h",
-            category_orders={
-                "inspector": orden_inspectores,
-                "prioridad_norm": todas_prioridades
-            },
+            category_orders={"inspector": orden_inspectores},
             color_discrete_map=color_prioridad,
             text="cantidad",
-            title="Órdenes ASIGNADAS por inspector (distribución por prioridad)"
+            title="Órdenes ASIGNADAS por inspector (prioridades reales)"
         )
 
         fig_asignadas.update_traces(
@@ -1155,41 +1108,6 @@ else:
 
         st.plotly_chart(fig_asignadas, use_container_width=True)
 
-        # ===================================================
-        # 📊 PANORAMA GENERAL DE PRIORIDADES ASIGNADAS
-        # ===================================================
-        st.markdown("## 📊 Panorama general de prioridades ASIGNADAS")
-
-        df_prio_total = (
-            df_asignadas
-            .groupby("prioridad_norm")
-            .size()
-            .reindex(todas_prioridades, fill_value=0)
-            .reset_index(name="cantidad")
-        )
-
-        fig_prio_total = px.bar(
-            df_prio_total,
-            x="prioridad_norm",
-            y="cantidad",
-            color="prioridad_norm",
-            text="cantidad",
-            color_discrete_map=color_prioridad,
-            title="Total de órdenes ASIGNADAS por tipo de prioridad"
-        )
-
-        fig_prio_total.update_traces(
-            textfont_size=22,
-            textposition="outside"
-        )
-
-        fig_prio_total.update_layout(
-            xaxis_title="Prioridad",
-            yaxis_title="Cantidad de órdenes ASIGNADAS",
-            showlegend=False
-        )
-
-        st.plotly_chart(fig_prio_total, use_container_width=True)
 
 
 
