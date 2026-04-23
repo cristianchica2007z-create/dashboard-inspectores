@@ -1021,14 +1021,35 @@ df2["prioridad_norm"] = (
 
 # ---------------------------------------------------
 # ---------------------------------------------------
+# ---------------------------------------------------
 # 📊 ÓRDENES ASIGNADAS POR INSPECTOR (POR PRIORIDAD)
 # ---------------------------------------------------
 st.markdown("## 📌 Órdenes ASIGNADAS por inspector (según prioridad)")
 
+# ---------------------------------------------------
+# DETECTAR COLUMNA DE ESTADO OPERATIVO (Asignada / Finalizada)
+# ---------------------------------------------------
+col_estado_operativo = None
+
+for col in df2.columns:
+    valores = (
+        df2[col]
+        .astype(str)
+        .str.upper()
+        .str.strip()
+    )
+    if valores.str.contains("ASIGNAD", na=False).any():
+        col_estado_operativo = col
+        break
+
 if col_estado_operativo is None:
-    st.info("⚠️ No se pudieron determinar órdenes ASIGNADAS.")
+    st.warning(
+        "⚠️ No se encontró ninguna columna con estado ASIGNADA en la bitácora."
+    )
 else:
-    # Normalizar prioridad
+    # ---------------------------------------------------
+    # NORMALIZAR PRIORIDAD
+    # ---------------------------------------------------
     df2["prioridad_norm"] = (
         df2["prioridad"]
         .astype(str)
@@ -1036,7 +1057,9 @@ else:
         .str.upper()
     )
 
-    # Filtrar órdenes ASIGNADAS usando columna detectada
+    # ---------------------------------------------------
+    # FILTRAR ÓRDENES ASIGNADAS (ROBUSTO)
+    # ---------------------------------------------------
     df_asignadas = df2[
         df2[col_estado_operativo]
         .astype(str)
@@ -1047,7 +1070,9 @@ else:
     if df_asignadas.empty:
         st.warning("⚠️ No hay órdenes ASIGNADAS para esta fecha.")
     else:
-        # Agrupar por inspector y prioridad
+        # ---------------------------------------------------
+        # AGRUPAR POR INSPECTOR Y PRIORIDAD
+        # ---------------------------------------------------
         df_prio = (
             df_asignadas
             .groupby(["inspector", "prioridad_norm"])
@@ -1055,7 +1080,7 @@ else:
             .reset_index(name="cantidad")
         )
 
-        # Ordenar inspectores por carga
+        # Ordenar inspectores por carga total
         orden_inspectores = (
             df_prio.groupby("inspector")["cantidad"]
             .sum()
@@ -1064,7 +1089,9 @@ else:
             .tolist()
         )
 
-        # Colores solicitados
+        # ---------------------------------------------------
+        # MAPA DE COLORES POR PRIORIDAD
+        # ---------------------------------------------------
         color_prioridad = {
             "ALTA": "#dc3545",        # rojo
             "MEDIA": "#ffc107",       # amarillo
@@ -1073,6 +1100,9 @@ else:
             "PRIORIDAD": "#6f4e37"    # café
         }
 
+        # ---------------------------------------------------
+        # GRÁFICA ACUMULADA
+        # ---------------------------------------------------
         fig_asignadas = px.bar(
             df_prio,
             y="inspector",
