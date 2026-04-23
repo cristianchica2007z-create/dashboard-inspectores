@@ -941,34 +941,40 @@ with tab2:
     # Gráficas finales
     # ===================================================
 
-    # ---------------------------------------------------
-    # PRODUCCIÓN POR INSPECTOR
-    # ---------------------------------------------------
-    st.markdown("## 📊 Producción por inspector")
+  # ---------------------------------------------------
+# ✅ PRODUCCIÓN POR INSPECTOR (SOLO ORDENES EFECTIVAS)
+# ---------------------------------------------------
+st.markdown("## 📊 Producción por inspector (órdenes efectivas)")
 
-    df_prod = (
-        df2.groupby("inspector")
-           .apply(lambda x: pd.Series({
-               "Efectivas": x["efectiva"].sum(),
-               "No efectivas": (~x["efectiva"]).sum()
-           }))
-           .reset_index()
-    )
+df_prod = (
+    df2[df2["efectiva"] == True]
+    .groupby("inspector")
+    .size()
+    .reset_index(name="Ordenes efectivas")
+    .sort_values("Ordenes efectivas", ascending=False)
+)
 
+if df_prod.empty:
+    st.info("⚠️ No hay órdenes efectivas para esta fecha.")
+else:
     fig_prod = px.bar(
         df_prod,
         y="inspector",
-        x=["Efectivas", "No efectivas"],
+        x="Ordenes efectivas",
         orientation="h",
-        barmode="group",
-        color_discrete_map={
-            "Efectivas": "green",
-            "No efectivas": "red"
-        }
+        text="Ordenes efectivas",
+        title="Órdenes efectivas por inspector",
+        color_discrete_sequence=["green"]
     )
 
-    fig_prod.update_traces(texttemplate="%{x}", textposition="outside")
+    fig_prod.update_layout(
+        xaxis_title="Órdenes efectivas",
+        yaxis_title="Inspector"
+    )
+
+    fig_prod.update_traces(textposition="outside")
     st.plotly_chart(fig_prod, use_container_width=True)
+
 
     # ---------------------------------------------------
     # TOP 5 EFECTIVIDAD (USA 'resumen' DE PARTE 3)
