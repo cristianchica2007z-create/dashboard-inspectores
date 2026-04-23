@@ -407,10 +407,6 @@ with tab1:
 
 # ===================================================
 # ===================================================
-# ✅ TAB 2 — PARTE 1 / 4
-# Carga + funciones + normalización
-# LEE BITACORA.xlsx DESDE EL REPOSITORIO
-# ===================================================
 with tab2:
     st.subheader("🕒 Control Operativo e&c")
     st.subheader("Eje Cafetero")
@@ -432,14 +428,10 @@ with tab2:
     # CARGAR BITÁCORA COMPARTIDA
     # -------------------------------------------------
     df_bitacora = pd.read_excel(archivo_bitacora)
-
-    # -------------------------------------------------
-    # NORMALIZAR NOMBRES DE COLUMNAS
-    # -------------------------------------------------
     df_bitacora.columns = df_bitacora.columns.str.strip().str.lower()
 
     # -------------------------------------------------
-    # ✅ EXCLUIR GRUPOS NO OPERATIVOS (REGLA DEFINITIVA)
+    # ✅ EXCLUIR GRUPOS NO OPERATIVOS
     # -------------------------------------------------
     if "grupo" in df_bitacora.columns:
         df_bitacora["grupo"] = (
@@ -449,19 +441,12 @@ with tab2:
             .str.strip()
         )
 
-        grupos_no_operativos = [
-            "SST-NAL",
-            "SUPERVISIONES",
-            "SUSP-ANT"
-        ]
+        grupos_no_operativos = ["SST-NAL", "SUPERVISIONES", "SUSP-ANT"]
 
         df_bitacora = df_bitacora[
             ~df_bitacora["grupo"].isin(grupos_no_operativos)
         ]
 
-    # -------------------------------------------------
-    # PROTECCIÓN: EVITAR PESTAÑA VACÍA
-    # -------------------------------------------------
     if df_bitacora.empty:
         st.warning(
             "⚠️ No hay datos disponibles después del filtro por GRUPO.\n"
@@ -470,8 +455,7 @@ with tab2:
         st.stop()
 
     # -------------------------------------------------
- # -------------------------------------------------
-    # MOSTRAR FECHA, HORA (COLOMBIA) Y USUARIO QUE ACTUALIZÓ
+    # FECHA Y USUARIO DE ÚLTIMA ACTUALIZACIÓN
     # -------------------------------------------------
     TZ_UTC = ZoneInfo("UTC")
     TZ_CO = ZoneInfo("America/Bogota")
@@ -495,12 +479,9 @@ with tab2:
                 ultima_actualizacion = fecha_colombia.strftime(
                     "%Y-%m-%d %H:%M:%S"
                 )
-
                 usuario_actualizo = info.get("usuario_actualizo", "—")
-
     except Exception:
-        ultima_actualizacion = "—"
-        usuario_actualizo = "—"
+        pass
 
     st.caption(
         f"🕓 Última actualización: {ultima_actualizacion} "
@@ -510,8 +491,6 @@ with tab2:
     # -------------------------------------------------
     # FUNCIONES UTILITARIAS DE TIEMPO
     # -------------------------------------------------
-    import datetime
-
     def parse_hora(valor):
         try:
             return pd.to_datetime(valor, format="%H:%M").time()
@@ -550,13 +529,7 @@ with tab2:
         m = (s % 3600) // 60
         s2 = s % 60
         return f"{h}h {m}m {s2}s" if h > 0 else f"{m}m {s2}s"
-
-    # -------------------------------------------------
-    # NORMALIZAR COLUMNAS
-    # -------------------------------------------------
-    df_bitacora.columns = df_bitacora.columns.str.strip().str.lower()
-
-    columnas_necesarias = [
+columnas_necesarias = [
         "fecha de ejecucion", "hora inicio", "hora final",
         "inspector", "localidad", "cierre", "tiempo de tarea"
     ]
@@ -566,9 +539,6 @@ with tab2:
             st.error(f"❌ Falta la columna requerida: {col}")
             st.stop()
 
-    # -------------------------------------------------
-    # NORMALIZAR TEXTO
-    # -------------------------------------------------
     df_bitacora["inspector"] = (
         df_bitacora["inspector"]
         .astype(str)
@@ -584,9 +554,6 @@ with tab2:
         .str.strip()
     )
 
-    # -------------------------------------------------
-    # CONVERTIR FECHAS Y HORAS
-    # -------------------------------------------------
     df_bitacora["fecha"] = pd.to_datetime(
         df_bitacora["fecha de ejecucion"], errors="coerce"
     ).dt.date
@@ -598,13 +565,11 @@ with tab2:
         df_bitacora["tiempo de tarea"].apply(parse_tiempo_tarea)
     )
 
-    # Mantener registros sin hora (SIN HORA)
     df_bitacora["hora_inicio"] = df_bitacora["hora_inicio"].apply(
         lambda x: x if pd.notna(x) else "SIN HORA"
     )
-    # ===================================================
-   # ===================================================
-    # ✅ TAB 2 — PARTE 2 / 4
+# ===================================================
+    # ✅ TAB 2 — PARTE 3 / 5
     # Supervisores y filtros
     # ===================================================
 
@@ -679,6 +644,7 @@ with tab2:
     # -------------------------------------------
     fechas_validas = sorted(df_bitacora["fecha"].dropna().unique())
     fecha_sel = st.selectbox("Selecciona fecha:", fechas_validas)
+
     df2 = df_bitacora[df_bitacora["fecha"] == fecha_sel]
 
     # -------------------------------------------
@@ -707,10 +673,7 @@ with tab2:
         st.stop()
 
     # -------------------------------------------
-   # -------------------------------------------
-# -------------------------------------------
-# -------------------------------------------
-# FILTRO DE INSPECTORES (DEPENDIENTE)
+    # FILTRO DE INSPECTORES (DEPENDIENTE)
     # -------------------------------------------
     inspectores_disponibles = sorted(df2["inspector"].unique())
 
@@ -726,8 +689,7 @@ with tab2:
         st.warning("⚠️ Selecciona al menos un inspector.")
         st.stop()
 # ===================================================
-# ===================================================
-    # ✅ TAB 2 — PARTE 3 / 4
+    # ✅ TAB 2 — PARTE 4 / 5
     # Agrupación diaria, puntualidad, producción y KPIs
     # ===================================================
 
@@ -807,7 +769,6 @@ with tab2:
     ]
 
     # ---------------------------------------------------
-# ---------------------------------------------------
     # ✅ KPI: PROMEDIO HORA DE INICIO
     # (PRIMERA TAREA DEL DÍA POR INSPECTOR)
     # ---------------------------------------------------
@@ -855,6 +816,7 @@ with tab2:
         hora_to_string(decimal_to_hora(prom_fin))
         if pd.notna(prom_fin) else "—"
     )
+
     # ---------------------------------------------------
     # ✅ KPI: PROMEDIO TIEMPO POR TAREA (SOLO EFECTIVAS)
     # ---------------------------------------------------
@@ -883,18 +845,18 @@ with tab2:
     # ---------------------------------------------------
     resumen = (
         df2.groupby("inspector")
-           .apply(lambda x: pd.Series({
-               "total_ordenes": x.shape[0],
-               "ordenes_efectivas": x["efectiva"].sum(),
-               "porcentaje_efectividad":
-                   round((x["efectiva"].sum() / x.shape[0]) * 100, 1)
-                   if x.shape[0] > 0 else 0,
-               "promedio_tiempo_tarea":
-                   td_to_str(
-                       x.loc[x["efectiva"], "tiempo_tarea_td"].mean()
-                   )
-           }))
-           .reset_index()
+        .apply(lambda x: pd.Series({
+            "total_ordenes": x.shape[0],
+            "ordenes_efectivas": x["efectiva"].sum(),
+            "porcentaje_efectividad":
+                round((x["efectiva"].sum() / x.shape[0]) * 100, 1)
+                if x.shape[0] > 0 else 0,
+            "promedio_tiempo_tarea":
+                td_to_str(
+                    x.loc[x["efectiva"], "tiempo_tarea_td"].mean()
+                )
+        }))
+        .reset_index()
     )
 
     # ---------------------------------------------------
@@ -917,21 +879,28 @@ with tab2:
         "promedio_tiempo_tarea": "—"
     })
 
+# ===================================================
+    # ✅ TAB 2 — PARTE 5 / 5
+    # Estilos, tabla final y gráficas
+    # ===================================================
 
     # ---------------------------------------------------
     # 🎨 ESTILO DE PUNTUALIDAD PARA LA TABLA
     # ---------------------------------------------------
-def estilo_puntualidad(row):
-    if row["estado"] == "Muy tarde":
-        return ["background-color: #f8d7da; color: #721c24"] * len(row)
-    elif row["estado"] == "Tarde":
-        return ["background-color: #fff3cd; color: #856404"] * len(row)
-    else:
-        return [""] * len(row)
+    def estilo_puntualidad(row):
+        if row["estado"] == "Muy tarde":
+            return ["background-color: #f8d7da; color: #721c24"] * len(row)
+        elif row["estado"] == "Tarde":
+            return ["background-color: #fff3cd; color: #856404"] * len(row)
+        else:
+            return [""] * len(row)
 
+    # ---------------------------------------------------
+    # 📋 Tabla de inspecciones del día (con colores)
+    # ---------------------------------------------------
+    st.markdown("### 📋 Tabla de inspecciones del día")
 
-    
-st.dataframe(
+    st.dataframe(
         df_tabla[
             [
                 "inspector",
@@ -952,14 +921,10 @@ st.dataframe(
         use_container_width=True
     )
 
-  # ===================================================
-    # ✅ TAB 2 — PARTE 4 / 4
-    # Gráficas finales
     # ===================================================
-
-  # ---------------------------------------------------
-# ---------------------------------------------------
-st.markdown("## 📊 Producción por inspector (órdenes efectivas)")
+    # 📊 Producción por inspector (órdenes efectivas)
+    # ===================================================
+    st.markdown("## 📊 Producción por inspector (órdenes efectivas)")
 
     df_prod = (
         df2[df2["efectiva"] == True]
@@ -996,8 +961,6 @@ st.markdown("## 📊 Producción por inspector (órdenes efectivas)")
         )
 
         st.plotly_chart(fig_prod, use_container_width=True)
-
-
 
 # ---------------------------------------------------
 # ===================================================
