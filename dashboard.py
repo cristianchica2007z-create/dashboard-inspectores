@@ -1003,19 +1003,12 @@ else:
 
 # ---------------------------------------------------
 # ---------------------------------------------------
+# ---------------------------------------------------
 # 📊 ÓRDENES ASIGNADAS POR INSPECTOR (POR PRIORIDAD)
 # ---------------------------------------------------
 st.markdown("## 📌 Órdenes ASIGNADAS por inspector (según prioridad)")
 
-# Normalizar estado
-df2["estado_norm"] = (
-    df2["estado"]
-    .astype(str)
-    .str.upper()
-    .str.strip()
-)
-
-# Filtrar solo órdenes ASIGNADAS
+# Filtrar solo ASIGNADAS
 df_asignadas = df2[
     df2["estado_norm"].str.contains("ASIGNAD", na=False)
 ].copy()
@@ -1023,23 +1016,15 @@ df_asignadas = df2[
 if df_asignadas.empty:
     st.info("⚠️ No hay órdenes ASIGNADAS para esta fecha.")
 else:
-    # Normalizar prioridad
-    df_asignadas["prioridad"] = (
-        df_asignadas["prioridad"]
-        .astype(str)
-        .str.upper()
-        .str.strip()
-    )
-
     # Agrupar por inspector y prioridad
     df_prio = (
         df_asignadas
-        .groupby(["inspector", "prioridad"])
+        .groupby(["inspector", "prioridad_norm"])
         .size()
         .reset_index(name="cantidad")
     )
 
-    # Ordenar inspectores por total asignadas
+    # Ordenar inspectores por carga total
     orden_inspectores = (
         df_prio.groupby("inspector")["cantidad"]
         .sum()
@@ -1048,7 +1033,7 @@ else:
         .tolist()
     )
 
-    # Colores por prioridad
+    # Colores correctos por prioridad
     color_prioridad = {
         "ALTA": "#dc3545",        # rojo
         "MEDIA": "#ffc107",       # amarillo
@@ -1061,9 +1046,12 @@ else:
         df_prio,
         y="inspector",
         x="cantidad",
-        color="prioridad",
+        color="prioridad_norm",
         orientation="h",
-        category_orders={"inspector": orden_inspectores},
+        category_orders={
+            "inspector": orden_inspectores,
+            "prioridad_norm": ["CRITICA", "ALTA", "MEDIA", "BAJA", "PRIORIDAD"]
+        },
         color_discrete_map=color_prioridad,
         text="cantidad",
         title="Órdenes ASIGNADAS por inspector (distribución por prioridad)"
@@ -1071,7 +1059,7 @@ else:
 
     fig_asignadas.update_traces(
         textposition="inside",
-        textfont_size=14
+        textfont_size=16
     )
 
     fig_asignadas.update_layout(
@@ -1083,57 +1071,7 @@ else:
     )
 
     st.plotly_chart(fig_asignadas, use_container_width=True)
-    # ---------------------------------------------------
-    # TOP 5 EFECTIVIDAD (USA 'resumen' DE PARTE 3)
-    # ---------------------------------------------------
-    st.markdown("## 🏆 TOP 5 Inspectores por efectividad")
 
-    df_rank = (
-        resumen.sort_values("porcentaje_efectividad", ascending=False)
-               .head(5)
-    )
-
-    fig_rank = px.bar(
-        df_rank,
-        x="porcentaje_efectividad",
-        y="inspector",
-        orientation="h",
-        text="porcentaje_efectividad",
-        color="porcentaje_efectividad"
-    )
-
-    fig_rank.update_traces(texttemplate="%{x}%")
-    st.plotly_chart(fig_rank, use_container_width=True)
-
-    # ---------------------------------------------------
-    # PRODUCTIVIDAD POR HORA (EFECTIVAS)
-    # ---------------------------------------------------
-    st.markdown("## ⏱️ Productividad por hora (tareas efectivas)")
-
-    df_horas = df2[df2["efectiva"] == True]
-
-    if df_horas.empty:
-        st.info("⚠️ No hay tareas efectivas para esta fecha.")
-    else:
-        df_horas = df_horas.copy()
-        df_horas["hora_str"] = df_horas["hora_inicio"].astype(str)
-
-        horas_prod = (
-            df_horas.groupby("hora_str")
-                    .size()
-                    .reset_index(name="cantidad")
-        )
-
-        fig_horas = px.bar(
-            horas_prod,
-            x="hora_str",
-            y="cantidad",
-            text="cantidad",
-            color="cantidad"
-        )
-
-        fig_horas.update_traces(textposition="outside")
-        st.plotly_chart(fig_horas, use_container_width=True)
 # ---------------------------------------------------
 # ===================================================
 # ===================================================
