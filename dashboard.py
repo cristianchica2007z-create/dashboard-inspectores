@@ -1003,18 +1003,34 @@ else:
 
 # ---------------------------------------------------
 # ---------------------------------------------------
+# NORMALIZAR ESTADO Y PRIORIDAD (OBLIGATORIO – SOLO UNA VEZ)
+# ---------------------------------------------------
+df2["estado_norm"] = (
+    df2["estado"]
+    .astype(str)
+    .str.strip()
+    .str.upper()
+)
+
+df2["prioridad_norm"] = (
+    df2["prioridad"]
+    .astype(str)
+    .str.strip()
+    .str.upper()
+)
+
 # ---------------------------------------------------
 # 📊 ÓRDENES ASIGNADAS POR INSPECTOR (POR PRIORIDAD)
 # ---------------------------------------------------
 st.markdown("## 📌 Órdenes ASIGNADAS por inspector (según prioridad)")
 
-# Filtrar solo ASIGNADAS
+# Filtrar órdenes ASIGNADAS (robusto)
 df_asignadas = df2[
     df2["estado_norm"].str.contains("ASIGNAD", na=False)
 ].copy()
 
 if df_asignadas.empty:
-    st.info("⚠️ No hay órdenes ASIGNADAS para esta fecha.")
+    st.warning("⚠️ No hay órdenes ASIGNADAS para esta fecha.")
 else:
     # Agrupar por inspector y prioridad
     df_prio = (
@@ -1024,7 +1040,7 @@ else:
         .reset_index(name="cantidad")
     )
 
-    # Ordenar inspectores por carga total
+    # Ordenar inspectores por total de órdenes asignadas
     orden_inspectores = (
         df_prio.groupby("inspector")["cantidad"]
         .sum()
@@ -1033,15 +1049,16 @@ else:
         .tolist()
     )
 
-    # Colores correctos por prioridad
+    # Mapa de colores EXACTO según prioridad
     color_prioridad = {
-        "ALTA": "#dc3545",        # rojo
-        "MEDIA": "#ffc107",       # amarillo
-        "BAJA": "#7cd992",        # verde claro
-        "CRITICA": "#fd7e14",     # naranja
-        "PRIORIDAD": "#6f4e37"    # café
+        "ALTA": "#dc3545",        # 🔴 rojo
+        "MEDIA": "#ffc107",       # 🟡 amarillo
+        "BAJA": "#7cd992",        # 🟢 verde claro
+        "CRITICA": "#fd7e14",     # 🟠 naranja
+        "PRIORIDAD": "#6f4e37"    # 🟤 café
     }
 
+    # Crear gráfica acumulada
     fig_asignadas = px.bar(
         df_prio,
         y="inspector",
@@ -1057,9 +1074,10 @@ else:
         title="Órdenes ASIGNADAS por inspector (distribución por prioridad)"
     )
 
+    # Hacer números grandes y legibles
     fig_asignadas.update_traces(
         textposition="inside",
-        textfont_size=16
+        textfont_size=18
     )
 
     fig_asignadas.update_layout(
@@ -1067,7 +1085,7 @@ else:
         xaxis_title="Cantidad de órdenes ASIGNADAS",
         yaxis_title="Inspector",
         legend_title="Prioridad",
-        height=600
+        height=650
     )
 
     st.plotly_chart(fig_asignadas, use_container_width=True)
