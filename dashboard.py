@@ -914,26 +914,43 @@ with tab2:
         "promedio_tiempo_tarea": "—"
     })
 
-    st.markdown("### 📋 Tabla de inspecciones del día")
 
-    st.dataframe(
-        df_tabla[
-            [
-                "inspector",
-                "supervisor",
-                "fecha",
-                "hora_inicio",
-                "hora_final",
-                "localidad",
-                "estado",
-                "total_ordenes",
-                "ordenes_efectivas",
-                "porcentaje_efectividad",
-                "promedio_tiempo_tarea"
-            ]
-        ],
-        use_container_width=True
-    )
+    # ---------------------------------------------------
+# 🎨 ESTILO DE PUNTUALIDAD PARA LA TABLA
+# ---------------------------------------------------
+def estilo_puntualidad(row):
+    if row["estado"] == "Muy tarde":
+        return ["background-color: #f8d7da; color: #721c24"] * len(row)
+    elif row["estado"] == "Tarde":
+        return ["background-color: #fff3cd; color: #856404"] * len(row)
+    else:
+        return [""] * len(row)
+
+
+    
+# ---------------------------------------------------
+# 📋 Tabla de inspecciones del día (con colores)
+# ---------------------------------------------------
+st.dataframe(
+    df_tabla[
+        [
+            "inspector",
+            "supervisor",
+            "fecha",
+            "hora_inicio",
+            "hora_final",
+            "localidad",
+            "estado",
+            "total_ordenes",
+            "ordenes_efectivas",
+            "porcentaje_efectividad",
+            "promedio_tiempo_tarea"
+        ]
+    ]
+    .style
+    .apply(estilo_puntualidad, axis=1),
+    use_container_width=True
+)
 
 
   # ===================================================
