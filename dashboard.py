@@ -942,6 +942,7 @@ with tab2:
     # ===================================================
 
   # ---------------------------------------------------
+# ---------------------------------------------------
 # ✅ PRODUCCIÓN POR INSPECTOR (SOLO ORDENES EFECTIVAS)
 # ---------------------------------------------------
 st.markdown("## 📊 Producción por inspector (órdenes efectivas)")
@@ -950,8 +951,8 @@ df_prod = (
     df2[df2["efectiva"] == True]
     .groupby("inspector")
     .size()
-    .reset_index(name="Ordenes efectivas")
-    .sort_values("Ordenes efectivas", ascending=False)
+    .reset_index(name="Órdenes efectivas")
+    .sort_values("Órdenes efectivas", ascending=False)
 )
 
 if df_prod.empty:
@@ -960,20 +961,29 @@ else:
     fig_prod = px.bar(
         df_prod,
         y="inspector",
-        x="Ordenes efectivas",
+        x="Órdenes efectivas",
         orientation="h",
-        text="Ordenes efectivas",
+        text="Órdenes efectivas",
         title="Órdenes efectivas por inspector",
         color_discrete_sequence=["green"]
     )
 
-    fig_prod.update_layout(
-        xaxis_title="Órdenes efectivas",
-        yaxis_title="Inspector"
+    # 🔥 HACER LOS NÚMEROS MUCHO MÁS GRANDES
+    fig_prod.update_traces(
+        textposition="outside",
+        textfont_size=28,        # ⬅️ AQUÍ el tamaño (ajústalo si quieres)
+        textfont_color="black",
+        cliponaxis=False
     )
 
-    fig_prod.update_traces(textposition="outside")
+    fig_prod.update_layout(
+        xaxis_title="Órdenes efectivas",
+        yaxis_title="Inspector",
+        font=dict(size=14)       # tamaño general del gráfico
+    )
+
     st.plotly_chart(fig_prod, use_container_width=True)
+
 
 
     # ---------------------------------------------------
