@@ -1041,7 +1041,7 @@ else:
 
     # Colores personalizados
     color_prioridad = {
-        "ALTA": "#dc3545",        # rojo
+        "Alta": "#dc3545",        # rojo
         "MEDIA": "#ffc107",       # amarillo
         "BAJA": "#7cd992",        # verde claro
         "CRITICA": "#fd7e14",     # naranja
