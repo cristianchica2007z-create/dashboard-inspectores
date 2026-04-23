@@ -1305,30 +1305,30 @@ with tab4:
 with tab5:
     st.markdown("## 📌 Órdenes ASIGNADAS")
 
-    # ---------------------------------------------------
-    # CARGAR BITÁCORA COMPLETA
-    # ---------------------------------------------------
+    # ===================================================
+    # VALIDAR Y CARGAR BITÁCORA LOCAL
+    # ===================================================
     archivo_bitacora = "BITACORA.xlsx"
 
     if not os.path.exists(archivo_bitacora):
-        st.warning("⚠️ No hay bitácora cargada.")
+        st.warning("⚠️ No hay una bitácora cargada.")
         st.stop()
 
     df = pd.read_excel(archivo_bitacora)
     df.columns = df.columns.str.strip().str.lower()
 
-    # ---------------------------------------------------
+    # ===================================================
     # VALIDAR COLUMNAS NECESARIAS
-    # ---------------------------------------------------
-    columnas_req = ["inspector", "estado", "prioridad", "grupo"]
-    for col in columnas_req:
+    # ===================================================
+    columnas_requeridas = ["inspector", "estado", "prioridad", "grupo"]
+    for col in columnas_requeridas:
         if col not in df.columns:
             st.error(f"❌ Falta la columna requerida: {col}")
             st.stop()
 
-    # ---------------------------------------------------
-    # FILTRAR SOLO ÓRDENES ASIGNADAS
-    # ---------------------------------------------------
+    # ===================================================
+    # FILTRAR SOLO ÓRDENES ASIGNADAS (TEXTO REAL)
+    # ===================================================
     df_asignadas = df[
         df["estado"]
         .astype(str)
@@ -1336,13 +1336,12 @@ with tab5:
     ].copy()
 
     if df_asignadas.empty:
-        st.info("✅ No hay órdenes ASIGNADAS.")
+        st.info("✅ No hay órdenes ASIGNADAS en la bitácora.")
         st.stop()
 
-    # ---------------------------------------------------
-    # ================= FILTROS =================
-    # ---------------------------------------------------
-
+    # ===================================================
+    # FILTROS
+    # ===================================================
     st.markdown("### 🔎 Filtros")
 
     # -------- FILTRO POR GRUPO --------
@@ -1351,7 +1350,7 @@ with tab5:
 
     with st.expander("Seleccionar Grupo"):
         for g in grupos_disponibles:
-            if st.checkbox(g, value=True, key=f"asg_grupo_{g}"):
+            if st.checkbox(g, value=True, key=f"tab5_grupo_{g}"):
                 grupos_sel.append(g)
 
     if grupos_sel:
@@ -1363,7 +1362,7 @@ with tab5:
 
     with st.expander("Seleccionar Prioridad"):
         for p in prioridades_disponibles:
-            if st.checkbox(p, value=True, key=f"asg_prio_{p}"):
+            if st.checkbox(p, value=True, key=f"tab5_prio_{p}"):
                 prioridades_sel.append(p)
 
     if prioridades_sel:
@@ -1373,9 +1372,9 @@ with tab5:
         st.warning("⚠️ No hay datos con los filtros seleccionados.")
         st.stop()
 
-    # ---------------------------------------------------
-    # AGRUPAR POR INSPECTOR Y PRIORIDAD REAL
-    # ---------------------------------------------------
+    # ===================================================
+    # AGRUPAR POR INSPECTOR Y PRIORIDAD (DATOS REALES)
+    # ===================================================
     df_prio = (
         df_asignadas
         .groupby(["inspector", "prioridad"])
@@ -1383,7 +1382,7 @@ with tab5:
         .reset_index(name="cantidad")
     )
 
-    # Ordenar inspectores por carga total
+    # Ordenar inspectores por total asignadas
     orden_inspectores = (
         df_prio.groupby("inspector")["cantidad"]
         .sum()
@@ -1392,20 +1391,20 @@ with tab5:
         .tolist()
     )
 
-    # ---------------------------------------------------
-    # COLORES POR PRIORIDAD (EXACTOS)
-    # ---------------------------------------------------
+    # ===================================================
+    # MAPA DE COLORES POR PRIORIDAD
+    # ===================================================
     color_prioridad = {
-        "Alta": "#dc3545",        # rojo
-        "Media": "#ffc107",       # amarillo
-        "Baja": "#7cd992",        # verde claro
-        "Critica": "#fd7e14",     # naranja
-        "Prioridad": "#6f4e37"    # café
+        "Alta": "#dc3545",        # 🔴 rojo
+        "Media": "#ffc107",       # 🟡 amarillo
+        "Baja": "#7cd992",        # 🟢 verde claro
+        "Critica": "#fd7e14",     # 🟠 naranja
+        "Prioridad": "#6f4e37"    # 🟤 café
     }
 
-    # ---------------------------------------------------
+    # ===================================================
     # GRÁFICA ACUMULADA
-    # ---------------------------------------------------
+    # ===================================================
     fig = px.bar(
         df_prio,
         y="inspector",
