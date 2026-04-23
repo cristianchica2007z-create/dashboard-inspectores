@@ -1006,9 +1006,17 @@ else:
 # ---------------------------------------------------
 st.markdown("## 📌 Órdenes ASIGNADAS por inspector (según prioridad)")
 
-# Filtrar solo órdenes ASIGNADAS
+# Normalizar estado
+df2["estado_norm"] = (
+    df2["estado"]
+    .astype(str)
+    .str.upper()
+    .str.strip()
+)
+
+# Filtrar órdenes ASIGNADAS (robusto)
 df_asignadas = df2[
-    df2["estado"].astype(str).str.upper() == "ASIGNADA"
+    df2["estado_norm"].str.contains("ASIGNAD", na=False)
 ].copy()
 
 if df_asignadas.empty:
