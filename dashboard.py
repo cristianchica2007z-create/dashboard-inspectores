@@ -529,7 +529,7 @@ with tab2:
         m = (s % 3600) // 60
         s2 = s % 60
         return f"{h}h {m}m {s2}s" if h > 0 else f"{m}m {s2}s"
-columnas_necesarias = [
+    columnas_necesarias = [
         "fecha de ejecucion", "hora inicio", "hora final",
         "inspector", "localidad", "cierre", "tiempo de tarea"
     ]
