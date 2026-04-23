@@ -184,8 +184,9 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "📦 Inventario Papelería",
     "🕒 Seguimiento Diario",
     "📈 Subir Archivos",
-    "Seguimiento agendas",
-    "ORDENES ASIGNADAS"
+     "📅 Seguimiento agendas",
+    "📌 Órdenes Asignadas"
+
     
 ])
 
@@ -1342,3 +1343,118 @@ with tab4:
                 use_container_width=True
             )
             st.error(f"🚨 TOTAL ALERTAS: {len(df_alerta)}")
+
+
+
+
+with tab5:
+    st.markdown("## 📌 Órdenes ASIGNADAS")
+
+    # ---------------------------------------------------
+    # VALIDAR QUE EXISTA LA BITÁCORA
+    # ---------------------------------------------------
+    archivo_bitacora = "BITACORA.xlsx"
+
+    if not os.path.exists(archivo_bitacora):
+        st.warning(
+            "⚠️ No hay una bitácora cargada.\n"
+            "Un administrador debe subir el archivo en la pestaña de Administración."
+        )
+        st.stop()
+
+    # ---------------------------------------------------
+    # CARGAR BITÁCORA COMPLETA
+    # ---------------------------------------------------
+    df_bitacora = pd.read_excel(archivo_bitacora)
+    df_bitacora.columns = df_bitacora.columns.str.strip().str.lower()
+
+    # ---------------------------------------------------
+    # VALIDAR COLUMNAS NECESARIAS
+    # ---------------------------------------------------
+    columnas_req = ["inspector", "estado", "prioridad"]
+    for col in columnas_req:
+        if col not in df_bitacora.columns:
+            st.error(f"❌ Falta la columna requerida: {col}")
+            st.stop()
+
+    # ---------------------------------------------------
+    # FILTRAR SOLO ÓRDENES ASIGNADAS (TEXTO REAL)
+    # ---------------------------------------------------
+    df_asignadas = df_bitacora[
+        df_bitacora["estado"]
+        .astype(str)
+        .str.contains("Asignad", case=False, na=False)
+    ].copy()
+
+    if df_asignadas.empty:
+        st.info("✅ No hay órdenes ASIGNADAS en la bitácora.")
+        st.stop()
+
+    # ---------------------------------------------------
+    # USAR PRIORIDAD TAL CUAL VIENE DEL EXCEL
+    # ---------------------------------------------------
+    df_asignadas["prioridad_real"] = (
+        df_asignadas["prioridad"]
+        .astype(str)
+        .str.strip()
+    )
+
+    # ---------------------------------------------------
+    # AGRUPAR POR INSPECTOR Y PRIORIDAD REAL
+    # ---------------------------------------------------
+    df_prio = (
+        df_asignadas
+        .groupby(["inspector", "prioridad_real"])
+        .size()
+        .reset_index(name="cantidad")
+    )
+
+    # Ordenar inspectores por total asignadas
+    orden_inspectores = (
+        df_prio.groupby("inspector")["cantidad"]
+        .sum()
+        .sort_values(ascending=False)
+        .index
+        .tolist()
+    )
+
+    # ---------------------------------------------------
+    # COLORES SEGÚN PRIORIDAD (TAL COMO PEDISTE)
+    # ---------------------------------------------------
+    color_prioridad = {
+        "Alta": "#dc3545",        # 🔴 rojo
+        "Media": "#ffc107",       # 🟡 amarillo
+        "Baja": "#7cd992",        # 🟢 verde claro
+        "Critica": "#fd7e14",     # 🟠 naranja
+        "Prioridad": "#6f4e37"    # 🟤 café
+    }
+
+    # ---------------------------------------------------
+    # GRÁFICA ACUMULADA
+    # ---------------------------------------------------
+    fig = px.bar(
+        df_prio,
+        y="inspector",
+        x="cantidad",
+        color="prioridad_real",
+        orientation="h",
+        category_orders={"inspector": orden_inspectores},
+        color_discrete_map=color_prioridad,
+        text="cantidad",
+        title="Órdenes ASIGNADAS por inspector (prioridades reales del Excel)"
+    )
+
+    fig.update_traces(
+        textposition="inside",
+        textfont_size=16
+    )
+
+    fig.update_layout(
+        barmode="stack",
+        xaxis_title="Cantidad de órdenes ASIGNADAS",
+        yaxis_title="Inspector",
+        legend_title="Prioridad",
+        height=700
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
