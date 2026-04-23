@@ -971,7 +971,7 @@ else:
     # 🔥 HACER LOS NÚMEROS MUCHO MÁS GRANDES
     fig_prod.update_traces(
         textposition="outside",
-        textfont_size=28,        # ⬅️ AQUÍ el tamaño (ajústalo si quieres)
+        textfont_size=35,        # ⬅️ AQUÍ el tamaño (ajústalo si quieres)
         textfont_color="black",
         cliponaxis=False
     )
@@ -979,7 +979,7 @@ else:
     fig_prod.update_layout(
         xaxis_title="Órdenes efectivas",
         yaxis_title="Inspector",
-        font=dict(size=14)       # tamaño general del gráfico
+        font=dict(size=18)       # tamaño general del gráfico
     )
 
     st.plotly_chart(fig_prod, use_container_width=True)
