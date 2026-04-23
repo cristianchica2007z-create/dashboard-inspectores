@@ -1001,7 +1001,84 @@ else:
 
     st.plotly_chart(fig_prod, use_container_width=True)
 
+# ---------------------------------------------------
+# 📊 ÓRDENES ASIGNADAS POR INSPECTOR (POR PRIORIDAD)
+# ---------------------------------------------------
+st.markdown("## 📌 Órdenes ASIGNADAS por inspector (según prioridad)")
 
+# Filtrar solo órdenes ASIGNADAS
+df_asignadas = df2[
+    df2["estado"].astype(str).str.upper() == "ASIGNADA"
+].copy()
+
+if df_asignadas.empty:
+    st.info("⚠️ No hay órdenes ASIGNADAS para esta fecha.")
+else:
+    # Normalizar prioridad
+    df_asignadas["prioridad"] = (
+        df_asignadas["prioridad"]
+        .astype(str)
+        .str.upper()
+        .str.strip()
+    )
+
+    # Agrupar por inspector y prioridad
+    df_prio = (
+        df_asignadas
+        .groupby(["inspector", "prioridad"])
+        .size()
+        .reset_index(name="cantidad")
+    )
+
+    # Ordenar inspectores por total de órdenes asignadas
+    orden_inspectores = (
+        df_prio.groupby("inspector")["cantidad"]
+        .sum()
+        .sort_values(ascending=False)
+        .index
+        .tolist()
+    )
+
+    # Colores personalizados
+    color_prioridad = {
+        "ALTA": "#dc3545",        # rojo
+        "MEDIA": "#ffc107",       # amarillo
+        "BAJA": "#7cd992",        # verde claro
+        "CRITICA": "#fd7e14",     # naranja
+        "PRIORIDAD": "#6f4e37"    # café
+    }
+
+    # Crear gráfica acumulada
+    fig_asignadas = px.bar(
+        df_prio,
+        y="inspector",
+        x="cantidad",
+        color="prioridad",
+        orientation="h",
+        category_orders={
+            "inspector": orden_inspectores
+        },
+        color_discrete_map=color_prioridad,
+        text="cantidad",
+        title="Órdenes ASIGNADAS por inspector (distribución por prioridad)"
+    )
+
+    # Hacer números grandes y visibles
+    fig_asignadas.update_traces(
+        textposition="inside",
+        textfont_size=14
+    )
+
+    fig_asignadas.update_layout(
+        barmode="stack",
+        xaxis_title="Cantidad de órdenes ASIGNADAS",
+        yaxis_title="Inspector",
+        legend_title="Prioridad",
+        height=600
+    )
+
+    st.plotly_chart(fig_asignadas, use_container_width=True)
+    
 
     # ---------------------------------------------------
     # TOP 5 EFECTIVIDAD (USA 'resumen' DE PARTE 3)
