@@ -1315,6 +1315,29 @@ with tab5:
     df.columns = df.columns.str.strip().str.lower()
 
     # ===================================================
+    # ✅ EXCLUIR GRUPOS NO OPERATIVOS (MISMA REGLA QUE TAB 2)
+    # ===================================================
+    if "grupo" in df.columns:
+        df["grupo"] = (
+            df["grupo"]
+            .astype(str)
+            .str.upper()
+            .str.strip()
+        )
+
+        grupos_no_operativos = [
+            "SST-NAL",
+            "SUPERVISIONES",
+            "SUSP-ANT"
+        ]
+
+        df = df[~df["grupo"].isin(grupos_no_operativos)]
+
+    if df.empty:
+        st.warning("⚠️ No hay datos operativos después del filtro de grupos.")
+        st.stop()
+
+    # ===================================================
     # VALIDAR COLUMNAS NECESARIAS
     # ===================================================
     columnas_requeridas = ["inspector", "estado", "prioridad", "grupo"]
@@ -1324,7 +1347,7 @@ with tab5:
             st.stop()
 
     # ===================================================
-    # FILTRAR SOLO ÓRDENES ASIGNADAS (TEXTO REAL)
+    # FILTRAR SOLO ÓRDENES ASIGNADAS
     # ===================================================
     df_asignadas = df[
         df["estado"]
@@ -1337,7 +1360,7 @@ with tab5:
         st.stop()
 
     # ===================================================
-    # FILTROS
+    # ================= FILTROS =================
     # ===================================================
     st.markdown("### 🔎 Filtros")
 
@@ -1345,7 +1368,7 @@ with tab5:
     grupos_disponibles = sorted(df_asignadas["grupo"].dropna().unique())
     grupos_sel = []
 
-    with st.expander("Seleccionar Grupo"):
+    with st.expander("Seleccionar Grupo", expanded=True):
         for g in grupos_disponibles:
             if st.checkbox(g, value=True, key=f"tab5_grupo_{g}"):
                 grupos_sel.append(g)
@@ -1357,7 +1380,7 @@ with tab5:
     prioridades_disponibles = sorted(df_asignadas["prioridad"].dropna().unique())
     prioridades_sel = []
 
-    with st.expander("Seleccionar Prioridad"):
+    with st.expander("Seleccionar Prioridad", expanded=True):
         for p in prioridades_disponibles:
             if st.checkbox(p, value=True, key=f"tab5_prio_{p}"):
                 prioridades_sel.append(p)
@@ -1379,7 +1402,7 @@ with tab5:
         .reset_index(name="cantidad")
     )
 
-    # Ordenar inspectores por total asignadas
+    # Ordenar inspectores por carga total
     orden_inspectores = (
         df_prio.groupby("inspector")["cantidad"]
         .sum()
@@ -1428,5 +1451,3 @@ with tab5:
     )
 
     st.plotly_chart(fig, use_container_width=True)
-
-
