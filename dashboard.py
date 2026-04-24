@@ -975,20 +975,20 @@ with tab3:
     # -------------------------------------------------
     # VALIDACIÓN DE ADMINISTRADOR
     # -------------------------------------------------
-    clave_ingresada = st.text_input(
-        "Contraseña de administrador",
-        type="password",
-        placeholder="Ingresa la clave para administrar la bitácora"
-    )
+ #    clave_ingresada = st.text_input(
+  #       "Contraseña de administrador",
+#         type="password",
+#         placeholder="Ingresa la clave para administrar la bitácora"
+#     )
+# 
+#     clave_real = st.secrets["admin"]["password"]
 
-    clave_real = st.secrets["admin"]["password"]
-
-    if clave_ingresada != clave_real:
-        st.warning(
-            "⛔ Acceso restringido.\n\n"
-            "Solo personal autorizado puede cargar o actualizar la bitácora."
-        )
-        st.stop()
+ #    if clave_ingresada != clave_real:
+#         st.warning(
+#             "⛔ Acceso restringido.\n\n"
+#             "Solo personal autorizado puede cargar o actualizar la bitácora."
+#         )
+ #        st.stop()
 
     # -------------------------------------------------
     # CONTENIDO SOLO PARA ADMIN
