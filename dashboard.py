@@ -1113,7 +1113,7 @@ with tab4:
     st.markdown("## 🗂️ Control agendas")
 
     # ======================================================
-    # CARGAR BITÁCORA DESDE GITHUB
+    # CARGAR BITÁCORA DESDE GITHUB (FORMA CORRECTA)
     # ======================================================
     archivo_bitacora = "BITACORA.xlsx"
     token = st.secrets["github"]["token"]
@@ -1125,15 +1125,29 @@ with tab4:
         "Cache-Control": "no-cache"
     }
 
-    url_bit = f"https://api.github.com/repos/{repo}/contents/{archivo_bitacora}"
-    r = requests.get(url_bit, headers=headers)
+    url_metadata = f"https://api.github.com/repos/{repo}/contents/{archivo_bitacora}"
+    r_meta = requests.get(url_metadata, headers=headers)
 
-    if r.status_code != 200:
-        st.error("❌ No se pudo cargar la bitácora desde GitHub.")
+    if r_meta.status_code != 200:
+        st.error("❌ No se pudo obtener la información del archivo desde GitHub.")
         st.stop()
 
-    buffer = io.BytesIO(base64.b64decode(r.json()["content"]))
-    df = pd.read_excel(buffer, engine="openpyxl")
+    download_url = r_meta.json().get("download_url")
+
+    if not download_url:
+        st.error("❌ No se pudo obtener la URL de descarga del archivo.")
+        st.stop()
+
+    r_file = requests.get(download_url, headers=headers)
+
+    if r_file.status_code != 200:
+        st.error("❌ No se pudo descargar el archivo desde GitHub.")
+        st.stop()
+
+    buffer = io.BytesIO(r_file.content)
+    df = pd.read_excel(buffer)
+    df.columns = df.columns.str.strip().str.lower()
+
 
     # ======================================================
     # NORMALIZAR Y VALIDAR COLUMNAS
