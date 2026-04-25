@@ -992,21 +992,28 @@ with tab2:
     # ---------------------------------------------------
     st.markdown("### 📋 Tabla de inspecciones del día")
 
-    tabla_mostrar = df_tabla[
-        [
-            "inspector",
-            "supervisor",
-            "fecha",
-            "hora_inicio",
-            "hora_final",
-            "localidad",
-            "estado",
-            "total_ordenes",
-            "ordenes_efectivas",
-            "porcentaje_efectividad",
-            "promedio_tiempo_tarea"
-        ]
+    # ---------------------------------------------------
+    # 📋 Tabla de inspecciones del día (SEGURA)
+    # ---------------------------------------------------
+    columnas_tabla = [
+        "inspector",
+        "supervisor",
+        "fecha",
+        "hora_inicio",
+        "hora_final",
+        "localidad",
+        "estado",
+        "total_ordenes",
+        "ordenes_efectivas",
+        "porcentaje_efectividad",
+        "promedio_tiempo_tarea"
     ]
+
+    columnas_disponibles = [
+        c for c in columnas_tabla if c in df_tabla.columns
+    ]
+
+    tabla_mostrar = df_tabla[columnas_disponibles]
 
     styled_tabla = (
         tabla_mostrar
