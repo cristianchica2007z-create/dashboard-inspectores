@@ -890,10 +890,11 @@ with tab2:
 def estilo_puntualidad(row):
     estilos = [""] * len(row)
 
-    try:
-        idx_hora = row.index.get_loc("hora_inicio")
-    except KeyError:
-        return estilos  # por seguridad, si la columna no existe
+    # Protección total: si no existe la columna, no aplicar estilo
+    if "hora_inicio" not in row.index or "estado" not in row.index:
+        return estilos
+
+    idx_hora = list(row.index).index("hora_inicio")
 
     if row["estado"] == "Muy tarde":
         estilos[idx_hora] = "background-color: #f8d7da; color: #721c24"
