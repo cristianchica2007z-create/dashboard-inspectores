@@ -887,13 +887,22 @@ with tab2:
     # ---------------------------------------------------
     # 🎨 ESTILO DE PUNTUALIDAD PARA LA TABLA
     # ---------------------------------------------------
-    def estilo_puntualidad(row):
-        if row["estado"] == "Muy tarde":
-            return ["background-color: #f8d7da; color: #721c24"] * len(row)
-        elif row["estado"] == "Tarde":
-            return ["background-color: #fff3cd; color: #856404"] * len(row)
-        else:
-            return [""] * len(row)
+def estilo_puntualidad(row):
+    estilos = [""] * len(row)
+
+    try:
+        idx_hora = row.index.get_loc("hora_inicio")
+    except KeyError:
+        return estilos  # por seguridad, si la columna no existe
+
+    if row["estado"] == "Muy tarde":
+        estilos[idx_hora] = "background-color: #f8d7da; color: #721c24"
+    elif row["estado"] == "Tarde":
+        estilos[idx_hora] = "background-color: #fff3cd; color: #856404"
+    elif row["estado"] == "Puntual":
+        estilos[idx_hora] = "background-color: #d4edda; color: #155724"
+
+    return estilos
 
     # ---------------------------------------------------
     # 📋 Tabla de inspecciones del día (con colores)
