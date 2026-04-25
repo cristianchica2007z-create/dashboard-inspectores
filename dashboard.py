@@ -769,30 +769,45 @@ with tab2:
         st.stop()
 # ===================================================
     # ✅ TAB 2 — PARTE 4 / 5
-    # Agrupación diaria, puntualidad, producción y KPIs
-    # ===================================================
+  # ---------------------------------------------------
+    # LISTA BASE: TODOS LOS INSPECTORES DEL DÍA
+    # ---------------------------------------------------
+    base_inspectores = (
+        df_bitacora[df_bitacora["fecha"] == fecha_sel][["inspector"]]
+        .drop_duplicates()
+        .reset_index(drop=True)
+    )
 
     # ---------------------------------------------------
-    # AGRUPACIÓN DIARIA (solo para puntualidad y tabla)
+    # PRIMERA Y ÚLTIMA ACTIVIDAD REAL (SI EXISTE)
     # ---------------------------------------------------
     primeras = (
         df2.sort_values("hora_inicio")
-           .groupby(["inspector", "fecha"], as_index=False)
-           .first()[["inspector", "supervisor", "fecha", "hora_inicio", "localidad"]]
+        .groupby("inspector", as_index=False)
+        .first()[["inspector", "hora_inicio", "localidad"]]
     )
 
     ultimas = (
         df2.sort_values("hora_final")
-           .groupby(["inspector", "fecha"], as_index=False)
-           .last()[["inspector", "fecha", "hora_final"]]
+        .groupby("inspector", as_index=False)
+        .last()[["inspector", "hora_final"]]
     )
 
-    df_agrupado = primeras.merge(
-        ultimas,
-        on=["inspector", "fecha"],
-        how="left"
+    # ---------------------------------------------------
+    # UNIR TODO
+    # ---------------------------------------------------
+    df_agrupado = (
+        base_inspectores
+        .merge(primeras, on="inspector", how="left")
+        .merge(ultimas, on="inspector", how="left")
     )
 
+    # ---------------------------------------------------
+    # NORMALIZAR CASOS SIN INICIO
+    # ---------------------------------------------------
+    df_agrupado["hora_inicio"] = df_agrupado["hora_inicio"].apply(
+        lambda x: "SIN HORA" if x in [None, pd.NaT, "", "—"] else x
+    )
     # ---------------------------------------------------
  # ---------------------------------------------------
     # PUNTUALIDAD (usa SOLO la primera hora del día)
