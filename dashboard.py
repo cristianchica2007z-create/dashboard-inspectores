@@ -1008,20 +1008,26 @@ with tab2:
 
 
 # ===================================================
+   # ===================================================
     # 🏠 PRUEBA VISUAL: INICIO DE ACTIVIDAD POR INSPECTOR
+    # (Foto de fachada + Foto de VP)
     # ===================================================
     st.markdown("## 🏠 Inicio de actividad por inspector (prueba visual)")
 
-    # Validar que exista la columna de foto
-    if "foto de fachada" not in df2.columns:
-        st.warning("⚠️ La columna 'foto de fachada' no existe en la bitácora.")
+    columnas_foto = ["foto de fachada", "foto de vp"]
+
+    # Validar que existan las columnas de foto
+    faltantes = [c for c in columnas_foto if c not in df2.columns]
+
+    if faltantes:
+        st.warning(f"⚠️ No se encontraron las columnas: {', '.join(faltantes)}")
     else:
         # Obtener la PRIMERA tarea del día por inspector
         primeras_fotos = (
             df2.sort_values("hora_inicio")
             .groupby("inspector", as_index=False)
             .first()[
-                ["inspector", "hora_inicio", "foto de fachada"]
+                ["inspector", "hora_inicio", "foto de fachada", "foto de vp"]
             ]
         )
 
@@ -1031,23 +1037,35 @@ with tab2:
             for _, row in primeras_fotos.iterrows():
                 st.markdown(f"### 👷 {row['inspector']}")
 
-                col1, col2 = st.columns([1, 2])
+                st.markdown(f"**Hora inicio:** {row['hora_inicio']}")
 
+                col1, col2 = st.columns(2)
+
+                # ---- Foto de fachada ----
                 with col1:
-                    st.markdown("**Hora inicio:**")
-                    st.write(row["hora_inicio"])
+                    st.markdown("**🏠 Foto de fachada**")
+                    link_fachada = row["foto de fachada"]
 
-                with col2:
-                    link_foto = row["foto de fachada"]
-
-                    if pd.notna(link_foto) and str(link_foto).startswith("http"):
+                    if pd.notna(link_fachada) and str(link_fachada).startswith("http"):
                         st.image(
-                            link_foto,
-                            caption="Foto de fachada – primera actividad del día",
+                            link_fachada,
                             use_container_width=True
                         )
                     else:
-                        st.info("📷 No hay foto disponible para esta actividad.")
+                        st.info("📷 Sin foto de fachada")
+
+                # ---- Foto de VP ----
+                with col2:
+                    st.markdown("**📷 Foto de VP**")
+                    link_vp = row["foto de vp"]
+
+                    if pd.notna(link_vp) and str(link_vp).startswith("http"):
+                        st.image(
+                            link_vp,
+                            use_container_width=True
+                        )
+                    else:
+                        st.info("📷 Sin foto de VP")
 
                 st.markdown("---")
 
