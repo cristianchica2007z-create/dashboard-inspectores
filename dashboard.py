@@ -749,11 +749,14 @@ with tab2:
     # LISTA BASE: TODOS LOS INSPECTORES DEL DÍA
     # ---------------------------------------------------
     base_inspectores = (
-        df_bitacora[df_bitacora["fecha"] == fecha_sel][["inspector"]]
-        .drop_duplicates()
+  # ---------------------------------------------------
+    # LISTA BASE DE INSPECTORES (RESPETA FILTROS)
+    # ---------------------------------------------------
+    base_inspectores = (
+        df2[["inspector", "supervisor"]]
+        .drop_duplicates(subset=["inspector"])
         .reset_index(drop=True)
     )
-
     # ---------------------------------------------------
     # PRIMERA Y ÚLTIMA ACTIVIDAD REAL (SI EXISTE)
     # ---------------------------------------------------
