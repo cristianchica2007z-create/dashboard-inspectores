@@ -440,12 +440,24 @@ with tab2:
     wb = load_workbook(archivo_bitacora, data_only=True)
     ws = wb.active
 
-    # Encabezados reales del Excel
-    headers = [cell.value for cell in ws[1]]
+ # Encabezados normalizados (igual que en pandas)
+    headers_raw = [cell.value for cell in ws[1]]
+    headers = [
+        str(h).strip().lower() if h is not None else ""
+        for h in headers_raw
+    ]
 
-    col_inspector = headers.index("inspector") + 1
-    col_fachada = headers.index("foto de fachada") + 1
-    col_vp = headers.index("foto de vp") + 1
+    # Buscar posiciones de columnas de forma segura
+    try:
+        col_inspector = headers.index("inspector") + 1
+        col_fachada = headers.index("foto de fachada") + 1
+        col_vp = headers.index("foto de vp") + 1
+    except ValueError as e:
+        st.error(
+            "❌ No se encontraron columnas requeridas en el Excel.\n\n"
+            f"Columnas encontradas:\n{headers_raw}"
+        )
+        st.stop()
 
     links_fotos = []
 
