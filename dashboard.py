@@ -1004,6 +1004,50 @@ with tab2:
         st.plotly_chart(fig_prod, use_container_width=True)
 
 
+    # ===================================================
+    # 🏠 INICIO DE ACTIVIDAD POR INSPECTOR (CON FOTOS)
+    # ===================================================
+    st.markdown("## 🏠 Inicio de actividad por inspector (con evidencia)")
+
+    primeras = (
+        df2.sort_values("hora_inicio")
+        .groupby("inspector", as_index=False)
+        .first()[["inspector", "hora_inicio"]]
+    )
+
+    primeras = primeras.merge(
+        df_links,
+        on="inspector",
+        how="left"
+    )
+
+    if primeras.empty:
+        st.info("No hay información para mostrar.")
+    else:
+        for _, row in primeras.iterrows():
+            st.markdown(f"### 👷 {row['inspector']}")
+            st.markdown(f"**Hora inicio:** {row['hora_inicio']}")
+
+            c1, c2 = st.columns(2)
+
+            with c1:
+                st.markdown("**🏠 Foto de fachada**")
+                if pd.notna(row["link_fachada"]):
+                    st.image(row["link_fachada"], use_container_width=True)
+                else:
+                    st.info("Sin foto de fachada")
+
+            with c2:
+                st.markdown("**📷 Foto de VP**")
+                if pd.notna(row["link_vp"]):
+                    st.image(row["link_vp"], use_container_width=True)
+                else:
+                    st.info("Sin foto de VP")
+
+            st.markdown("---")
+
+    
+
 
 # ---------------------------------------------------
 
