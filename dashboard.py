@@ -728,6 +728,15 @@ with tab2:
 
     df_agrupado["minutos_tarde"] = df_agrupado["hora_inicio"].apply(mins_tarde)
 
+    # ---------------------------------------------------
+# NORMALIZAR CASOS SIN INICIO
+# Todo lo inválido se marca como SIN HORA
+# ---------------------------------------------------
+df_agrupado["hora_inicio"] = df_agrupado["hora_inicio"].apply(
+    lambda x: "SIN HORA" if x in [None, pd.NaT, "", "—"] else x
+)
+
+
     def estado(m):
         if m is None:
             return "SIN INICIO"
