@@ -430,7 +430,41 @@ with tab2:
     df_bitacora = pd.read_excel(archivo_bitacora)
 
 
-    from openpyxl import load_workbook    from openada,
+   from openpyxl import load_workbook
+
+    # ---------------------------------------------------
+    # EXTRAER HIPERVÍNCULOS DE FOTOS DESDE EXCEL
+    # ---------------------------------------------------
+    wb = load_workbook(archivo_bitacora, data_only=True)
+    ws = wb.active
+
+    headers = [cell.value for cell in ws[1]]
+
+    col_inspector = headers.index("inspector") + 1
+    col_fachada = headers.index("foto de fachada") + 1
+    col_vp = headers.index("foto de vp") + 1
+
+    links_fotos = []
+
+    for row in ws.iter_rows(min_row=2):
+        inspector = row[col_inspector - 1].value
+
+        cell_fachada = row[col_fachada - 1]
+        cell_vp = row[col_vp - 1]
+
+        link_fachada = (
+            cell_fachada.hyperlink.target
+            if cell_fachada.hyperlink else None
+        )
+
+        link_vp = (
+            cell_vp.hyperlink.target
+            if cell_vp.hyperlink else None
+        )
+
+        links_fotos.append({
+            "inspector": inspector,
+            "link_fachada": link_fachada,
             "link_vp": link_vp
         })
 
@@ -1049,39 +1083,58 @@ with tab2:
 
 
     # ===================================================
-    # 🏠 INICIO DE ACTIVIDAD POR INSPECTOR (CON FOTOS)
+ # ===================================================
+    # 🏠 INICIO DE ACTIVIDAD POR INSPECTOR (CON Y SIN INICIO)
     # ===================================================
     st.markdown("## 🏠 Inicio de actividad por inspector (con evidencia)")
 
+    # ---------------------------------------------------
+    # LISTA BASE: TODOS LOS INSPECTORES DEL DÍA
+    # ---------------------------------------------------
+    inspectores_dia = (
+        df_bitacora[df_bitacora["fecha"] == fecha_sel][["inspector"]]
+        .drop_duplicates()
+        .reset_index(drop=True)
+    )
+
+    # ---------------------------------------------------
+    # PRIMERA ACTIVIDAD REAL (SI EXISTE)
+    # ---------------------------------------------------
     primeras = (
         df2.sort_values("hora_inicio")
         .groupby("inspector", as_index=False)
         .first()[["inspector", "hora_inicio"]]
     )
 
-    primeras = primeras.merge(
-        df_links,
-        on="inspector",
-        how="left"
+    # ---------------------------------------------------
+    # UNIR INSPECTORES + HORAS + LINKS DE FOTOS
+    # ---------------------------------------------------
+    base = (
+        inspectores_dia
+        .merge(primeras, on="inspector", how="left")
+        .merge(df_links, on="inspector", how="left")
     )
 
-    if primeras.empty:
+    # Normalizar inspectores sin inicio
+    base["hora_inicio"] = base["hora_inicio"].fillna("SIN INICIO")
+
+    if base.empty:
         st.info("No hay información para mostrar.")
     else:
-        for _, row in primeras.iterrows():
+        for _, row in base.iterrows():
             st.markdown(f"### 👷 {row['inspector']}")
             st.markdown(f"**Hora inicio:** {row['hora_inicio']}")
 
-            c1, c2 = st.columns(2)
+            col1, col2 = st.columns(2)
 
-            with c1:
+            with col1:
                 st.markdown("**🏠 Foto de fachada**")
                 if pd.notna(row["link_fachada"]):
                     st.image(row["link_fachada"], use_container_width=True)
                 else:
                     st.info("Sin foto de fachada")
 
-            with c2:
+            with col2:
                 st.markdown("**📷 Foto de VP**")
                 if pd.notna(row["link_vp"]):
                     st.image(row["link_vp"], use_container_width=True)
@@ -1089,7 +1142,6 @@ with tab2:
                     st.info("Sin foto de VP")
 
             st.markdown("---")
-
     
 
 
