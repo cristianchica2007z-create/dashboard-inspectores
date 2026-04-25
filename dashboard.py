@@ -946,61 +946,61 @@ with tab2:
 
     st.dataframe(styled_tabla, use_container_width=True)
     # ===================================================
+ # ===================================================
     # 📊 Producción por inspector (órdenes efectivas)
     # ===================================================
-   st.markdown("## 📊 Producción por inspector (órdenes efectivas)")
+    st.markdown("## 📊 Producción por inspector (órdenes efectivas)")
 
-df_prod = (
-    df2[df2["efectiva"] == True]
-    .groupby("inspector")
-    .size()
-    .reset_index(name="Órdenes efectivas")
-    .sort_values("Órdenes efectivas", ascending=True)
-)
-
-if df_prod.empty:
-    st.info("⚠️ No hay órdenes efectivas para esta fecha.")
-else:
-    # Colores según producción
-    def color_por_produccion(valor):
-        if valor <= 3:
-            return "#dc3545"      # rojo
-        elif valor <= 6:
-            return "#f5b7b1"      # rosado
-        elif valor <= 8:
-            return "#f7dc6f"      # amarillo
-        else:
-            return "#28a745"      # verde
-
-    df_prod["color"] = df_prod["Órdenes efectivas"].apply(color_por_produccion)
-
-    fig_prod = px.bar(
-        df_prod,
-        y="inspector",
-        x="Órdenes efectivas",
-        orientation="h",
-        text="Órdenes efectivas",
-        title="Órdenes efectivas por inspector",
+    df_prod = (
+        df2[df2["efectiva"] == True]
+        .groupby("inspector")
+        .size()
+        .reset_index(name="Órdenes efectivas")
+        .sort_values("Órdenes efectivas", ascending=True)
     )
 
-    # Aplicar colores personalizados
-    fig_prod.update_traces(
-        marker_color=df_prod["color"],
-        textposition="outside",
-        textfont_size=28,     # números grandes
-        cliponaxis=False
-    )
+    if df_prod.empty:
+        st.info("⚠️ No hay órdenes efectivas para esta fecha.")
+    else:
+        # Colores según producción
+        def color_por_produccion(valor):
+            if valor <= 3:
+                return "#dc3545"      # rojo
+            elif valor <= 6:
+                return "#f5b7b1"      # rosado
+            elif valor <= 8:
+                return "#f7dc6f"      # amarillo
+            else:
+                return "#28a745"      # verde
 
-    # 👉 HACER LAS BARRAS MÁS GRUESAS
-    fig_prod.update_layout(
-        bargap=0.15,          # menos espacio = barras más gruesas
-        xaxis_title="Órdenes efectivas",
-        yaxis_title="Inspector",
-        font=dict(size=18),
-        height=650            # más alto para dar aire
-    )
+        df_prod["color"] = df_prod["Órdenes efectivas"].apply(color_por_produccion)
 
-    st.plotly_chart(fig_prod, use_container_width=True)
+        fig_prod = px.bar(
+            df_prod,
+            y="inspector",
+            x="Órdenes efectivas",
+            orientation="h",
+            text="Órdenes efectivas",
+            title="Órdenes efectivas por inspector"
+        )
+
+        # Colores y barras más gruesas
+        fig_prod.update_traces(
+            marker_color=df_prod["color"],
+            textposition="outside",
+            textfont_size=28,
+            cliponaxis=False
+        )
+
+        fig_prod.update_layout(
+            bargap=0.15,              # barras más gruesas
+            xaxis_title="Órdenes efectivas",
+            yaxis_title="Inspector",
+            font=dict(size=18),
+            height=650
+        )
+
+        st.plotly_chart(fig_prod, use_container_width=True)
 # ---------------------------------------------------
 # ===================================================
 # ===================================================
