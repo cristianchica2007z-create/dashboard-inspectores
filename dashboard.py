@@ -715,10 +715,22 @@ with tab2:
     )
 
     # ---------------------------------------------------
+ # ---------------------------------------------------
     # PUNTUALIDAD (usa SOLO la primera hora del día)
     # ---------------------------------------------------
     hora_oficial = datetime.time(7, 30)
 
+    # ---------------------------------------------------
+    # NORMALIZAR CASOS SIN INICIO
+    # Todo lo inválido se marca como SIN HORA
+    # ---------------------------------------------------
+    df_agrupado["hora_inicio"] = df_agrupado["hora_inicio"].apply(
+        lambda x: "SIN HORA" if x in [None, pd.NaT, "", "—"] else x
+    )
+
+    # ---------------------------------------------------
+    # CALCULAR MINUTOS TARDE
+    # ---------------------------------------------------
     def mins_tarde(h):
         if h == "SIN HORA" or h is None:
             return None
@@ -729,14 +741,8 @@ with tab2:
     df_agrupado["minutos_tarde"] = df_agrupado["hora_inicio"].apply(mins_tarde)
 
     # ---------------------------------------------------
-# NORMALIZAR CASOS SIN INICIO
-# Todo lo inválido se marca como SIN HORA
-# ---------------------------------------------------
-df_agrupado["hora_inicio"] = df_agrupado["hora_inicio"].apply(
-    lambda x: "SIN HORA" if x in [None, pd.NaT, "", "—"] else x
-)
-
-
+    # ESTADO DE PUNTUALIDAD
+    # ---------------------------------------------------
     def estado(m):
         if m is None:
             return "SIN INICIO"
