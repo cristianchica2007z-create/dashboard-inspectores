@@ -786,6 +786,7 @@ with tab2:
     )
     # ---------------------------------------------------
  # ---------------------------------------------------
+  # ---------------------------------------------------
     # PUNTUALIDAD (usa SOLO la primera hora del día)
     # ---------------------------------------------------
     hora_oficial = datetime.time(7, 30)
@@ -799,11 +800,17 @@ with tab2:
     )
 
     # ---------------------------------------------------
-    # CALCULAR MINUTOS TARDE
+    # CALCULAR MINUTOS TARDE (FUNCIÓN ROBUSTA)
     # ---------------------------------------------------
     def mins_tarde(h):
-        if h == "SIN HORA" or h is None:
+        # Casos sin inicio o valores inválidos
+        if h in ["SIN HORA", None] or pd.isna(h):
             return None
+
+        # Asegurar que sea una hora válida
+        if not isinstance(h, datetime.time):
+            return None
+
         h1 = datetime.datetime.combine(datetime.date.today(), h)
         h2 = datetime.datetime.combine(datetime.date.today(), hora_oficial)
         return int((h1 - h2).total_seconds() / 60)
