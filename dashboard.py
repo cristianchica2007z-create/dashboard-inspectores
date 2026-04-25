@@ -880,57 +880,56 @@ with tab2:
     })
 
 # ===================================================
+  # ===================================================
     # ✅ TAB 2 — PARTE 5 / 5
-    # Estilos, tabla final y gráficas
+    # Estilos y tabla final
     # ===================================================
 
     # ---------------------------------------------------
-    # 🎨 ESTILO DE PUNTUALIDAD PARA LA TABLA
+    # 🎨 ESTILO SOLO PARA LA COLUMNA hora_inicio
+    # (FORMA ESTABLE – NO SE ROMPE)
     # ---------------------------------------------------
-def estilo_puntualidad(row):
-    estilos = [""] * len(row)
-
-    # Protección total: si no existe la columna, no aplicar estilo
-    if "hora_inicio" not in row.index or "estado" not in row.index:
+    def color_hora_inicio(col):
+        estilos = []
+        for valor, estado in zip(col, df_tabla["estado"]):
+            if estado == "Muy tarde":
+                estilos.append("background-color: #f8d7da; color: #721c24")
+            elif estado == "Tarde":
+                estilos.append("background-color: #fff3cd; color: #856404")
+            elif estado == "Puntual":
+                estilos.append("background-color: #d4edda; color: #155724")
+            else:
+                estilos.append("")
         return estilos
 
-    idx_hora = list(row.index).index("hora_inicio")
-
-    if row["estado"] == "Muy tarde":
-        estilos[idx_hora] = "background-color: #f8d7da; color: #721c24"
-    elif row["estado"] == "Tarde":
-        estilos[idx_hora] = "background-color: #fff3cd; color: #856404"
-    elif row["estado"] == "Puntual":
-        estilos[idx_hora] = "background-color: #d4edda; color: #155724"
-
-    return estilos
-
     # ---------------------------------------------------
-    # 📋 Tabla de inspecciones del día (con colores)
+    # 📋 Tabla de inspecciones del día
     # ---------------------------------------------------
     st.markdown("### 📋 Tabla de inspecciones del día")
 
-    st.dataframe(
-        df_tabla[
-            [
-                "inspector",
-                "supervisor",
-                "fecha",
-                "hora_inicio",
-                "hora_final",
-                "localidad",
-                "estado",
-                "total_ordenes",
-                "ordenes_efectivas",
-                "porcentaje_efectividad",
-                "promedio_tiempo_tarea"
-            ]
+    tabla_mostrar = df_tabla[
+        [
+            "inspector",
+            "supervisor",
+            "fecha",
+            "hora_inicio",
+            "hora_final",
+            "localidad",
+            "estado",
+            "total_ordenes",
+            "ordenes_efectivas",
+            "porcentaje_efectividad",
+            "promedio_tiempo_tarea"
         ]
+    ]
+
+    styled_tabla = (
+        tabla_mostrar
         .style
-        .apply(estilo_puntualidad, axis=1),
-        use_container_width=True
+        .apply(color_hora_inicio, subset=["hora_inicio"])
     )
 
+    st.dataframe(styled_tabla, use_container_width=True)
     # ===================================================
     # 📊 Producción por inspector (órdenes efectivas)
     # ===================================================
