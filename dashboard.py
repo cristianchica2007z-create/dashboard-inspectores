@@ -428,6 +428,50 @@ with tab2:
     # CARGAR BITÁCORA COMPARTIDA
     # -------------------------------------------------
     df_bitacora = pd.read_excel(archivo_bitacora)
+
+
+    from openpyxl import load_workbook    from openada,
+            "link_vp": link_vp
+        })
+
+    df_links = pd.DataFrame(links_fotos)
+
+    # ---------------------------------------------------
+    # EXTRAER HIPERVÍNCULOS DE FOTOS DESDE EXCEL
+    # ---------------------------------------------------
+    wb = load_workbook(archivo_bitacora, data_only=True)
+    ws = wb.active
+
+    headers = [cell.value for cell in ws[1]]
+
+    col_inspector = headers.index("inspector") + 1
+    col_fachada = headers.index("foto de fachada") + 1
+    col_vp = headers.index("foto de vp") + 1
+
+    links_fotos = []
+
+    for row in ws.iter_rows(min_row=2):
+        inspector = row[col_inspector - 1].value
+
+        cell_fachada = row[col_fachada - 1]
+        cell_vp = row[col_vp - 1]
+
+        link_fachada = (
+            cell_fachada.hyperlink.target
+            if cell_fachada.hyperlink else None
+        )
+
+        link_vp = (
+            cell_vp.hyperlink.target
+            if cell_vp.hyperlink else None
+        )
+
+        links_fotos.append({
+            "inspector": inspector,
+
+
+
+            
     df_bitacora.columns = df_bitacora.columns.str.strip().str.lower()
 
     # -------------------------------------------------
