@@ -425,14 +425,53 @@ with tab2:
         st.stop()
 
     # -------------------------------------------------
+# -------------------------------------------------
     # CARGAR BITÁCORA COMPARTIDA
     # -------------------------------------------------
     df_bitacora = pd.read_excel(archivo_bitacora)
+    df_bitacora.columns = df_bitacora.columns.str.strip().str.lower()
 
+    # -------------------------------------------------
+    # EXTRAER HIPERVÍNCULOS DE FOTOS DESDE EXCEL
+    # (SIN MODIFICAR EL ARCHIVO)
+    # -------------------------------------------------
+    from openpyxl import load_workbook
 
-   from openpyxl import load_workbook
+    wb = load_workbook(archivo_bitacora, data_only=True)
+    ws = wb.active
 
+    # Encabezados reales del Excel
+    headers = [cell.value for cell in ws[1]]
 
+    col_inspector = headers.index("inspector") + 1
+    col_fachada = headers.index("foto de fachada") + 1
+    col_vp = headers.index("foto de vp") + 1
+
+    links_fotos = []
+
+    for row in ws.iter_rows(min_row=2):
+        inspector = row[col_inspector - 1].value
+
+        cell_fachada = row[col_fachada - 1]
+        cell_vp = row[col_vp - 1]
+
+        link_fachada = (
+            cell_fachada.hyperlink.target
+            if cell_fachada.hyperlink else None
+        )
+
+        link_vp = (
+            cell_vp.hyperlink.target
+            if cell_vp.hyperlink else None
+        )
+
+        links_fotos.append({
+            "inspector": inspector,
+            "link_fachada": link_fachada,
+            "link_vp": link_vp
+        })
+
+    df_links = pd.DataFrame(links_fotos)
     # -------------------------------------------------
     # ✅ EXCLUIR GRUPOS NO OPERATIVOS
     # -------------------------------------------------
