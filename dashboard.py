@@ -686,7 +686,7 @@ with tab2:
         "VILLA MERA CHRISTIAN DAVID": "JANIER MARIN",
         "AVENDAÑO GARCIA JUAN NEPOMUCENO": "ANDRES ARROYAVE",
         "PELAEZ TATIS GABRIEL ESTEBAN": "CRISTIAN CHICA",
-        "CHICA RAMIREZ CRISTIAN ALBERTO": "CRISTIAN CHICA"
+        "CHICA RAMIREZ CRISTIAN ALBERTO": "CRISTIAN CHICA",
     }.items()}
 
     df_bitacora["supervisor"] = (
@@ -745,45 +745,38 @@ with tab2:
         st.warning("⚠️ Selecciona al menos un inspector.")
         st.stop()
 # ===================================================
-        # ✅ TAB 2 — PARTE 4 / 5
-    
-        # AGRUPACIÓN DIARIA POR INSPECTOR (RESPETA FILTROS)
-        # ---------------------------------------------------
-        primeras = (
-            df2.sort_values("hora_inicio")
-            .groupby("inspector", as_index=False)
-            .first()[["inspector", "hora_inicio", "localidad", "supervisor"]]
-        )
-    
-        ultimas = (
-            df2.sort_values("hora_final")
-            .groupby("inspector", as_index=False)
-            .last()[["inspector", "hora_final"]]
-        )
-    
-        df_agrupado = primeras.merge(
-            ultimas,
-            on="inspector",
-            how="left"
-        )
-    
-   # ---------------------------------------------------
-    # AGRUPACIÓN DIARIA POR INSPECTOR (RESPETA FILTROS)
+   # ===================================================
+    # ✅ TAB 2 — PARTE 4 / 5
+    # Agrupación diaria y estado de inicio
+    # ===================================================
+
+    # ---------------------------------------------------
+    # BASE DE INSPECTORES CON OBRA ASIGNADA (RESPETA FILTROS)
+    # Aquí están TODOS los inspectores del día, hayan iniciado o no
+    # ---------------------------------------------------
+    base_inspectores = (
+        df_bitacora[df_bitacora["fecha"] == fecha_sel]
+        [["inspector", "supervisor"]]
+        .drop_duplicates()
+        .reset_index(drop=True)
+    )
+
+    # ---------------------------------------------------
+    # PRIMERA ACTIVIDAD REAL (SI EXISTE)
+    # Solo inspectores que sí iniciaron tareas
     # ---------------------------------------------------
     primeras = (
         df2.sort_values("hora_inicio")
         .groupby("inspector", as_index=False)
-        .first()[["inspector", "hora_inicio", "localidad", "supervisor"]]
+        .first()[["inspector", "hora_inicio", "localidad"]]
     )
 
-    ultimas = (
-        df2.sort_values("hora_final")
-        .groupby("inspector", as_index=False)
-        .last()[["inspector", "hora_final"]]
-    )
-
-    df_agrupado = primeras.merge(
-        ultimas,
+    # ---------------------------------------------------
+    # UNIR INSPECTORES + ACTIVIDAD
+    # Los que no tengan actividad quedarán con NaN
+    # ---------------------------------------------------
+    df_agrupado = base_inspectores.merge(
+        primeras,
         on="inspector",
         how="left"
     )
