@@ -151,7 +151,7 @@ inspectores_lista = sorted([
     "VILLA MERA CHRISTIAN DAVID",
     "AVENDAÑO GARCIA JUAN NEPOMUCENO",
     "PELAEZ TATIS GABRIEL ESTEBAN",
-    "CHICA RAMIREZ CRISTIAN ALBERTO,
+    "CHICA RAMIREZ CRISTIAN ALBERTO",
 ])
 # ---------------------------------------------------
 # ✅ CONFIGURACIÓN GENERAL DEL DASHBOARD
