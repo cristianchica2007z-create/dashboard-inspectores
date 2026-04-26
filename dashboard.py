@@ -744,8 +744,29 @@ with tab2:
         st.warning("⚠️ Selecciona al menos un inspector.")
         st.stop()
 # ===================================================
-    # ✅ TAB 2 — PARTE 4 / 5
-
+        # ✅ TAB 2 — PARTE 4 / 5
+    
+        # AGRUPACIÓN DIARIA POR INSPECTOR (RESPETA FILTROS)
+        # ---------------------------------------------------
+        primeras = (
+            df2.sort_values("hora_inicio")
+            .groupby("inspector", as_index=False)
+            .first()[["inspector", "hora_inicio", "localidad", "supervisor"]]
+        )
+    
+        ultimas = (
+            df2.sort_values("hora_final")
+            .groupby("inspector", as_index=False)
+            .last()[["inspector", "hora_final"]]
+        )
+    
+        df_agrupado = primeras.merge(
+            ultimas,
+            on="inspector",
+            how="left"
+        )
+    
+   # ---------------------------------------------------
     # AGRUPACIÓN DIARIA POR INSPECTOR (RESPETA FILTROS)
     # ---------------------------------------------------
     primeras = (
@@ -772,29 +793,24 @@ with tab2:
     df_agrupado["hora_inicio"] = df_agrupado["hora_inicio"].apply(
         lambda x: "SIN HORA" if x in [None, pd.NaT, "", "—"] else x
     )
-    # ---------------------------------------------------
- # ---------------------------------------------------
-  # ---------------------------------------------------
-# ---------------------------------------------------
-    # AGRUPACIÓN DIARIA POR INSPECTOR (RESPETA FILTROS)
-    # ---------------------------------------------------
-    primeras = (
-        df2.sort_values("hora_inicio")
-        .groupby("inspector", as_index=False)
-        .first()[["inspector", "hora_inicio", "localidad", "supervisor"]]
-    )
 
-    ultimas = (
-        df2.sort_values("hora_final")
-        .groupby("inspector", as_index=False)
-        .last()[["inspector", "hora_final"]]
-    )
+    # ---------------------------------------------------
+    # PUNTUALIDAD (usa SOLO la primera hora del día)
+    # ---------------------------------------------------
+    hora_oficial = datetime.time(7, 30)
 
-    df_agrupado = primeras.merge(
-        ultimas,
-        on="inspector",
-        how="left"
-    )
+    def mins_tarde(h):
+        if h in ["SIN HORA", None] or pd.isna(h):
+            return None
+        if not isinstance(h, datetime.time):
+            return None
+
+        h1 = datetime.datetime.combine(datetime.date.today(), h)
+        h2 = datetime.datetime.combine(datetime.date.today(), hora_oficial)
+        return int((h1 - h2).total_seconds() / 60)
+
+    df_agrupado["minutos_tarde"] = df_agrupado["hora_inicio"].apply(mins_tarde)
+
     # ---------------------------------------------------
     # ESTADO DE PUNTUALIDAD
     # ---------------------------------------------------
