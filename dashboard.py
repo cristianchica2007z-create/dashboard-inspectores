@@ -751,21 +751,12 @@ with tab2:
     base_inspectores = (
   # ---------------------------------------------------
 # ---------------------------------------------------
-    # LISTA BASE DE INSPECTORES (RESPETA FILTROS)
-    # ---------------------------------------------------
-    base_inspectores = (
-        df2[["inspector", "supervisor"]]
-        .drop_duplicates(subset=["inspector"])
-        .reset_index(drop=True)
-    )
-
-    # ---------------------------------------------------
-    # PRIMERA Y ÚLTIMA ACTIVIDAD REAL (SI EXISTE)
+    # AGRUPACIÓN DIARIA POR INSPECTOR (RESPETA FILTROS)
     # ---------------------------------------------------
     primeras = (
         df2.sort_values("hora_inicio")
         .groupby("inspector", as_index=False)
-        .first()[["inspector", "hora_inicio", "localidad"]]
+        .first()[["inspector", "hora_inicio", "localidad", "supervisor"]]
     )
 
     ultimas = (
@@ -774,13 +765,10 @@ with tab2:
         .last()[["inspector", "hora_final"]]
     )
 
-    # ---------------------------------------------------
-    # UNIR TODO
-    # ---------------------------------------------------
-    df_agrupado = (
-        base_inspectores
-        .merge(primeras, on="inspector", how="left")
-        .merge(ultimas, on="inspector", how="left")
+    df_agrupado = primeras.merge(
+        ultimas,
+        on="inspector",
+        how="left"
     )
 
     # ---------------------------------------------------
@@ -792,36 +780,26 @@ with tab2:
     # ---------------------------------------------------
  # ---------------------------------------------------
   # ---------------------------------------------------
-    # PUNTUALIDAD (usa SOLO la primera hora del día)
+# ---------------------------------------------------
+    # AGRUPACIÓN DIARIA POR INSPECTOR (RESPETA FILTROS)
     # ---------------------------------------------------
-    hora_oficial = datetime.time(7, 30)
-
-    # ---------------------------------------------------
-    # NORMALIZAR CASOS SIN INICIO
-    # Todo lo inválido se marca como SIN HORA
-    # ---------------------------------------------------
-    df_agrupado["hora_inicio"] = df_agrupado["hora_inicio"].apply(
-        lambda x: "SIN HORA" if x in [None, pd.NaT, "", "—"] else x
+    primeras = (
+        df2.sort_values("hora_inicio")
+        .groupby("inspector", as_index=False)
+        .first()[["inspector", "hora_inicio", "localidad", "supervisor"]]
     )
 
-    # ---------------------------------------------------
-    # CALCULAR MINUTOS TARDE (FUNCIÓN ROBUSTA)
-    # ---------------------------------------------------
-    def mins_tarde(h):
-        # Casos sin inicio o valores inválidos
-        if h in ["SIN HORA", None] or pd.isna(h):
-            return None
+    ultimas = (
+        df2.sort_values("hora_final")
+        .groupby("inspector", as_index=False)
+        .last()[["inspector", "hora_final"]]
+    )
 
-        # Asegurar que sea una hora válida
-        if not isinstance(h, datetime.time):
-            return None
-
-        h1 = datetime.datetime.combine(datetime.date.today(), h)
-        h2 = datetime.datetime.combine(datetime.date.today(), hora_oficial)
-        return int((h1 - h2).total_seconds() / 60)
-
-    df_agrupado["minutos_tarde"] = df_agrupado["hora_inicio"].apply(mins_tarde)
-
+    df_agrupado = primeras.merge(
+        ultimas,
+        on="inspector",
+        how="left"
+    )
     # ---------------------------------------------------
     # ESTADO DE PUNTUALIDAD
     # ---------------------------------------------------
