@@ -1531,7 +1531,11 @@ with tab5:
         "Media": "#ffc107",       # 🟡 amarillo
         "Baja": "#7cd992",        # 🟢 verde claro
         "Critica": "#fd7e14",     # 🟠 naranja
-        "Prioridad": "#6f4e37"    # 🟤 café
+        "Prioridad": "#6f4e37",    # 🟤 café
+        
+        "60 Meses": "#6f42c1",        # 🟣 morado
+        "Segunda visita": "#ff8c00"   # 🟠 naranja
+
     }
 
     # ===================================================
