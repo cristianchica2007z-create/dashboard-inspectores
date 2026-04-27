@@ -1575,18 +1575,23 @@ with tab5:
 
     # ===================================================
     df_sst = df_bitacora_base.copy()
+
+
 with tab6:
     st.markdown("## 🦺 SST")
 
+    # ===================================================
+    # BASE SST
+    # ===================================================
+    df_sst = df_bitacora_base.copy()
 
-
-    # Normalizar columnas base si existen
+    # Normalizar columnas base
     for col in ["inspector", "tipo de trabajo"]:
         if col in df_sst.columns:
             df_sst[col] = df_sst[col].astype(str).str.upper().str.strip()
 
     # ===================================================
-    # ASIGNAR SUPERVISOR (MISMO DICCIONARIO DE TAB 2)
+    # ASIGNAR SUPERVISOR (MISMO MAPEO QUE TAB 2)
     # ===================================================
     supervisores_dict = {k.upper(): v for k, v in {
         "ARIZA MARIN SERGIO": "ANDRES ARROYAVE",
@@ -1682,10 +1687,7 @@ with tab6:
         st.subheader("✅ PREOPERACIONAL – 2025 – EJE")
 
         df_preop = df_sst[
-            df_sst["tipo de trabajo"].str.contains(
-                "PREOPERACIONAL - 2025 - EJE",
-                na=False
-            )
+            df_sst["tipo de trabajo"].str.contains("PREOPERACIONAL - 2025 - EJE", na=False)
         ].copy()
 
         df_preop["fecha_ejecucion_solo"] = pd.to_datetime(
@@ -1701,23 +1703,15 @@ with tab6:
         if "cierre" in df_preop.columns:
             df_preop["cierre"] = df_preop["cierre"].astype(str).str.upper().str.strip()
 
-        columnas_preop = [
-            "fecha_ejecucion_solo",
-            "inspector",
-            "hora_inicio",
-            "hora_final",
-            "cierre"
-        ]
-
         def estilo_preop(row):
             if pd.isna(row["hora_inicio"]):
                 return ["background-color:#f8d7da"] * len(row)
             return [""] * len(row)
 
         st.dataframe(
-            df_preop[columnas_preop]
-            .style
-            .apply(estilo_preop, axis=1),
+            df_preop[
+                ["fecha_ejecucion_solo", "inspector", "hora_inicio", "hora_final", "cierre"]
+            ].style.apply(estilo_preop, axis=1),
             use_container_width=True
         )
 
@@ -1728,10 +1722,7 @@ with tab6:
         st.subheader("🏁 OPERACIONAL FINAL – 2025 – EJE")
 
         df_final = df_sst[
-            df_sst["tipo de trabajo"].str.contains(
-                "OPERACIONAL FINAL - 2025 - EJE",
-                na=False
-            )
+            df_sst["tipo de trabajo"].str.contains("OPERACIONAL FINAL - 2025 - EJE", na=False)
         ].copy()
 
         df_final["fecha_ejecucion_solo"] = pd.to_datetime(
@@ -1751,104 +1742,58 @@ with tab6:
             lambda x: "SIN FINALIZAR JORNADA" if pd.isna(x) else "JORNADA FINALIZADA"
         )
 
-        columnas_final = [
-            "fecha_ejecucion_solo",
-            "inspector",
-            "hora_inicio",
-            "hora_final",
-            "estado_jornada",
-            "cierre"
-        ]
-
         def estilo_final(row):
             if row["estado_jornada"] == "SIN FINALIZAR JORNADA":
                 return ["background-color:#f8d7da"] * len(row)
             return [""] * len(row)
 
         st.dataframe(
-            df_final[columnas_final]
-            .style
-            .apply(estilo_final, axis=1),
+            df_final[
+                ["fecha_ejecucion_solo", "inspector", "hora_inicio", "hora_final", "estado_jornada", "cierre"]
+            ].style.apply(estilo_final, axis=1),
             use_container_width=True
         )
 
-  with sub_aus:
-    st.subheader("🚫 AUSENTISMO – EJE")
+    # ===================================================
+    # 🚫 AUSENTISMO – EJE
+    # ===================================================
+    with sub_aus:
+        st.subheader("🚫 AUSENTISMO – EJE")
 
-    df_aus = df_sst[
-        df_sst["tipo de trabajo"].str.contains(
-            "AUSENTISMO",
-            na=False
-        )
-    ].copy()
+        df_aus = df_sst[
+            df_sst["tipo de trabajo"].str.contains("AUSENTISMO", na=False)
+        ].copy()
 
-    # Fecha solo fecha
-    if "fecha de ejecucion" in df_aus.columns:
         df_aus["fecha_ejecucion_solo"] = pd.to_datetime(
             df_aus["fecha de ejecucion"], errors="coerce"
         ).dt.date
 
-    # Normalizar horas
-    if "hora inicio" in df_aus.columns:
-        df_aus["hora_inicio"] = df_aus["hora inicio"]
+        if "hora inicio" in df_aus.columns:
+            df_aus["hora_inicio"] = df_aus["hora inicio"]
 
-    if "hora final" in df_aus.columns:
-        df_aus["hora_final"] = df_aus["hora final"]
+        if "hora final" in df_aus.columns:
+            df_aus["hora_final"] = df_aus["hora final"]
 
-    # Normalizar CIERRE
-    if "cierre" in df_aus.columns:
-        df_aus["cierre"] = (
-            df_aus["cierre"]
-            .astype(str)
-            .str.upper()
-            .str.strip()
-        )
+        if "cierre" in df_aus.columns:
+            df_aus["cierre"] = df_aus["cierre"].astype(str).str.upper().str.strip()
 
-    # Calcular tiempo de ausentismo (minutos)
-    def tiempo_minutos(row):
-        if (
-            pd.notna(row["hora_inicio"])
-            and pd.notna(row["hora_final"])
-        ):
-            h1 = datetime.datetime.combine(
-                datetime.date.today(),
-                row["hora_inicio"]
-            )
-            h2 = datetime.datetime.combine(
-                datetime.date.today(),
-                row["hora_final"]
-            )
-            return int((h2 - h1).total_seconds() / 60)
-        return None
+        def tiempo_minutos(row):
+            if pd.notna(row["hora_inicio"]) and pd.notna(row["hora_final"]):
+                h1 = datetime.datetime.combine(datetime.date.today(), row["hora_inicio"])
+                h2 = datetime.datetime.combine(datetime.date.today(), row["hora_final"])
+                return int((h2 - h1).total_seconds() / 60)
+            return None
 
-    df_aus["tiempo_ausentismo_min"] = df_aus.apply(
-        tiempo_minutos,
-        axis=1
-    )
+        df_aus["tiempo_ausentismo_min"] = df_aus.apply(tiempo_minutos, axis=1)
 
-    columnas_aus = [
-        "fecha_ejecucion_solo",
-        "inspector",
-        "hora_inicio",
-        "hora_final",
-        "tiempo_ausentismo_min",
-        "cierre"
-    ]
+        def estilo_aus(row):
+            if pd.notna(row["tiempo_ausentismo_min"]) and row["tiempo_ausentismo_min"] > 60:
+                return ["background-color:#f8d7da"] * len(row)
+            return [""] * len(row)
 
-    def estilo_aus(row):
-        if (
-            pd.notna(row["tiempo_ausentismo_min"])
-            and row["tiempo_ausentismo_min"] > 60
-        ):
-            return ["background-color:#f8d7da"] * len(row)
-        return [""] * len(row)
-
-    if not df_aus.empty:
         st.dataframe(
-            df_aus[columnas_aus]
-            .style
-            .apply(estilo_aus, axis=1),
+            df_aus[
+                ["fecha_ejecucion_solo", "inspector", "hora_inicio", "hora_final", "tiempo_ausentismo_min", "cierre"]
+            ].style.apply(estilo_aus, axis=1),
             use_container_width=True
         )
-    else:
-        st.info("No hay registros de AUSENTISMO para mostrar.")
