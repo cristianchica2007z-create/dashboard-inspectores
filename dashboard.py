@@ -748,38 +748,28 @@ with tab2:
    # ===================================================
     # ✅ TAB 2 — PARTE 4 / 5
     # Agrupación diaria y estado de inicio
-    # ===================================================
-
-    # ---------------------------------------------------
-    # BASE DE INSPECTORES CON OBRA ASIGNADA (RESPETA FILTROS)
-    # Aquí están TODOS los inspectores del día, hayan iniciado o no
-    # ---------------------------------------------------
+    # BASE de inspectores (ya filtrados por fecha/supervisor/inspector)
     base_inspectores = (
-        df_bitacora[df_bitacora["fecha"] == fecha_sel]
+        df_bitacora_filtrado
         [["inspector", "supervisor"]]
         .drop_duplicates()
         .reset_index(drop=True)
     )
 
-    # ---------------------------------------------------
-    # PRIMERA ACTIVIDAD REAL (SI EXISTE)
-    # Solo inspectores que sí iniciaron tareas
-    # ---------------------------------------------------
+    # Primera actividad real
     primeras = (
         df2.sort_values("hora_inicio")
         .groupby("inspector", as_index=False)
         .first()[["inspector", "hora_inicio", "localidad"]]
     )
 
-    # ---------------------------------------------------
-    # UNIR INSPECTORES + ACTIVIDAD
-    # Los que no tengan actividad quedarán con NaN
-    # ---------------------------------------------------
+    # Unión ASIGNACIÓN + EJECUCIÓN
     df_agrupado = base_inspectores.merge(
         primeras,
         on="inspector",
         how="left"
     )
+
 
     # ---------------------------------------------------
     # NORMALIZAR CASOS SIN INICIO
