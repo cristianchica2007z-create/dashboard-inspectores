@@ -1579,12 +1579,10 @@ with tab5:
 with tab6:
     st.markdown("## 🦺 SST")
 
-    # ===================================================
-    # BASE SST (SIN FILTRO POR GRUPO)
-    # ===================================================
-   df_sst = df_bitacora_base.copy()
+    # ✅ USAR LA BITÁCORA BASE (NO FILTRADA)
+    df_sst = df_bitacora_base.copy()
 
-    # Normalizar columnas clave (según bitácora real)
+    # Normalizar columnas clave
     for col in ["localidad", "inspector", "tipo de trabajo", "supervisor", "contrato"]:
         df_sst[col] = (
             df_sst[col]
@@ -1592,6 +1590,7 @@ with tab6:
             .str.upper()
             .str.strip()
         )
+
 
     # Filtro territorial (Eje cafetero)
     df_sst = df_sst[
