@@ -1578,6 +1578,11 @@ with tab6:
     st.success("TAB 6 cargó correctamente ✅")
     
 
-df_sst = df_bitacora_base.copy()
-st.subheader("Valores de tipo de trabajo (SST)")
-st.write(df_sst["tipo de trabajo"].value_counts().head(15))
+sub_preop = st.tabs(["✅ PREOPERACIONAL"])[0]
+
+with sub_preop:
+    df_preop = df_sst[
+        df_sst["tipo de trabajo"].str.contains("PREOPERACIONAL", na=False)
+    ]
+
+    st.write("Filas PREOPERACIONAL:", df_preop.shape[0])
