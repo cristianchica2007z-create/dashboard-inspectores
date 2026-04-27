@@ -179,6 +179,26 @@ with col_logo:
         caption=""
     )
 # ---------------------------------------------------
+
+# ===================================================
+# CARGA ÚNICA DE BITÁCORA (BASE GLOBAL)
+# ===================================================
+archivo_bitacora = "BITACORA.xlsx"
+
+if not os.path.exists(archivo_bitacora):
+    st.error(
+        "❌ No se encontró el archivo BITACORA.xlsx.\n"
+        "Debe cargarse antes de usar el dashboard."
+    )
+    st.stop()
+
+df_bitacora = pd.read_excel(archivo_bitacora)
+df_bitacora.columns = df_bitacora.columns.str.strip().str.lower()
+
+# ✅ COPIA BASE INMUTABLE (NO SE FILTRA)
+df_bitacora_base = df_bitacora.copy()
+
+
 # ✅ CREAR PESTAÑAS
 # ---------------------------------------------------
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
@@ -414,28 +434,10 @@ with tab2:
     st.subheader("🕒 Control Operativo e&c")
     st.subheader("Eje Cafetero")
 
-    # -------------------------------------------------
-    # VALIDAR QUE EXISTA BITÁCORA COMPARTIDA
-    # -------------------------------------------------
-    archivo_bitacora = "BITACORA.xlsx"
-
-    if not os.path.exists(archivo_bitacora):
-        st.warning(
-            "⚠️ No hay una bitácora cargada.\n\n"
-            "Un administrador debe subir el archivo en la pestaña "
-            "📂 Administración de Bitácora."
-        )
-        st.stop()
-
-    # -------------------------------------------------
-# -------------------------------------------------
-    # CARGAR BITÁCORA COMPARTIDA
-    # -------------------------------------------------
-    df_bitacora = pd.read_excel(archivo_bitacora)
-    df_bitacora.columns = df_bitacora.columns.str.strip().str.lower()
-
-    # -------------------------------------------------
-    # EXTRAER HIPERVÍNCULOS DE FOTOS DESDE EXCEL
+    # ===================================================
+    # USAR COPIA PARA TAB 2 (NO TOCAR LA BASE)
+    # ===================================================
+    df_tab2 = df_bitacora_base.copy()
     # (SIN MODIFICAR EL ARCHIVO)
     # -------------------------------------------------
     from openpyxl import load_workbook
