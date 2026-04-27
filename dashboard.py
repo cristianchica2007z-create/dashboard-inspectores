@@ -1576,11 +1576,11 @@ with tab5:
 with tab6:
     st.markdown("## 🦺 SST")
     st.success("TAB 6 cargó correctamente ✅")
-    
 
-sub_preop = st.tabs(["✅ PREOPERACIONAL"])[0]
+    # Base SST
+    df_sst = df_bitacora_base.copy()
 
-with sub_preop:
+    # PREOPERACIONAL (solo prueba)
     df_preop = df_sst[
         df_sst["tipo de trabajo"].str.contains("PREOPERACIONAL", na=False)
     ]
