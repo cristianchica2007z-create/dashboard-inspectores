@@ -745,37 +745,30 @@ with tab2:
         st.warning("⚠️ Selecciona al menos un inspector.")
         st.stop()
 # ===================================================
-   # ===================================================
+  # ===================================================
     # ✅ TAB 2 — PARTE 4 / 5
-    # Agrupación diaria y estado de inicio
-    # BASE de inspectores (ya filtrados por fecha/supervisor/inspector)
-    base_inspectores = (
-        df_bitacora_filtrado
-        [["inspector", "supervisor"]]
-        .drop_duplicates()
-        .reset_index(drop=True)
-    )
+    # Agrupación diaria, puntualidad y estado
+    # ===================================================
 
-    # Primera actividad real
+    # ---------------------------------------------------
+    # AGRUPACIÓN DIARIA POR INSPECTOR (ESTABLE)
+    # ---------------------------------------------------
     primeras = (
         df2.sort_values("hora_inicio")
         .groupby("inspector", as_index=False)
-        .first()[["inspector", "hora_inicio", "localidad"]]
+        .first()[["inspector", "hora_inicio", "localidad", "supervisor"]]
     )
 
-    # Unión ASIGNACIÓN + EJECUCIÓN
-    df_agrupado = base_inspectores.merge(
-        primeras,
+    ultimas = (
+        df2.sort_values("hora_final")
+        .groupby("inspector", as_index=False)
+        .last()[["inspector", "hora_final"]]
+    )
+
+    df_agrupado = primeras.merge(
+        ultimas,
         on="inspector",
         how="left"
-    )
-
-
-    # ---------------------------------------------------
-    # NORMALIZAR CASOS SIN INICIO
-    # ---------------------------------------------------
-    df_agrupado["hora_inicio"] = df_agrupado["hora_inicio"].apply(
-        lambda x: "SIN HORA" if x in [None, pd.NaT, "", "—"] else x
     )
 
     # ---------------------------------------------------
@@ -784,7 +777,7 @@ with tab2:
     hora_oficial = datetime.time(7, 30)
 
     def mins_tarde(h):
-        if h in ["SIN HORA", None] or pd.isna(h):
+        if h is None or pd.isna(h):
             return None
         if not isinstance(h, datetime.time):
             return None
@@ -796,7 +789,7 @@ with tab2:
     df_agrupado["minutos_tarde"] = df_agrupado["hora_inicio"].apply(mins_tarde)
 
     # ---------------------------------------------------
-    # ESTADO DE PUNTUALIDAD
+    # ESTADO DE PUNTUALIDAD (ORIGINAL)
     # ---------------------------------------------------
     def estado(m):
         if m is None:
