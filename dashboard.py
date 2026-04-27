@@ -1776,13 +1776,32 @@ with tab6:
 
         if "cierre" in df_aus.columns:
             df_aus["cierre"] = df_aus["cierre"].astype(str).str.upper().str.strip()
+            # ---------------------------------------------------
+# Calcular tiempo de ausentismo (en minutos) – FORMA CORRECTA
+# ---------------------------------------------------
 
-        def tiempo_minutos(row):
-            if pd.notna(row["hora_inicio"]) and pd.notna(row["hora_final"]):
-                h1 = datetime.datetime.combine(datetime.date.today(), row["hora_inicio"])
-                h2 = datetime.datetime.combine(datetime.date.today(), row["hora_final"])
-                return int((h2 - h1).total_seconds() / 60)
-            return None
+# Convertir horas a datetime (si vienen como texto)
+
+df_aus["hora_inicio_dt"] = pd.to_datetime(
+    df_aus["hora_inicio"], errors="coerce"
+)
+
+df_aus["hora_final_dt"] = pd.to_datetime(
+    df_aus["hora_final"], errors="coerce"
+)
+
+# Calcular diferencia en minutos
+df_aus["tiempo_ausentismo_min"] = (
+    (df_aus["hora_final_dt"] - df_aus["hora_inicio_dt"])
+    .dt.total_seconds() / 60
+).round()
+
+# Limpiar negativos o inconsistencias
+df_aus.loc[df_aus["tiempo_ausentismo_min"] < 0, "tiempo_ausentismo_min"] = None
+
+        
+
+        
 
         df_aus["tiempo_ausentismo_min"] = df_aus.apply(tiempo_minutos, axis=1)
 
