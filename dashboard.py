@@ -1579,31 +1579,61 @@ with tab5:
 with tab6:
     st.markdown("## 🦺 SST")
 
-
-
-    st.markdown("### 🔍 DEBUG BITÁCORA SST")
-
-st.write("Columnas disponibles:")
-st.write(df_bitacora.columns.tolist())
-
-st.write("Valores únicos de columnas candidatas:")
-for col in df_bitacora.columns:
-    if "tipo" in col.lower() or "trabajo" in col.lower():
-        st.write(f"--- {col} ---")
-        st.write(df_bitacora[col].dropna().unique()[:20])
-
-
-
     # ===================================================
-    # BASE SST (COMÚN) — SIN FILTRO POR FECHA
+    # BASE SST
     # ===================================================
     df_sst = df_bitacora.copy()
 
-    # Normalizar columnas clave
-    df_sst["grupo"] = df_sst["grupo"].astype(str).str.upper().str.strip()
-    df_sst["localidad"] = df_sst["localidad"].astype(str).str.upper().str.strip()
-    df_sst["inspector"] = df_sst["inspector"].astype(str).str.upper().str.strip()
+    # -------- Normalizar columnas clave --------
+    for col in ["grupo", "localidad", "inspector", "tipo de trabajo"]:
+        df_sst[col] = (
+            df_sst[col]
+            .astype(str)
+            .str.upper()
+            .str.strip()
+        )
 
+    # -------- Filtros fijos SST --------
+    df_sst = df_sst[
+        (df_sst["grupo"].str.contains("SST", na=False)) &
+        (df_sst["localidad"].str.contains("PEREIRA", na=False))
+    ]
+
+    if df_sst.empty:
+        st.warning("⚠️ No se encontraron registros SST con los filtros actuales.")
+        st.stop()
+
+    # ===================================================
+    # ASIGNAR SUPERVISOR (MISMA LÓGICA TAB 2)
+    # La columna supervisor YA EXISTE en la bitácora,
+    # solo normalizamos
+    # ===================================================
+    df_sst["supervisor"] = (
+        df_sst["supervisor"]
+        .astype(str)
+        .str.upper()
+        .str.strip()
+    )
+
+    # ===================================================
+    # FILTRO POR SUPERVISOR
+    # ===================================================
+    st.markdown("### 👤 Filtro por Supervisor")
+
+    supervisores_disp = sorted(df_sst["supervisor"].dropna().unique())
+    sup_sel = []
+
+    with st.expander("Seleccionar supervisores", expanded=True):
+        for s in supervisores_disp:
+            if st.checkbox(s, value=True, key=f"sst_sup_{s}"):
+                sup_sel.append(s)
+
+    if sup_sel:
+        df_sst = df_sst[df_sst["supervisor"].isin(sup_sel)]
+
+    if df_sst.empty:
+        st.warning("⚠️ No hay registros SST para el supervisor seleccionado.")
+        st.stop()
 
     # ===================================================
     # SUBPESTAÑAS SST
@@ -1616,17 +1646,23 @@ for col in df_bitacora.columns:
     # ✅ PREOPERACIONAL
     # ===================================================
     with sub_preop:
+        st.markdown("### ✅ PREOPERACIONAL")
+
         df_preop = df_sst[
-            df_sst["tipo de trabajo"] == "PREOPERACIONAL - 2025 - EJE"
-        ][["fecha", "inspector", "hora_inicio", "hora_final"]]
+            df_sst["tipo de trabajo"].str.contains("PREOPERACIONAL", na=False)
+        ][
+            ["fecha de ejecucion", "inspector", "hora_inicio", "hora_final"]
+        ]
 
         def estilo_preop(row):
             if pd.isna(row["hora_inicio"]):
-                return ["background-color: #f8d7da"] * len(row)
+                return ["background-color:#f8d7da"] * len(row)
             return [""] * len(row)
 
         st.dataframe(
-            df_preop.style.apply(estilo_preop, axis=1),
+            df_preop
+            .style
+            .apply(estilo_preop, axis=1),
             use_container_width=True
         )
 
@@ -1634,8 +1670,10 @@ for col in df_bitacora.columns:
     # 🏁 OPERACIONAL FINAL
     # ===================================================
     with sub_final:
+        st.markdown("### 🏁 OPERACIONAL FINAL")
+
         df_final = df_sst[
-            df_sst["tipo de trabajo"] == "OPERACIONAL FINAL - EJE"
+            df_sst["tipo de trabajo"].str.contains("OPERACIONAL FINAL", na=False)
         ].copy()
 
         df_final["estado"] = df_final["hora_final"].apply(
@@ -1643,7 +1681,9 @@ for col in df_bitacora.columns:
         )
 
         st.dataframe(
-            df_final[["fecha", "inspector", "hora_inicio", "hora_final", "estado"]],
+            df_final[
+                ["fecha de ejecucion", "inspector", "hora_inicio", "hora_final", "estado"]
+            ],
             use_container_width=True
         )
 
@@ -1651,11 +1691,14 @@ for col in df_bitacora.columns:
     # 🚫 AUSENTISMO
     # ===================================================
     with sub_aus:
+        st.markdown("### 🚫 AUSENTISMO")
+
         df_aus = df_sst[
-            (df_sst["tipo de trabajo"] == "AUSENTISMO") &
+            (df_sst["tipo de trabajo"].str.contains("AUSENTISMO", na=False)) &
             (df_sst["contrato"] == "OFM-2025-014, EJE")
         ].copy()
 
+        # ---- Tiempo de tarea en minutos ----
         def tiempo_min(row):
             if pd.isna(row["hora_inicio"]) or pd.isna(row["hora_final"]):
                 return None
@@ -1664,18 +1707,28 @@ for col in df_bitacora.columns:
             return int((h2 - h1).total_seconds() / 60)
 
         df_aus["tiempo_tarea"] = df_aus.apply(tiempo_min, axis=1)
+
         df_aus["estado"] = df_aus["hora_inicio"].apply(
             lambda x: "SIN AUSENTISMO" if pd.isna(x) else "CON AUSENTISMO"
         )
 
         def estilo_aus(row):
-            if row["tiempo_tarea"] and row["tiempo_tarea"] > 60:
-                return ["background-color: #f8d7da"] * len(row)
+            if row["tiempo_tarea"] is not None and row["tiempo_tarea"] > 60:
+                return ["background-color:#f8d7da"] * len(row)
             return [""] * len(row)
 
         st.dataframe(
             df_aus[
-                ["fecha", "inspector", "hora_inicio", "hora_final", "tiempo_tarea", "estado"]
-            ].style.apply(estilo_aus, axis=1),
+                [
+                    "fecha de ejecucion",
+                    "inspector",
+                    "hora_inicio",
+                    "hora_final",
+                    "tiempo_tarea",
+                    "estado",
+                ]
+            ]
+            .style
+            .apply(estilo_aus, axis=1),
             use_container_width=True
         )
