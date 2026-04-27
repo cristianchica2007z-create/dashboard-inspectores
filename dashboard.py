@@ -1579,8 +1579,8 @@ with tab5:
     # ===================================================
 
 with tab6:
-   _sel.append(s)    st.markdown("## 🦺 SST")
-
+    st.markdown("## 🦺 SST")
+    st.success("TAB 6 cargó correctamente ✅")
     if sup_sel and "supervisor" in df_sst.columns:
         df_sst = df_sst[df_sst["supervisor"].isin(sup_sel)]
 
