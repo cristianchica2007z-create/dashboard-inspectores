@@ -1584,19 +1584,21 @@ with tab6:
     # ===================================================
     df_sst = df_bitacora.copy()
 
-    # Filtros fijos SST
+    # Normalizar texto clave
+    df_sst["grupo"] = df_sst["grupo"].astype(str).str.upper().str.strip()
+    df_sst["localidad"] = df_sst["localidad"].astype(str).str.upper().str.strip()
+    df_sst["inspector"] = df_sst["inspector"].astype(str).str.upper().str.strip()
+
+    # Filtros fijos SST (ROBUSTOS)
     df_sst = df_sst[
-        (df_sst["grupo"] == "SST-NAL") &
-        (df_sst["localidad"] == "PEREIRA") &
+        (df_sst["grupo"].str.contains("SST", na=False)) &
+        (df_sst["localidad"].str.contains("PEREIRA", na=False)) &
         (df_sst["fecha"] == fecha_sel)
     ]
 
     # ===================================================
-# ===================================================
     # ASIGNAR SUPERVISOR (MISMA LÓGICA QUE TAB 2)
     # ===================================================
-    df_sst["inspector"] = df_sst["inspector"].str.upper()
-
     supervisores_dict = {k.upper(): v for k, v in {
         "ARIZA MARIN SERGIO": "ANDRES ARROYAVE",
         "ANDRES ARROYAVE": "ANDRES ARROYAVE",
@@ -1661,13 +1663,12 @@ with tab6:
         .fillna("SIN SUPERVISOR")
     )
 
-
-    
+    # ===================================================
     # FILTRO POR SUPERVISOR
     # ===================================================
     st.markdown("### 👤 Filtro por Supervisor")
 
-    supervisores_disp = sorted(df_sst["supervisor"].dropna().unique())
+    supervisores_disp = sorted(df_sst["supervisor"].unique())
     sup_sel = []
 
     with st.expander("Seleccionar supervisores", expanded=True):
@@ -1686,18 +1687,12 @@ with tab6:
     )
 
     # ===================================================
-    # ✅ SUBPESTAÑA PREOPERACIONAL
+    # ✅ PREOPERACIONAL
     # ===================================================
     with sub_preop:
-        st.markdown("### ✅ PREOPERACIONAL")
-
         df_preop = df_sst[
             df_sst["tipo de trabajo"] == "PREOPERACIONAL - 2025 - EJE"
-        ].copy()
-
-        df_preop_tabla = df_preop[
-            ["fecha", "inspector", "hora_inicio", "hora_final"]
-        ]
+        ][["fecha", "inspector", "hora_inicio", "hora_final"]]
 
         def estilo_preop(row):
             if pd.isna(row["hora_inicio"]):
@@ -1705,18 +1700,14 @@ with tab6:
             return [""] * len(row)
 
         st.dataframe(
-            df_preop_tabla
-            .style
-            .apply(estilo_preop, axis=1),
+            df_preop.style.apply(estilo_preop, axis=1),
             use_container_width=True
         )
 
     # ===================================================
-    # 🏁 SUBPESTAÑA OPERACIONAL FINAL
+    # 🏁 OPERACIONAL FINAL
     # ===================================================
     with sub_final:
-        st.markdown("### 🏁 OPERACIONAL FINAL")
-
         df_final = df_sst[
             df_sst["tipo de trabajo"] == "OPERACIONAL FINAL - EJE"
         ].copy()
@@ -1725,24 +1716,20 @@ with tab6:
             lambda x: "SIN FINALIZAR JORNADA" if pd.isna(x) else "JORNADA FINALIZADA"
         )
 
-        df_final_tabla = df_final[
-            ["fecha", "inspector", "hora_inicio", "hora_final", "estado"]
-        ]
-
-        st.dataframe(df_final_tabla, use_container_width=True)
+        st.dataframe(
+            df_final[["fecha", "inspector", "hora_inicio", "hora_final", "estado"]],
+            use_container_width=True
+        )
 
     # ===================================================
-    # 🚫 SUBPESTAÑA AUSENTISMO
+    # 🚫 AUSENTISMO
     # ===================================================
     with sub_aus:
-        st.markdown("### 🚫 AUSENTISMO")
-
         df_aus = df_sst[
             (df_sst["tipo de trabajo"] == "AUSENTISMO") &
             (df_sst["contrato"] == "OFM-2025-014, EJE")
         ].copy()
 
-        # Tiempo de tarea en minutos
         def tiempo_min(row):
             if pd.isna(row["hora_inicio"]) or pd.isna(row["hora_final"]):
                 return None
@@ -1751,24 +1738,18 @@ with tab6:
             return int((h2 - h1).total_seconds() / 60)
 
         df_aus["tiempo_tarea"] = df_aus.apply(tiempo_min, axis=1)
-
         df_aus["estado"] = df_aus["hora_inicio"].apply(
             lambda x: "SIN AUSENTISMO" if pd.isna(x) else "CON AUSENTISMO"
         )
 
-        df_aus_tabla = df_aus[
-            ["fecha", "inspector", "hora_inicio", "hora_final", "tiempo_tarea", "estado"]
-        ]
-
         def estilo_aus(row):
-            if row["tiempo_tarea"] is not None and row["tiempo_tarea"] > 60:
+            if row["tiempo_tarea"] and row["tiempo_tarea"] > 60:
                 return ["background-color: #f8d7da"] * len(row)
             return [""] * len(row)
 
         st.dataframe(
-            df_aus_tabla
-            .style
-            .apply(estilo_aus, axis=1),
+            df_aus[
+                ["fecha", "inspector", "hora_inicio", "hora_final", "tiempo_tarea", "estado"]
+            ].style.apply(estilo_aus, axis=1),
             use_container_width=True
         )
-
