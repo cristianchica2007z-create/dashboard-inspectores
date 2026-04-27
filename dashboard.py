@@ -1607,34 +1607,35 @@ df_preop = df_sst[
     df_sst["tipo de trabajo"].str.contains("PREOPERACIONAL", na=False)
 ].copy()
 
-# --- Crear columna SOLO FECHA ---
-if "fecha de ejecucion" in df_preop.columns:
-    df_preop["fecha_ejecucion_solo"] = pd.to_datetime(
-        df_preop["fecha de ejecucion"], errors="coerce"
-    ).dt.date
+# Fecha solo fecha
+df_preop["fecha_ejecucion_solo"] = pd.to_datetime(
+    df_preop["fecha de ejecucion"], errors="coerce"
+).dt.date
 
-# Columnas a mostrar (orden correcto)
+# ✅ Unificar columnas de hora
+if "hora inicio" in df_preop.columns:
+    df_preop["hora_inicio"] = df_preop["hora inicio"]
+
+if "hora final" in df_preop.columns:
+    df_preop["hora_final"] = df_preop["hora final"]
+
+# Columnas a mostrar
 columnas_preop = [
-    "fecha_ejecucion_solo",  # ✅ solo fecha
+    "fecha_ejecucion_solo",
     "inspector",
-    "hora_inicio",           # ✅ aquí sí va la hora
+    "hora_inicio",
     "hora_final"
 ]
-columnas_preop = [c for c in columnas_preop if c in df_preop.columns]
 
-# Estilo: rojo si NO tiene hora de inicio
+# Estilo: rojo si no tiene hora de inicio
 def estilo_preop(row):
-    if "hora_inicio" in row and pd.isna(row["hora_inicio"]):
+    if pd.isna(row["hora_inicio"]):
         return ["background-color: #f8d7da"] * len(row)
     return [""] * len(row)
 
-# Mostrar tabla
-if not df_preop.empty and columnas_preop:
-    st.dataframe(
-        df_preop[columnas_preop]
-        .style
-        .apply(estilo_preop, axis=1),
-        use_container_width=True
-    )
-else:
-    st.info("No hay registros PREOPERACIONAL para mostrar.")
+st.dataframe(
+    df_preop[columnas_preop]
+    .style
+    .apply(estilo_preop, axis=1),
+    use_container_width=True
+)
