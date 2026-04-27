@@ -1567,3 +1567,144 @@ with tab5:
     )
 
     st.plotly_chart(fig, use_container_width=True)
+
+    # ===================================================
+    # ===================================================
+    # ===================================================
+    # ===================================================
+    # ===================================================
+
+with tab_sst:
+    st.markdown("## 🦺 SST")
+
+    sub_preop, sub_final, sub_aus = st.tabs(
+        ["✅ PREOPERACIONAL", "🏁 OPERACIONAL FINAL", "🚫 AUSENTISMO"]
+    )
+# ===================================================
+# BASE SST (COMÚN)
+# ===================================================
+
+df_sst = df_bitacora.copy()
+
+# Filtros fijos SST
+df_sst = df_sst[
+    (df_sst["grupo"] == "SST-NAL") &
+    (df_sst["localidad"] == "PEREIRA") &
+    (df_sst["fecha"] == fecha_sel)
+]
+
+
+st.markdown("### 👤 Filtro por Supervisor")
+
+supervisores_disp = sorted(df_sst["supervisor"].dropna().unique())
+sup_sel = []
+
+with st.expander("Seleccionar supervisor", expanded=True):
+    for s in supervisores_disp:
+        if st.checkbox(s, value=True, key=f"sst_sup_{s}"):
+            sup_sel.append(s)
+
+if sup_sel:
+    df_sst = df_sst[df_sst["supervisor"].isin(sup_sel)]
+
+
+
+with sub_preop:
+    st.markdown("### ✅ PREOPERACIONAL")
+
+    df_preop = df_sst[
+        df_sst["tipo de trabajo"] == "PREOPERACIONAL - 2025 - EJE"
+    ].copy()
+
+    df_preop_tabla = df_preop[
+        [
+            "fecha",
+            "inspector",
+            "hora_inicio",
+            "hora_final"
+        ]
+    ]
+
+    def estilo_preop(row):
+        if pd.isna(row["hora_inicio"]):
+            return ["background-color: #f8d7da"] * len(row)
+        return [""] * len(row)
+
+    st.dataframe(
+        df_preop_tabla
+        .style
+        .apply(estilo_preop, axis=1),
+        use_container_width=True
+    )
+
+
+with sub_final:
+    st.markdown("### 🏁 OPERACIONAL FINAL")
+
+    df_final = df_sst[
+        df_sst["tipo de trabajo"] == "OPERACIONAL FINAL - EJE"
+    ].copy()
+
+    df_final["estado"] = df_final["hora_final"].apply(
+        lambda x: "SIN FINALIZAR JORNADA" if pd.isna(x) else "JORNADA FINALIZADA"
+    )
+
+    df_final_tabla = df_final[
+        [
+            "fecha",
+            "inspector",
+            "hora_inicio",
+            "hora_final",
+            "estado"
+        ]
+    ]
+
+    st.dataframe(df_final_tabla, use_container_width=True)
+
+
+with sub_aus:
+    st.markdown("### 🚫 AUSENTISMO")
+
+    df_aus = df_sst[
+        (df_sst["tipo de trabajo"] == "AUSENTISMO") &
+        (df_sst["contrato"] == "OFM-2025-014, EJE")
+    ].copy()
+
+    # Calcular tiempo en minutos
+    def tiempo_min(row):
+        if pd.isna(row["hora_inicio"]) or pd.isna(row["hora_final"]):
+            return None
+        h1 = datetime.datetime.combine(datetime.date.today(), row["hora_inicio"])
+        h2 = datetime.datetime.combine(datetime.date.today(), row["hora_final"])
+        return int((h2 - h1).total_seconds() / 60)
+
+    df_aus["tiempo_tarea"] = df_aus.apply(tiempo_min, axis=1)
+
+    df_aus["estado"] = df_aus["hora_inicio"].apply(
+        lambda x: "SIN AUSENTISMO" if pd.isna(x) else "CON AUSENTISMO"
+    )
+
+    df_aus_tabla = df_aus[
+        [
+            "fecha",
+            "inspector",
+            "hora_inicio",
+            "hora_final",
+            "tiempo_tarea",
+            "estado"
+        ]
+    ]
+
+    def estilo_aus(row):
+        if row["tiempo_tarea"] is not None and row["tiempo_tarea"] > 60:
+            return ["background-color: #f8d7da"] * len(row)
+        return [""] * len(row)
+
+    st.dataframe(
+        df_aus_tabla
+        .style
+        .apply(estilo_aus, axis=1),
+        use_container_width=True
+    )
+
+
