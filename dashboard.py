@@ -1591,6 +1591,12 @@ df_sst = df_bitacora_base.copy()
 
 # ===================================================
 # ===================================================
+# --- Normalizar nombres de hora ---
+if "hora inicio" in df_preop.columns and "hora_inicio" not in df_preop.columns:
+    df_preop["hora_inicio"] = df_preop["hora inicio"]
+
+if "hora final" in df_preop.columns and "hora_final" not in df_preop.columns:
+    df_preop["hora_final"] = df_preop["hora final"]
 # ===================================================
 # PREOPERACIONAL — TABLA CON FECHA (SIN HORA)
 # ===================================================
