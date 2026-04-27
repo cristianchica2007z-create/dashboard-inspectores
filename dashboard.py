@@ -1580,22 +1580,20 @@ with tab6:
     st.markdown("## 🦺 SST")
 
     # ===================================================
-    # BASE SST (COMÚN)
+    # BASE SST (COMÚN) — SIN FILTRO POR FECHA
     # ===================================================
     df_sst = df_bitacora.copy()
 
-    # Normalizar texto clave
+    # Normalizar columnas clave
     df_sst["grupo"] = df_sst["grupo"].astype(str).str.upper().str.strip()
     df_sst["localidad"] = df_sst["localidad"].astype(str).str.upper().str.strip()
     df_sst["inspector"] = df_sst["inspector"].astype(str).str.upper().str.strip()
 
-    # Filtros fijos SST (ROBUSTOS)
+    # Filtros SST (ROBUSTOS)
     df_sst = df_sst[
         (df_sst["grupo"].str.contains("SST", na=False)) &
-        (df_sst["localidad"].str.contains("PEREIRA", na=False)) &
-        (df_sst["fecha"] == fecha_sel)
+        (df_sst["localidad"].str.contains("PEREIRA", na=False))
     ]
-
     # ===================================================
     # ASIGNAR SUPERVISOR (MISMA LÓGICA QUE TAB 2)
     # ===================================================
