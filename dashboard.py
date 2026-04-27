@@ -1585,7 +1585,8 @@ with tab6:
     df_sst = df_bitacora_base.copy()
 
     # Normalizar columnas clave
-    for col in ["localidad", "inspector", "tipo de trabajo", "supervisor", "contrato"]:
+   for col in ["localidad", "inspector", "tipo de trabajo", "supervisor", "contrato"]:
+    if col in df_sst.columns:
         df_sst[col] = (
             df_sst[col]
             .astype(str)
