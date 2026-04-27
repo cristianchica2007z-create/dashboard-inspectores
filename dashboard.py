@@ -1579,61 +1579,7 @@ with tab5:
     # ===================================================
 
 with tab6:
-    st.markdown("## 🦺 SST")
-
-    # ===================================================
-    # USAR BITÁCORA BASE (SIN FILTROS DE OTROS TABS)
-    # ===================================================
-    df_sst = df_bitacora_base.copy()
-
-    # ---------------------------------------------------
-    # Normalizar SOLO columnas que existan
-    # ---------------------------------------------------
-    columnas_normalizar = [
-        "localidad",
-        "inspector",
-        "tipo de trabajo",
-        "supervisor",
-        "contrato"
-    ]
-
-    for col in columnas_normalizar:
-        if col in df_sst.columns:
-            df_sst[col] = (
-                df_sst[col]
-                .astype(str)
-                .str.upper()
-                .str.strip()
-            )
-
-    # ---------------------------------------------------
-    # FILTRO TERRITORIAL (EJE CAFETERO)
-    # ---------------------------------------------------
-    if "localidad" in df_sst.columns:
-        df_sst = df_sst[
-            df_sst["localidad"].str.contains("PEREIRA", na=False)
-        ]
-
-    if df_sst.empty:
-        st.warning("⚠️ No se encontraron registros SST para la localidad filtrada.")
-        st.stop()
-
-    # ---------------------------------------------------
-    # FILTRO POR SUPERVISOR
-    # ---------------------------------------------------
-    st.markdown("### 👤 Filtro por Supervisor")
-
-    if "supervisor" in df_sst.columns:
-        supervisores_disp = sorted(df_sst["supervisor"].dropna().unique())
-    else:
-        supervisores_disp = []
-
-    sup_sel = []
-
-    with st.expander("Seleccionar supervisores", expanded=True):
-        for s in supervisores_disp:
-            if st.checkbox(s, value=True, key=f"sst_sup_{s}"):
-                sup_sel.append(s)
+   _sel.append(s)    st.markdown("## 🦺 SST")
 
     if sup_sel and "supervisor" in df_sst.columns:
         df_sst = df_sst[df_sst["supervisor"].isin(sup_sel)]
@@ -1657,17 +1603,25 @@ with tab6:
 
         df_preop = df_sst[
             df_sst["tipo de trabajo"].str.contains("PREOPERACIONAL", na=False)
-        ][
-            ["fecha de ejecucion", "inspector", "hora_inicio", "hora_final"]
+        ].copy()
+
+        columnas_preop = [
+            "fecha de ejecucion",
+            "inspector",
+            "hora_inicio",
+            "hora_final"
         ]
+        columnas_preop = [c for c in columnas_preop if c in df_preop.columns]
 
         def estilo_preop(row):
-            if pd.isna(row["hora_inicio"]):
+            if "hora_inicio" in row and pd.isna(row["hora_inicio"]):
                 return ["background-color:#f8d7da"] * len(row)
             return [""] * len(row)
 
         st.dataframe(
-            df_preop.style.apply(estilo_preop, axis=1),
+            df_preop[columnas_preop]
+            .style
+            .apply(estilo_preop, axis=1),
             use_container_width=True
         )
 
@@ -1681,14 +1635,24 @@ with tab6:
             df_sst["tipo de trabajo"].str.contains("OPERACIONAL FINAL", na=False)
         ].copy()
 
-        df_final["estado"] = df_final["hora_final"].apply(
-            lambda x: "SIN FINALIZAR JORNADA" if pd.isna(x) else "JORNADA FINALIZADA"
-        )
+        if "hora_final" in df_final.columns:
+            df_final["estado"] = df_final["hora_final"].apply(
+                lambda x: "SIN FINALIZAR JORNADA" if pd.isna(x) else "JORNADA FINALIZADA"
+            )
+        else:
+            df_final["estado"] = "SIN FINALIZAR JORNADA"
+
+        columnas_final = [
+            "fecha de ejecucion",
+            "inspector",
+            "hora_inicio",
+            "hora_final",
+            "estado"
+        ]
+        columnas_final = [c for c in columnas_final if c in df_final.columns]
 
         st.dataframe(
-            df_final[
-                ["fecha de ejecucion", "inspector", "hora_inicio", "hora_final", "estado"]
-            ],
+            df_final[columnas_final],
             use_container_width=True
         )
 
@@ -1699,40 +1663,106 @@ with tab6:
         st.markdown("### 🚫 AUSENTISMO")
 
         df_aus = df_sst[
-            (df_sst["tipo de trabajo"].str.contains("AUSENTISMO", na=False)) &
-            (df_sst["contrato"] == "OFM-2025-014, EJE")
+            df_sst["tipo de trabajo"].str.contains("AUSENTISMO", na=False)
         ].copy()
 
+        if "contrato" in df_aus.columns:
+            df_aus = df_aus[df_aus["contrato"] == "OFM-2025-014, EJE"]
+
         def tiempo_min(row):
-            if pd.isna(row["hora_inicio"]) or pd.isna(row["hora_final"]):
-                return None
-            h1 = datetime.datetime.combine(datetime.date.today(), row["hora_inicio"])
-            h2 = datetime.datetime.combine(datetime.date.today(), row["hora_final"])
-            return int((h2 - h1).total_seconds() / 60)
+            if "hora_inicio" in row and "hora_final" in row:
+                if pd.isna(row["hora_inicio"]) or pd.isna(row["hora_final"]):
+                    return None
+                h1 = datetime.datetime.combine(datetime.date.today(), row["hora_inicio"])
+                h2 = datetime.datetime.combine(datetime.date.today(), row["hora_final"])
+                return int((h2 - h1).total_seconds() / 60)
+            return None
 
-        df_aus["tiempo_tarea"] = df_aus.apply(tiempo_min, axis=1)
+        if {"hora_inicio", "hora_final"}.issubset(df_aus.columns):
+            df_aus["tiempo_tarea"] = df_aus.apply(tiempo_min, axis=1)
+        else:
+            df_aus["tiempo_tarea"] = None
 
-        df_aus["estado"] = df_aus["hora_inicio"].apply(
-            lambda x: "SIN AUSENTISMO" if pd.isna(x) else "CON AUSENTISMO"
-        )
+        if "hora_inicio" in df_aus.columns:
+            df_aus["estado"] = df_aus["hora_inicio"].apply(
+                lambda x: "SIN AUSENTISMO" if pd.isna(x) else "CON AUSENTISMO"
+            )
+        else:
+            df_aus["estado"] = "SIN AUSENTISMO"
+
+        columnas_aus = [
+            "fecha de ejecucion",
+            "inspector",
+            "hora_inicio",
+            "hora_final",
+            "tiempo_tarea",
+            "estado"
+        ]
+        columnas_aus = [c for c in columnas_aus if c in df_aus.columns]
 
         def estilo_aus(row):
-            if row["tiempo_tarea"] is not None and row["tiempo_tarea"] > 60:
+            if "tiempo_tarea" in row and pd.notna(row["tiempo_tarea"]) and row["tiempo_tarea"] > 60:
                 return ["background-color:#f8d7da"] * len(row)
             return [""] * len(row)
 
         st.dataframe(
-            df_aus[
-                [
-                    "fecha de ejecucion",
-                    "inspector",
-                    "hora_inicio",
-                    "hora_final",
-                    "tiempo_tarea",
-                    "estado",
-                ]
-            ]
+            df_aus[columnas_aus]
             .style
             .apply(estilo_aus, axis=1),
             use_container_width=True
         )
+
+
+    # ===================================================
+    # BASE SST (SIEMPRE DESDE LA BITÁCORA BASE)
+    # ===================================================
+    df_sst = df_bitacora_base.copy()
+
+    # ---------------------------------------------------
+    # Normalizar SOLO columnas existentes
+    # ---------------------------------------------------
+    columnas_normalizar = [
+        "localidad",
+        "inspector",
+        "tipo de trabajo",
+        "supervisor",
+        "contrato"
+    ]
+
+    for col in columnas_normalizar:
+        if col in df_sst.columns:
+            df_sst[col] = (
+                df_sst[col]
+                .astype(str)
+                .str.upper()
+                .str.strip()
+            )
+
+    # ---------------------------------------------------
+    # Filtro territorial (Eje Cafetero)
+    # ---------------------------------------------------
+    if "localidad" in df_sst.columns:
+        df_sst = df_sst[
+            df_sst["localidad"].str.contains("PEREIRA", na=False)
+        ]
+
+    if df_sst.empty:
+        st.warning("⚠️ No se encontraron registros SST para esta localidad.")
+        st.stop()
+
+    # ---------------------------------------------------
+    # FILTRO POR SUPERVISOR (SEGURO)
+    # ---------------------------------------------------
+    st.markdown("### 👤 Filtro por Supervisor")
+
+    supervisores_disp = (
+        sorted(df_sst["supervisor"].dropna().unique())
+        if "supervisor" in df_sst.columns
+        else []
+    )
+
+    sup_sel = []
+
+    with st.expander("Seleccionar supervisores", expanded=True):
+        for s in supervisores_disp:
+            if st.checkbox(s, value=True, key=f"sst_sup_{s}"):
