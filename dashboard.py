@@ -1660,20 +1660,27 @@ df_sst["supervisor"] = (
     .fillna("SIN SUPERVISOR")
 )
 # ===================================================
-# FILTRO POR SUPERVISOR (SST)
 # ===================================================
-st.subheader("👤 Supervisor")
+# FILTRO POR SUPERVISOR (ESTILO TAB 2)
+# ===================================================
+st.markdown("### 👤 Filtro por Supervisor")
 
-lista_supervisores = sorted(
+supervisores_disp = sorted(
     df_sst["supervisor"].unique().tolist()
 )
 
-supervisores_sel = st.multiselect(
-    "Selecciona supervisor(es)",
-    options=lista_supervisores,
-    default=lista_supervisores
-)
+supervisores_sel = []
 
+with st.expander("Seleccionar supervisores", expanded=True):
+    for sup in supervisores_disp:
+        if st.checkbox(
+            sup,
+            value=True,
+            key=f"sst_sup_{sup}"
+        ):
+            supervisores_sel.append(sup)
+
+# Aplicar filtro
 if supervisores_sel:
     df_sst = df_sst[
         df_sst["supervisor"].isin(supervisores_sel)
