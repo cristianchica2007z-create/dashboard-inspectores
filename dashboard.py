@@ -1755,64 +1755,107 @@ with tab6:
         )
 
     # ===================================================
-    # 🚫 AUSENTISMO – EJE
     # ===================================================
-    with sub_aus:
-        st.subheader("🚫 AUSENTISMO – EJE")
+# 🚫 AUSENTISMO – EJE
+# ===================================================
+with sub_aus:
+    st.subheader("🚫 AUSENTISMO – EJE")
 
-        df_aus = df_sst[
-            df_sst["tipo de trabajo"].str.contains("AUSENTISMO", na=False)
-        ].copy()
+    # ---------------------------------------------
+    # Filtrar AUSENTISMO
+    # ---------------------------------------------
+    df_aus = df_sst[
+        df_sst["tipo de trabajo"].str.contains("AUSENTISMO", na=False)
+    ].copy()
 
+    # ✅ FILTRO CLAVE POR CONTRATO
+    if "contrato" in df_aus.columns:
+        df_aus = df_aus[
+            df_aus["contrato"]
+            .astype(str)
+            .str.upper()
+            .str.strip()
+            == "OFM-2025-014, EJE"
+        ]
+
+    # ---------------------------------------------
+    # Fecha solo fecha
+    # ---------------------------------------------
+    if "fecha de ejecucion" in df_aus.columns:
         df_aus["fecha_ejecucion_solo"] = pd.to_datetime(
             df_aus["fecha de ejecucion"], errors="coerce"
         ).dt.date
 
-        if "hora inicio" in df_aus.columns:
-            df_aus["hora_inicio"] = df_aus["hora inicio"]
+    # ---------------------------------------------
+    # Normalizar horas
+    # ---------------------------------------------
+    if "hora inicio" in df_aus.columns:
+        df_aus["hora_inicio"] = df_aus["hora inicio"]
 
-        if "hora final" in df_aus.columns:
-            df_aus["hora_final"] = df_aus["hora final"]
+    if "hora final" in df_aus.columns:
+        df_aus["hora_final"] = df_aus["hora final"]
 
-        if "cierre" in df_aus.columns:
-            df_aus["cierre"] = df_aus["cierre"].astype(str).str.upper().str.strip()
-            # ---------------------------------------------------
-# Calcular tiempo de ausentismo (en minutos) – FORMA CORRECTA
-# ---------------------------------------------------
+    # ---------------------------------------------
+    # Normalizar CIERRE
+    # ---------------------------------------------
+    if "cierre" in df_aus.columns:
+        df_aus["cierre"] = (
+            df_aus["cierre"]
+            .astype(str)
+            .str.upper()
+            .str.strip()
+        )
 
-# Convertir horas a datetime (si vienen como texto)
+    # ---------------------------------------------
+    # ✅ Cálculo CORRECTO del tiempo (sin apply)
+    # ---------------------------------------------
+    df_aus["hora_inicio_dt"] = pd.to_datetime(
+        df_aus["hora_inicio"], errors="coerce"
+    )
+    df_aus["hora_final_dt"] = pd.to_datetime(
+        df_aus["hora_final"], errors="coerce"
+    )
 
-df_aus["hora_inicio_dt"] = pd.to_datetime(
-    df_aus["hora_inicio"], errors="coerce"
-)
+    df_aus["tiempo_ausentismo_min"] = (
+        (df_aus["hora_final_dt"] - df_aus["hora_inicio_dt"])
+        .dt.total_seconds() / 60
+    )
 
-df_aus["hora_final_dt"] = pd.to_datetime(
-    df_aus["hora_final"], errors="coerce"
-)
+    # Eliminar valores negativos o inválidos
+    df_aus.loc[
+        df_aus["tiempo_ausentismo_min"] < 0,
+        "tiempo_ausentismo_min"
+    ] = None
 
-# Calcular diferencia en minutos
-df_aus["tiempo_ausentismo_min"] = (
-    (df_aus["hora_final_dt"] - df_aus["hora_inicio_dt"])
-    .dt.total_seconds() / 60
-).round()
+    # ---------------------------------------------
+    # Estilo: rojo si > 60 minutos
+    # ---------------------------------------------
+    def estilo_aus(row):
+        if (
+            pd.notna(row["tiempo_ausentismo_min"])
+            and row["tiempo_ausentismo_min"] > 60
+        ):
+            return ["background-color:#f8d7da"] * len(row)
+        return [""] * len(row)
 
-# Limpiar negativos o inconsistencias
-df_aus.loc[df_aus["tiempo_ausentismo_min"] < 0, "tiempo_ausentismo_min"] = None
-
-        
-
-        
-
-        df_aus["tiempo_ausentismo_min"] = df_aus.apply(tiempo_minutos, axis=1)
-
-        def estilo_aus(row):
-            if pd.notna(row["tiempo_ausentismo_min"]) and row["tiempo_ausentismo_min"] > 60:
-                return ["background-color:#f8d7da"] * len(row)
-            return [""] * len(row)
-
+    # ---------------------------------------------
+    # Mostrar tabla
+    # ---------------------------------------------
+    if not df_aus.empty:
         st.dataframe(
             df_aus[
-                ["fecha_ejecucion_solo", "inspector", "hora_inicio", "hora_final", "tiempo_ausentismo_min", "cierre"]
-            ].style.apply(estilo_aus, axis=1),
+                [
+                    "fecha_ejecucion_solo",
+                    "inspector",
+                    "hora_inicio",
+                    "hora_final",
+                    "tiempo_ausentismo_min",
+                    "cierre"
+                ]
+            ]
+            .style
+            .apply(estilo_aus, axis=1),
             use_container_width=True
         )
+    else:
+        st.info("No hay registros de AUSENTISMO – EJE para mostrar.")
