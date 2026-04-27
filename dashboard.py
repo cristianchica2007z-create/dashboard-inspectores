@@ -1579,4 +1579,5 @@ with tab6:
     
 
 df_sst = df_bitacora_base.copy()
-st.write("Filas SST:", df_sst.shape[0])
+st.subheader("Valores de tipo de trabajo (SST)")
+st.write(df_sst["tipo de trabajo"].value_counts().head(15))
