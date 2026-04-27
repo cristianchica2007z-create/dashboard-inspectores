@@ -1738,3 +1738,77 @@ st.dataframe(
     .apply(estilo_preop, axis=1),
     use_container_width=True
 )
+
+
+
+# ===================================================
+# 🏁 OPERACIONAL FINAL – 2025 – EJE
+# ===================================================
+st.subheader("🏁 OPERACIONAL FINAL")
+
+df_final = df_sst[
+    df_sst["tipo de trabajo"].str.contains(
+        "OPERACIONAL FINAL - 2025 - EJE",
+        na=False
+    )
+].copy()
+
+# Fecha solo fecha
+if "fecha de ejecucion" in df_final.columns:
+    df_final["fecha_ejecucion_solo"] = pd.to_datetime(
+        df_final["fecha de ejecucion"], errors="coerce"
+    ).dt.date
+
+# Normalizar horas
+if "hora inicio" in df_final.columns:
+    df_final["hora_inicio"] = df_final["hora inicio"]
+
+if "hora final" in df_final.columns:
+    df_final["hora_final"] = df_final["hora final"]
+
+# Normalizar CIERRE
+if "cierre" in df_final.columns:
+    df_final["cierre"] = (
+        df_final["cierre"]
+        .astype(str)
+        .str.upper()
+        .str.strip()
+    )
+
+# Estado de jornada
+def estado_jornada(row):
+    if pd.isna(row["hora_final"]):
+        return "SIN FINALIZAR JORNADA"
+    return "JORNADA FINALIZADA"
+
+df_final["estado_jornada"] = df_final.apply(estado_jornada, axis=1)
+
+# Columnas a mostrar
+columnas_final = [
+    "fecha_ejecucion_solo",
+    "inspector",
+    "hora_inicio",
+    "hora_final",
+    "estado_jornada",
+    "cierre"
+]
+
+columnas_final = [c for c in columnas_final if c in df_final.columns]
+
+# Estilo: rojo si NO finalizó la jornada
+def estilo_final(row):
+    if row["estado_jornada"] == "SIN FINALIZAR JORNADA":
+        return ["background-color: #f8d7da"] * len(row)
+    return [""] * len(row)
+
+# Mostrar tabla
+if not df_final.empty and columnas_final:
+    st.dataframe(
+        df_final[columnas_final]
+        .style
+        .apply(estilo_final, axis=1),
+        use_container_width=True
+    )
+else:
+    st.info("No hay registros de OPERACIONAL FINAL – 2025 – EJE para mostrar.")
+
