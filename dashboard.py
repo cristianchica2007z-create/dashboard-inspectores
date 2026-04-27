@@ -1820,7 +1820,7 @@ with tab6:
         )
     else:
         st.info("No hay registros de AUSENTISMO para mostrar.")
-``
+
 # 🚫 AUSENTISMO – EJE
 # ===================================================
 with sub_aus:
