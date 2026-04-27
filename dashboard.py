@@ -1586,3 +1586,44 @@ with tab6:
     ]
 
     st.write("Filas PREOPERACIONAL:", df_preop.shape[0])
+    # Base SST
+df_sst = df_bitacora_base.copy()
+
+# ===================================================
+# PREOPERACIONAL — TABLA CON COLORES
+# ===================================================
+st.subheader("✅ PREOPERACIONAL")
+
+# Filtrar solo PREOPERACIONAL (regla validada)
+df_preop = df_sst[
+    df_sst["tipo de trabajo"].str.contains("PREOPERACIONAL", na=False)
+].copy()
+
+# Columnas a mostrar (solo si existen)
+columnas_preop = [
+    "fecha de ejecucion",
+    "inspector",
+    "hora_inicio",
+    "hora_final"
+]
+columnas_preop = [c for c in columnas_preop if c in df_preop.columns]
+
+# Función de estilo: rojo si no tiene hora de inicio
+def estilo_preop(row):
+    if "hora_inicio" in row and pd.isna(row["hora_inicio"]):
+        return ["background-color: #f8d7da"] * len(row)
+    return [""] * len(row)
+
+# Mostrar tabla
+if not df_preop.empty and columnas_preop:
+    st.dataframe(
+        df_preop[columnas_preop]
+        .style
+        .apply(estilo_preop, axis=1),
+        use_container_width=True
+    )
+else:
+    st.info("No hay registros PREOPERACIONAL para mostrar.")
+
+
+
