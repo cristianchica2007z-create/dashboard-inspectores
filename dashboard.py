@@ -1776,7 +1776,7 @@ with tab6:
     # 🚫 AUSENTISMO (LISTO PARA EL SIGUIENTE PASO)
     # ===================================================
     with sub_aus:
-# ===================================================# ================================================= (en minutos)
+
     def tiempo_minutos(row):
         if pd.notna(row["hora_inicio"]) and pd.notna(row["hora_final"]):
             h1 = datetime.datetime.combine(
