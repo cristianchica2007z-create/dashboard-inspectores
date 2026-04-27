@@ -1574,241 +1574,208 @@ with tab5:
 
     # ===================================================
 with tab6:
-    st.markdown("## 🦺 SST")
-    st.success("TAB 6 cargó correctamente ✅")
+    with tab## 🦺 SST")
 
-    # Base SST
+    # ===================================================
+    # BASE SST
+    # ===================================================
     df_sst = df_bitacora_base.copy()
 
-    # PREOPERACIONAL (solo prueba)
-    df_preop = df_sst[
-        df_sst["tipo de trabajo"].str.contains("PREOPERACIONAL", na=False)
-    ]
+    # Normalizar columnas base si existen
+    for col in ["inspector", "tipo de trabajo"]:
+        if col in df_sst.columns:
+            df_sst[col] = df_sst[col].astype(str).str.upper().str.strip()
 
-    st.write("Filas PREOPERACIONAL:", df_preop.shape[0])
-    # Base SST
-df_sst = df_bitacora_base.copy()
+    # ===================================================
+    # ASIGNAR SUPERVISOR (MISMO DICCIONARIO DE TAB 2)
+    # ===================================================
+    supervisores_dict = {k.upper(): v for k, v in {
+        "ARIZA MARIN SERGIO": "ANDRES ARROYAVE",
+        "ANDRES ARROYAVE": "ANDRES ARROYAVE",
+        "BEDOYA DIEGO ALEJANDRO": "DANNY DE LA CRUZ",
+        "DANNY DE LA CRUZ": "DANNY DE LA CRUZ",
+        "CARVAJAL RESTREPO JUAN DAVID": "JANIER MARIN",
+        "JANIER MARIN": "JANIER MARIN",
+        "CHAVARRIAGA JUAN MANUEL": "CRISTIAN CHICA",
+        "CRISTIAN CHICA": "CRISTIAN CHICA",
+        "ECHEVERRY CARDONA JHON STIVEN": "JANIER MARIN",
+        "GALLEGO CADAVID NORBEY": "DANNY DE LA CRUZ",
+        "GIRALDO GARCIA SIGIFREDO": "ANDRES ARROYAVE",
+        "LOPEZ PINEDA CESAR AUGUSTO": "JANIER MARIN",
+        "NOREÑA GIRALDO GEOVANNY": "ANDRES ARROYAVE",
+        "OSPINA CASTELLANOS ANDERSON": "CRISTIAN CHICA",
+        "OSPINA RODRIGUEZ DANIEL ALBERTO": "ANDRES ARROYAVE",
+        "RUIZ DILON MARLON ANDREY": "ANDRES ARROYAVE",
+        "LARGO OSORIO JOSE OMAR": "ANDRES ARROYAVE",
+        "PULGARIN QUINTERO JULIAN ANDRES": "DANNY DE LA CRUZ",
+        "TAYACK TRUJILLO DEIVER EVELIO": "ANDRES ARROYAVE",
+        "RUIZ ARENAS JUAN CAMILO": "CRISTIAN CHICA",
+        "PATIÑO CIFUENTES RICARDO": "JANIER MARIN",
+        "VARGAS FRANCO JHON EDISON": "CRISTIAN CHICA",
+        "CARDONA CANO NELSON": "CRISTIAN CHICA",
+        "CARDONA OROZCO JULIAN ANDRES": "ANDRES ARROYAVE",
+        "GRISALES CUERVO JUAN DAVID": "JANIER MARIN",
+        "LEON MARIN LEONARDO FABIO": "JANIER MARIN",
+        "VELASQUEZ TAPASCO JHON DIEGO": "ANDRES ARROYAVE",
+        "CARDONA CASTANO DIDIER ORLANDO": "CRISTIAN CHICA",
+        "TORRES HERNANDEZ JOHN JAMES": "ANDRES ARROYAVE",
+        "COBO HOYOS JUAN MANUEL": "CRISTIAN CHICA",
+        "OSPINA NARANJO BERNARDO": "CRISTIAN CHICA",
+        "COGOLLO FIGUEROA RANDY": "DANNY DE LA CRUZ",
+        "ARIAS TORO YEISON": "DANNY DE LA CRUZ",
+        "MIRANDA FRANCO EFRAIN": "DANNY DE LA CRUZ",
+        "ARDILA MORA GUSTAVO ADOLFO": "DANNY DE LA CRUZ",
+        "LOPEZ VELEZ ESTEBAN": "JANIER MARIN",
+        "GALEANO GRISALEZ RICARDO": "DANNY DE LA CRUZ",
+        "CAICEDO ESCOBAR JUNIOR SANTIAGO": "JANIER MARIN",
+        "OTERO CAICEDO ANYEMBER": "DANNY DE LA CRUZ",
+        "BUITRAGO RAMIREZ LEONARD": "CRISTIAN CHICA",
+        "BORJAS WILLY ALEXANDER": "ANDRES ARROYAVE",
+        "MARIN LEON JAISSON JOAQUIN": "CRISTIAN CHICA",
+        "AMAYA HINCAPIE JUAN CARLOS": "CRISTIAN CHICA",
+        "BEDOYA SANCHEZ CRISTIAN DAVID": "ANDRES ARROYAVE",
+        "RAMIREZ WILSON ENRIQUE": "CRISTIAN CHICA",
+        "CANO MORALES JIMY ALFREDO": "ANDRES ARROYAVE",
+        "CASTRO CASTAÑO JUAN DAVID": "CRISTIAN CHICA",
+        "LOAIZA GAMBA JHON ALEXANDER": "ANDRES ARROYAVE",
+        "VILLA LOAIZA JHEISON ESTIBEN": "CRISTIAN CHICA",
+        "CÁRDENAS GALIANO HAROLD MAURICIO": "JANIER MARIN",
+        "VARGAS CORREA VICTOR ALFONSO": "DANNY DE LA CRUZ",
+        "VILLA MERA CHRISTIAN DAVID": "JANIER MARIN",
+        "AVENDAÑO GARCIA JUAN NEPOMUCENO": "ANDRES ARROYAVE",
+        "PELAEZ TATIS GABRIEL ESTEBAN": "CRISTIAN CHICA",
+        "CHICA RAMIREZ CRISTIAN ALBERTO": "CRISTIAN CHICA",
+    }.items()}
 
-# ===================================================
-# ASIGNAR SUPERVISOR A PARTIR DEL INSPECTOR (TAB 6)
-# ===================================================
-supervisores_dict = {k.upper(): v for k, v in {
-    "ARIZA MARIN SERGIO": "ANDRES ARROYAVE",
-    "ANDRES ARROYAVE": "ANDRES ARROYAVE",
-    "BEDOYA DIEGO ALEJANDRO": "DANNY DE LA CRUZ",
-    "DANNY DE LA CRUZ": "DANNY DE LA CRUZ",
-    "CARVAJAL RESTREPO JUAN DAVID": "JANIER MARIN",
-    "JANIER MARIN": "JANIER MARIN",
-    "CHAVARRIAGA JUAN MANUEL": "CRISTIAN CHICA",
-    "CRISTIAN CHICA": "CRISTIAN CHICA",
-    "ECHEVERRY CARDONA JHON STIVEN": "JANIER MARIN",
-    "GALLEGO CADAVID NORBEY": "DANNY DE LA CRUZ",
-    "GIRALDO GARCIA SIGIFREDO": "ANDRES ARROYAVE",
-    "LOPEZ PINEDA CESAR AUGUSTO": "JANIER MARIN",
-    "NOREÑA GIRALDO GEOVANNY": "ANDRES ARROYAVE",
-    "OSPINA CASTELLANOS ANDERSON": "CRISTIAN CHICA",
-    "OSPINA RODRIGUEZ DANIEL ALBERTO": "ANDRES ARROYAVE",
-    "RUIZ DILON MARLON ANDREY": "ANDRES ARROYAVE",
-    "LARGO OSORIO JOSE OMAR": "ANDRES ARROYAVE",
-    "PULGARIN QUINTERO JULIAN ANDRES": "DANNY DE LA CRUZ",
-    "TAYACK TRUJILLO DEIVER EVELIO": "ANDRES ARROYAVE",
-    "RUIZ ARENAS JUAN CAMILO": "CRISTIAN CHICA",
-    "PATIÑO CIFUENTES RICARDO": "JANIER MARIN",
-    "VARGAS FRANCO JHON EDISON": "CRISTIAN CHICA",
-    "CARDONA CANO NELSON": "CRISTIAN CHICA",
-    "CARDONA OROZCO JULIAN ANDRES": "ANDRES ARROYAVE",
-    "GRISALES CUERVO JUAN DAVID": "JANIER MARIN",
-    "LEON MARIN LEONARDO FABIO": "JANIER MARIN",
-    "VELASQUEZ TAPASCO JHON DIEGO": "ANDRES ARROYAVE",
-    "CARDONA CASTANO DIDIER ORLANDO": "CRISTIAN CHICA",
-    "TORRES HERNANDEZ JOHN JAMES": "ANDRES ARROYAVE",
-    "COBO HOYOS JUAN MANUEL": "CRISTIAN CHICA",
-    "OSPINA NARANJO BERNARDO": "CRISTIAN CHICA",
-    "COGOLLO FIGUEROA RANDY": "DANNY DE LA CRUZ",
-    "ARIAS TORO YEISON": "DANNY DE LA CRUZ",
-    "MIRANDA FRANCO EFRAIN": "DANNY DE LA CRUZ",
-    "ARDILA MORA GUSTAVO ADOLFO": "DANNY DE LA CRUZ",
-    "LOPEZ VELEZ ESTEBAN": "JANIER MARIN",
-    "GALEANO GRISALEZ RICARDO": "DANNY DE LA CRUZ",
-    "CAICEDO ESCOBAR JUNIOR SANTIAGO": "JANIER MARIN",
-    "OTERO CAICEDO ANYEMBER": "DANNY DE LA CRUZ",
-    "BUITRAGO RAMIREZ LEONARD": "CRISTIAN CHICA",
-    "BORJAS WILLY ALEXANDER": "ANDRES ARROYAVE",
-    "MARIN LEON JAISSON JOAQUIN": "CRISTIAN CHICA",
-    "AMAYA HINCAPIE JUAN CARLOS": "CRISTIAN CHICA",
-    "BEDOYA SANCHEZ CRISTIAN DAVID": "ANDRES ARROYAVE",
-    "RAMIREZ WILSON ENRIQUE": "CRISTIAN CHICA",
-    "CANO MORALES JIMY ALFREDO": "ANDRES ARROYAVE",
-    "CASTRO CASTAÑO JUAN DAVID": "CRISTIAN CHICA",
-    "LOAIZA GAMBA JHON ALEXANDER": "ANDRES ARROYAVE",
-    "VILLA LOAIZA JHEISON ESTIBEN": "CRISTIAN CHICA",
-    "CÁRDENAS GALIANO HAROLD MAURICIO": "JANIER MARIN",
-    "VARGAS CORREA VICTOR ALFONSO": "DANNY DE LA CRUZ",
-    "VILLA MERA CHRISTIAN DAVID": "JANIER MARIN",
-    "AVENDAÑO GARCIA JUAN NEPOMUCENO": "ANDRES ARROYAVE",
-    "PELAEZ TATIS GABRIEL ESTEBAN": "CRISTIAN CHICA",
-    "CHICA RAMIREZ CRISTIAN ALBERTO": "CRISTIAN CHICA",
-}.items()}
-# ===================================================
-# Normalizar inspector para mapear bien
-df_sst["inspector"] = df_sst["inspector"].astype(str).str.upper().str.strip()
-
-# Crear columna supervisor
-df_sst["supervisor"] = (
-    df_sst["inspector"]
-    .map(supervisores_dict)
-    .fillna("SIN SUPERVISOR")
-)
-# ===================================================
-# ===================================================
-# FILTRO POR SUPERVISOR (ESTILO TAB 2)
-# ===================================================
-st.markdown("### 👤 Filtro por Supervisor")
-
-supervisores_disp = sorted(
-    df_sst["supervisor"].unique().tolist()
-)
-
-supervisores_sel = []
-
-with st.expander("Seleccionar supervisores", expanded=True):
-    for sup in supervisores_disp:
-        if st.checkbox(
-            sup,
-            value=True,
-            key=f"sst_sup_{sup}"
-        ):
-            supervisores_sel.append(sup)
-
-# Aplicar filtro
-if supervisores_sel:
-    df_sst = df_sst[
-        df_sst["supervisor"].isin(supervisores_sel)
-    ]
-# ===================================================
-# --- Normalizar nombres de hora ---
-if "hora inicio" in df_preop.columns and "hora_inicio" not in df_preop.columns:
-    df_preop["hora_inicio"] = df_preop["hora inicio"]
-
-if "hora final" in df_preop.columns and "hora_final" not in df_preop.columns:
-    df_preop["hora_final"] = df_preop["hora final"]
-# ===================================================
-# PREOPERACIONAL — TABLA CON FECHA (SIN HORA)
-# ===================================================
-st.subheader("✅ PREOPERACIONAL")
-
-# Filtrar SOLO PREOPERACIONAL - 2025 - EJE
-df_preop = df_sst[
-    df_sst["tipo de trabajo"].str.contains(
-        "PREOPERACIONAL - 2025 - EJE",
-        na=False
-    )
-].copy()
-
-
-# Fecha solo fecha
-df_preop["fecha_ejecucion_solo"] = pd.to_datetime(
-    df_preop["fecha de ejecucion"], errors="coerce"
-).dt.date
-
-# ✅ Unificar columnas de hora
-if "hora inicio" in df_preop.columns:
-    df_preop["hora_inicio"] = df_preop["hora inicio"]
-
-if "hora final" in df_preop.columns:
-    df_preop["hora_final"] = df_preop["hora final"]
-
-# Columnas a mostrar
-columnas_preop = [
-    "fecha_ejecucion_solo",
-    "inspector",
-    "hora_inicio",
-    "hora_final"
-]
-
-# Estilo: rojo si no tiene hora de inicio
-def estilo_preop(row):
-    if pd.isna(row["hora_inicio"]):
-        return ["background-color: #f8d7da"] * len(row)
-    return [""] * len(row)
-
-st.dataframe(
-    df_preop[columnas_preop]
-    .style
-    .apply(estilo_preop, axis=1),
-    use_container_width=True
-)
-
-
-
-# ===================================================
-# 🏁 OPERACIONAL FINAL – 2025 – EJE
-# ===================================================
-st.subheader("🏁 OPERACIONAL FINAL")
-
-df_final = df_sst[
-    df_sst["tipo de trabajo"].str.contains(
-        "OPERACIONAL FINAL - 2025 - EJE",
-        na=False
-    )
-].copy()
-
-# Fecha solo fecha
-if "fecha de ejecucion" in df_final.columns:
-    df_final["fecha_ejecucion_solo"] = pd.to_datetime(
-        df_final["fecha de ejecucion"], errors="coerce"
-    ).dt.date
-
-# Normalizar horas
-if "hora inicio" in df_final.columns:
-    df_final["hora_inicio"] = df_final["hora inicio"]
-
-if "hora final" in df_final.columns:
-    df_final["hora_final"] = df_final["hora final"]
-
-# Normalizar CIERRE
-if "cierre" in df_final.columns:
-    df_final["cierre"] = (
-        df_final["cierre"]
-        .astype(str)
-        .str.upper()
-        .str.strip()
+    df_sst["supervisor"] = (
+        df_sst["inspector"]
+        .map(supervisores_dict)
+        .fillna("SIN SUPERVISOR")
     )
 
-# Estado de jornada
-def estado_jornada(row):
-    if pd.isna(row["hora_final"]):
-        return "SIN FINALIZAR JORNADA"
-    return "JORNADA FINALIZADA"
+    # ===================================================
+    # FILTRO POR SUPERVISOR (ESTILO TAB 2)
+    # ===================================================
+    st.markdown("### 👤 Filtro por Supervisor")
 
-df_final["estado_jornada"] = df_final.apply(estado_jornada, axis=1)
+    supervisores_disp = sorted(df_sst["supervisor"].unique().tolist())
+    supervisores_sel = []
 
-# Columnas a mostrar
-columnas_final = [
-    "fecha_ejecucion_solo",
-    "inspector",
-    "hora_inicio",
-    "hora_final",
-    "estado_jornada",
-    "cierre"
-]
+    with st.expander("Seleccionar supervisores", expanded=True):
+        for sup in supervisores_disp:
+            if st.checkbox(sup, value=True, key=f"sst_sup_{sup}"):
+                supervisores_sel.append(sup)
 
-columnas_final = [c for c in columnas_final if c in df_final.columns]
+    if supervisores_sel:
+        df_sst = df_sst[df_sst["supervisor"].isin(supervisores_sel)]
 
-# Estilo: rojo si NO finalizó la jornada
-def estilo_final(row):
-    if row["estado_jornada"] == "SIN FINALIZAR JORNADA":
-        return ["background-color: #f8d7da"] * len(row)
-    return [""] * len(row)
-
-# Mostrar tabla
-if not df_final.empty and columnas_final:
-    st.dataframe(
-        df_final[columnas_final]
-        .style
-        .apply(estilo_final, axis=1),
-        use_container_width=True
+    # ===================================================
+    # SUBPESTAÑAS SST
+    # ===================================================
+    sub_preop, sub_final, sub_aus = st.tabs(
+        ["✅ PREOPERACIONAL", "🏁 OPERACIONAL FINAL", "🚫 AUSENTISMO"]
     )
-else:
-    st.info("No hay registros de OPERACIONAL FINAL – 2025 – EJE para mostrar.")
+
+    # ===================================================
+    # ✅ PREOPERACIONAL – 2025 – EJE
+    # ===================================================
+    with sub_preop:
+        st.subheader("✅ PREOPERACIONAL – 2025 – EJE")
+
+        df_preop = df_sst[
+            df_sst["tipo de trabajo"].str.contains(
+                "PREOPERACIONAL - 2025 - EJE",
+                na=False
+            )
+        ].copy()
+
+        df_preop["fecha_ejecucion_solo"] = pd.to_datetime(
+            df_preop["fecha de ejecucion"], errors="coerce"
+        ).dt.date
+
+        if "hora inicio" in df_preop.columns:
+            df_preop["hora_inicio"] = df_preop["hora inicio"]
+
+        if "hora final" in df_preop.columns:
+            df_preop["hora_final"] = df_preop["hora final"]
+
+        if "cierre" in df_preop.columns:
+            df_preop["cierre"] = df_preop["cierre"].astype(str).str.upper().str.strip()
+
+        columnas_preop = [
+            "fecha_ejecucion_solo",
+            "inspector",
+            "hora_inicio",
+            "hora_final",
+            "cierre"
+        ]
+
+        def estilo_preop(row):
+            if pd.isna(row["hora_inicio"]):
+                return ["background-color:#f8d7da"] * len(row)
+            return [""] * len(row)
+
+        st.dataframe(
+            df_preop[columnas_preop]
+            .style
+            .apply(estilo_preop, axis=1),
+            use_container_width=True
+        )
+
+    # ===================================================
+    # 🏁 OPERACIONAL FINAL – 2025 – EJE
+    # ===================================================
+    with sub_final:
+        st.subheader("🏁 OPERACIONAL FINAL – 2025 – EJE")
+
+        df_final = df_sst[
+            df_sst["tipo de trabajo"].str.contains(
+                "OPERACIONAL FINAL - 2025 - EJE",
+                na=False
+            )
+        ].copy()
+
+        df_final["fecha_ejecucion_solo"] = pd.to_datetime(
+            df_final["fecha de ejecucion"], errors="coerce"
+        ).dt.date
+
+        if "hora inicio" in df_final.columns:
+            df_final["hora_inicio"] = df_final["hora inicio"]
+
+        if "hora final" in df_final.columns:
+            df_final["hora_final"] = df_final["hora final"]
+
+        if "cierre" in df_final.columns:
+            df_final["cierre"] = df_final["cierre"].astype(str).str.upper().str.strip()
+
+        df_final["estado_jornada"] = df_final["hora_final"].apply(
+            lambda x: "SIN FINALIZAR JORNADA" if pd.isna(x) else "JORNADA FINALIZADA"
+        )
+
+        columnas_final = [
+            "fecha_ejecucion_solo",
+            "inspector",
+            "hora_inicio",
+            "hora_final",
+            "estado_jornada",
+            "cierre"
+        ]
+
+        def estilo_final(row):
+            if row["estado_jornada"] == "SIN FINALIZAR JORNADA":
+                return ["background-color:#f8d7da"] * len(row)
+            return [""] * len(row)
+
+        st.dataframe(
+            df_final[columnas_final]
+            .style
+            .apply(estilo_final, axis=1),
+            use_container_width=True
+        )
+
+    # ===================================================
+    # 🚫 AUSENTISMO (LISTO PARA EL SIGUIENTE PASO)
+    # ===================================================
+    with sub_aus:
+        st.info("🚫 AUSENTISMO – pendiente de implementar")
 
