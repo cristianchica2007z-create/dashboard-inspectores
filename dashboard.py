@@ -1572,14 +1572,13 @@ with tab5:
 
     st.plotly_chart(fig, use_container_width=True)
 
-    # ===================================================
-with tab6:
-    with tab## 🦺 SST")
 
     # ===================================================
-    # BASE SST
-    # ===================================================
     df_sst = df_bitacora_base.copy()
+with tab6:
+    st.markdown("## 🦺 SST")
+
+
 
     # Normalizar columnas base si existen
     for col in ["inspector", "tipo de trabajo"]:
