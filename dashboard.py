@@ -1580,12 +1580,12 @@ with tab6:
     st.markdown("## 🦺 SST")
 
     # ===================================================
-    # BASE SST
+    # BASE SST (SIN FILTRO POR GRUPO)
     # ===================================================
     df_sst = df_bitacora.copy()
 
-    # -------- Normalizar columnas clave --------
-    for col in ["grupo", "localidad", "inspector", "tipo de trabajo"]:
+    # Normalizar columnas clave (según bitácora real)
+    for col in ["localidad", "inspector", "tipo de trabajo", "supervisor", "contrato"]:
         df_sst[col] = (
             df_sst[col]
             .astype(str)
@@ -1593,34 +1593,21 @@ with tab6:
             .str.strip()
         )
 
-    # -------- Filtros fijos SST --------
+    # Filtro territorial (Eje cafetero)
     df_sst = df_sst[
-        (df_sst["grupo"].str.contains("SST", na=False)) &
-        (df_sst["localidad"].str.contains("PEREIRA", na=False))
+        df_sst["localidad"].str.contains("PEREIRA", na=False)
     ]
 
     if df_sst.empty:
-        st.warning("⚠️ No se encontraron registros SST con los filtros actuales.")
+        st.warning("⚠️ No se encontraron registros SST para la localidad filtrada.")
         st.stop()
-
-    # ===================================================
-    # ASIGNAR SUPERVISOR (MISMA LÓGICA TAB 2)
-    # La columna supervisor YA EXISTE en la bitácora,
-    # solo normalizamos
-    # ===================================================
-    df_sst["supervisor"] = (
-        df_sst["supervisor"]
-        .astype(str)
-        .str.upper()
-        .str.strip()
-    )
 
     # ===================================================
     # FILTRO POR SUPERVISOR
     # ===================================================
     st.markdown("### 👤 Filtro por Supervisor")
 
-    supervisores_disp = sorted(df_sst["supervisor"].dropna().unique())
+    supervisores_disp = sorted(df_sst["supervisor"].dropna().unique().tolist())
     sup_sel = []
 
     with st.expander("Seleccionar supervisores", expanded=True):
@@ -1698,7 +1685,7 @@ with tab6:
             (df_sst["contrato"] == "OFM-2025-014, EJE")
         ].copy()
 
-        # ---- Tiempo de tarea en minutos ----
+        # Calcular tiempo de tarea en minutos
         def tiempo_min(row):
             if pd.isna(row["hora_inicio"]) or pd.isna(row["hora_final"]):
                 return None
