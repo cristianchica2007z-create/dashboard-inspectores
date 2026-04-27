@@ -1776,5 +1776,83 @@ with tab6:
     # 🚫 AUSENTISMO (LISTO PARA EL SIGUIENTE PASO)
     # ===================================================
     with sub_aus:
-        st.info("🚫 AUSENTISMO – pendiente de implementar")
+# ===================================================# ================================================= (en minutos)
+    def tiempo_minutos(row):
+        if pd.notna(row["hora_inicio"]) and pd.notna(row["hora_final"]):
+            h1 = datetime.datetime.combine(
+                datetime.date.today(), row["hora_inicio"]
+            )
+            h2 = datetime.datetime.combine(
+                datetime.date.today(), row["hora_final"]
+            )
+            return int((h2 - h1).total_seconds() / 60)
+        return None
+
+    df_aus["tiempo_ausentismo_min"] = df_aus.apply(
+        tiempo_minutos, axis=1
+    )
+
+    # Columnas a mostrar
+    columnas_aus = [
+        "fecha_ejecucion_solo",
+        "inspector",
+        "hora_inicio",
+        "hora_final",
+        "tiempo_ausentismo_min",
+        "cierre"
+    ]
+
+    # Estilo: rojo si ausentismo > 60 min
+    def estilo_aus(row):
+        if (
+            pd.notna(row["tiempo_ausentismo_min"])
+            and row["tiempo_ausentismo_min"] > 60
+        ):
+            return ["background-color:#f8d7da"] * len(row)
+        return [""] * len(row)
+
+    if not df_aus.empty:
+        st.dataframe(
+            df_aus[columnas_aus]
+            .style
+            .apply(estilo_aus, axis=1),
+            use_container_width=True
+        )
+    else:
+        st.info("No hay registros de AUSENTISMO para mostrar.")
+``
+# 🚫 AUSENTISMO – EJE
+# ===================================================
+with sub_aus:
+    st.subheader("🚫 AUSENTISMO – EJE")
+
+    df_aus = df_sst[
+        df_sst["tipo de trabajo"].str.contains(
+            "AUSENTISMO",
+            na=False
+        )
+    ].copy()
+
+    # Fecha solo fecha
+    df_aus["fecha_ejecucion_solo"] = pd.to_datetime(
+        df_aus["fecha de ejecucion"], errors="coerce"
+    ).dt.date
+
+    # Normalizar horas
+    if "hora inicio" in df_aus.columns:
+        df_aus["hora_inicio"] = df_aus["hora inicio"]
+
+    if "hora final" in df_aus.columns:
+        df_aus["hora_final"] = df_aus["hora final"]
+
+    # Normalizar CIERRE
+    if "cierre" in df_aus.columns:
+        df_aus["cierre"] = (
+            df_aus["cierre"]
+            .astype(str)
+            .str.upper()
+            .str.strip()
+        )
+
+
 
