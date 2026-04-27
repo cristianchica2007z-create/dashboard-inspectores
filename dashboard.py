@@ -1602,10 +1602,14 @@ if "hora final" in df_preop.columns and "hora_final" not in df_preop.columns:
 # ===================================================
 st.subheader("✅ PREOPERACIONAL")
 
-# Filtrar PREOPERACIONAL
+# Filtrar SOLO PREOPERACIONAL - 2025 - EJE
 df_preop = df_sst[
-    df_sst["tipo de trabajo"].str.contains("PREOPERACIONAL", na=False)
+    df_sst["tipo de trabajo"].str.contains(
+        "PREOPERACIONAL - 2025 - EJE",
+        na=False
+    )
 ].copy()
+
 
 # Fecha solo fecha
 df_preop["fecha_ejecucion_solo"] = pd.to_datetime(
