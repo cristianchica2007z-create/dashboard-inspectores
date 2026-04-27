@@ -1582,7 +1582,7 @@ with tab6:
     # ===================================================
     # BASE SST (SIN FILTRO POR GRUPO)
     # ===================================================
-    df_sst = df_bitacora.copy()
+   df_sst = df_bitacora_base.copy()
 
     # Normalizar columnas clave (según bitácora real)
     for col in ["localidad", "inspector", "tipo de trabajo", "supervisor", "contrato"]:
