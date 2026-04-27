@@ -1590,25 +1590,32 @@ with tab6:
 df_sst = df_bitacora_base.copy()
 
 # ===================================================
-# PREOPERACIONAL — TABLA CON COLORES
+# ===================================================
+# PREOPERACIONAL — TABLA CON FECHA (SIN HORA)
 # ===================================================
 st.subheader("✅ PREOPERACIONAL")
 
-# Filtrar solo PREOPERACIONAL (regla validada)
+# Filtrar PREOPERACIONAL
 df_preop = df_sst[
     df_sst["tipo de trabajo"].str.contains("PREOPERACIONAL", na=False)
 ].copy()
 
-# Columnas a mostrar (solo si existen)
+# --- Crear columna SOLO FECHA ---
+if "fecha de ejecucion" in df_preop.columns:
+    df_preop["fecha_ejecucion_solo"] = pd.to_datetime(
+        df_preop["fecha de ejecucion"], errors="coerce"
+    ).dt.date
+
+# Columnas a mostrar (orden correcto)
 columnas_preop = [
-    "fecha de ejecucion",
+    "fecha_ejecucion_solo",  # ✅ solo fecha
     "inspector",
-    "hora_inicio",
+    "hora_inicio",           # ✅ aquí sí va la hora
     "hora_final"
 ]
 columnas_preop = [c for c in columnas_preop if c in df_preop.columns]
 
-# Función de estilo: rojo si no tiene hora de inicio
+# Estilo: rojo si NO tiene hora de inicio
 def estilo_preop(row):
     if "hora_inicio" in row and pd.isna(row["hora_inicio"]):
         return ["background-color: #f8d7da"] * len(row)
@@ -1624,6 +1631,3 @@ if not df_preop.empty and columnas_preop:
     )
 else:
     st.info("No hay registros PREOPERACIONAL para mostrar.")
-
-
-
