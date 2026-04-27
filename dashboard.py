@@ -1579,6 +1579,21 @@ with tab5:
 with tab6:
     st.markdown("## 🦺 SST")
 
+
+
+    st.markdown("### 🔍 DEBUG BITÁCORA SST")
+
+st.write("Columnas disponibles:")
+st.write(df_bitacora.columns.tolist())
+
+st.write("Valores únicos de columnas candidatas:")
+for col in df_bitacora.columns:
+    if "tipo" in col.lower() or "trabajo" in col.lower():
+        st.write(f"--- {col} ---")
+        st.write(df_bitacora[col].dropna().unique()[:20])
+
+
+
     # ===================================================
     # BASE SST (COMÚN) — SIN FILTRO POR FECHA
     # ===================================================
