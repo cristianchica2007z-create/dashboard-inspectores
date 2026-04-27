@@ -1581,35 +1581,53 @@ with tab5:
 with tab6:
     st.markdown("## 🦺 SST")
 
-    # ✅ USAR LA BITÁCORA BASE (NO FILTRADA)
+    # ===================================================
+    # USAR BITÁCORA BASE (SIN FILTROS DE OTROS TABS)
+    # ===================================================
     df_sst = df_bitacora_base.copy()
 
-    # Normalizar columnas clave
-   for col in ["localidad", "inspector", "tipo de trabajo", "supervisor", "contrato"]:
-    if col in df_sst.columns:
-        df_sst[col] = (
-            df_sst[col]
-            .astype(str)
-            .str.upper()
-            .str.strip()
-        )
-
-
-    # Filtro territorial (Eje cafetero)
-    df_sst = df_sst[
-        df_sst["localidad"].str.contains("PEREIRA", na=False)
+    # ---------------------------------------------------
+    # Normalizar SOLO columnas que existan
+    # ---------------------------------------------------
+    columnas_normalizar = [
+        "localidad",
+        "inspector",
+        "tipo de trabajo",
+        "supervisor",
+        "contrato"
     ]
+
+    for col in columnas_normalizar:
+        if col in df_sst.columns:
+            df_sst[col] = (
+                df_sst[col]
+                .astype(str)
+                .str.upper()
+                .str.strip()
+            )
+
+    # ---------------------------------------------------
+    # FILTRO TERRITORIAL (EJE CAFETERO)
+    # ---------------------------------------------------
+    if "localidad" in df_sst.columns:
+        df_sst = df_sst[
+            df_sst["localidad"].str.contains("PEREIRA", na=False)
+        ]
 
     if df_sst.empty:
         st.warning("⚠️ No se encontraron registros SST para la localidad filtrada.")
         st.stop()
 
-    # ===================================================
+    # ---------------------------------------------------
     # FILTRO POR SUPERVISOR
-    # ===================================================
+    # ---------------------------------------------------
     st.markdown("### 👤 Filtro por Supervisor")
 
-    supervisores_disp = sorted(df_sst["supervisor"].dropna().unique().tolist())
+    if "supervisor" in df_sst.columns:
+        supervisores_disp = sorted(df_sst["supervisor"].dropna().unique())
+    else:
+        supervisores_disp = []
+
     sup_sel = []
 
     with st.expander("Seleccionar supervisores", expanded=True):
@@ -1617,7 +1635,7 @@ with tab6:
             if st.checkbox(s, value=True, key=f"sst_sup_{s}"):
                 sup_sel.append(s)
 
-    if sup_sel:
+    if sup_sel and "supervisor" in df_sst.columns:
         df_sst = df_sst[df_sst["supervisor"].isin(sup_sel)]
 
     if df_sst.empty:
@@ -1649,9 +1667,7 @@ with tab6:
             return [""] * len(row)
 
         st.dataframe(
-            df_preop
-            .style
-            .apply(estilo_preop, axis=1),
+            df_preop.style.apply(estilo_preop, axis=1),
             use_container_width=True
         )
 
@@ -1687,7 +1703,6 @@ with tab6:
             (df_sst["contrato"] == "OFM-2025-014, EJE")
         ].copy()
 
-        # Calcular tiempo de tarea en minutos
         def tiempo_min(row):
             if pd.isna(row["hora_inicio"]) or pd.isna(row["hora_final"]):
                 return None
