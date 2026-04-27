@@ -1577,7 +1577,7 @@ with tab5:
     # ===================================================
    with tab6:
     st.markdown("## 🦺 SST")
-
+    st.success("TAB 6 cargó correctamente ✅")
     df_sst = df_bitacora_base.copy()
 
     # resto del código SST
