@@ -1726,7 +1726,7 @@ with tab5:
             )
         else:
             st.info("No hay registros de AUSENTISMO para mostrar.")
-``
+
     # ✅ PREOPERACIONAL
     # ===================================================
     with sub_preop:
