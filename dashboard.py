@@ -1900,67 +1900,67 @@ with sub_aus:
 
 
 with tab_inv:
-   
-# ✅ TAB - INVENTARIO NUEVO (REEMPLAZA TAB 1)
-# Categorías: EPPs, Dotación (con tallas), Papelería, Herramientas
-# Lógica: Entradas / Salidas / Stock actual / Historial
-
-# ===================================================
-# HELPERS GITHUB
-# ===================================================
-
-def gh_get(filename, headers, repo, branch="main"):
+    
+    # ✅ TAB - INVENTARIO NUEVO (REEMPLAZA TAB 1)
+    # Categorías: EPPs, Dotación (con tallas), Papelería, Herramientas
+    # Lógica: Entradas / Salidas / Stock actual / Historial
+    
+    # ===================================================
+    # HELPERS GITHUB
+    # ===================================================
+    
+    def gh_get(filename, headers, repo, branch="main"):
     """Lee un archivo JSON desde GitHub. Retorna (data, sha)."""
     url = f"https://api.github.com/repos/{repo}/contents/{filename}"
     r = requests.get(url, headers=headers)
     if r.status_code == 200:
-        raw = base64.b64decode(r.json()["content"]).decode("utf-8")
-        return json.loads(raw), r.json().get("sha")
+    raw = base64.b64decode(r.json()["content"]).decode("utf-8")
+    return json.loads(raw), r.json().get("sha")
     return None, None
-
-
-def gh_put(filename, data, headers, repo, sha=None, branch="main", mensaje="Actualización"):
+    
+    
+    def gh_put(filename, data, headers, repo, sha=None, branch="main", mensaje="Actualización"):
     """Guarda un archivo JSON en GitHub."""
     url = f"https://api.github.com/repos/{repo}/contents/{filename}"
     contenido = base64.b64encode(
-        json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
+    json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
     ).decode("utf-8")
     payload = {"message": mensaje, "content": contenido, "branch": branch}
     if sha:
-        payload["sha"] = sha
+    payload["sha"] = sha
     return requests.put(url, headers=headers, json=payload)
-
-
-# ===================================================
-# CATÁLOGO POR DEFECTO
-# ===================================================
-
-CATALOGO_DEFAULT = {
+    
+    
+    # ===================================================
+    # CATÁLOGO POR DEFECTO
+    # ===================================================
+    
+    CATALOGO_DEFAULT = {
     "EPPs": {
-        "Monogafas":  {"tallas": False},
-        "Guantes":    {"tallas": False},
-        "Piernera":   {"tallas": False},
-        "Botas":      {"tallas": True,  "opciones_talla": ["36","37","38","39","40","41","42","43","44","45","46"]},
+    "Monogafas":  {"tallas": False},
+    "Guantes":    {"tallas": False},
+    "Piernera":   {"tallas": False},
+    "Botas":      {"tallas": True,  "opciones_talla": ["36","37","38","39","40","41","42","43","44","45","46"]},
     },
     "Dotación": {
-        "Camisa":     {"tallas": True,  "opciones_talla": ["XS","S","M","L","XL","XXL"]},
-        "Pantalón":   {"tallas": True,  "opciones_talla": ["28","30","32","34","36","38","40"]},
-        "Chaleco":    {"tallas": True,  "opciones_talla": ["XS","S","M","L","XL","XXL"]},
+    "Camisa":     {"tallas": True,  "opciones_talla": ["XS","S","M","L","XL","XXL"]},
+    "Pantalón":   {"tallas": True,  "opciones_talla": ["28","30","32","34","36","38","40"]},
+    "Chaleco":    {"tallas": True,  "opciones_talla": ["XS","S","M","L","XL","XXL"]},
     },
     "Papelería": {
-        "Isométricos (paquete x200)": {"tallas": False},
-        "Stickers":                   {"tallas": False},
-        "Papelería general":          {"tallas": False},
+    "Isométricos (paquete x200)": {"tallas": False},
+    "Stickers":                   {"tallas": False},
+    "Papelería general":          {"tallas": False},
     },
     "Herramientas": {
-        "Cepo":         {"tallas": False},
-        "Llaves de cepo": {"tallas": False},
+    "Cepo":         {"tallas": False},
+    "Llaves de cepo": {"tallas": False},
     },
-}
-
-SEDES = ["CALDAS", "RISARALDA"]
-
-RESPONSABLES = [
+    }
+    
+    SEDES = ["CALDAS", "RISARALDA"]
+    
+    RESPONSABLES = [
     "ANDRES ARROYAVE",
     "CRISTIAN CHICA",
     "DANNY DE LA CRUZ",
@@ -1968,481 +1968,481 @@ RESPONSABLES = [
     "CAMILA (RESIDENTE)",
     "ANDRES CARMONA (SST)",
     "JENNY (DOTACIÓN)",
-]
-
-TZ_CO = ZoneInfo("America/Bogota")
-
-
-# ===================================================
-# INICIO DEL TAB
-# ===================================================
-
-st.markdown("## 🏭 Inventario E&C")
-
-# Credenciales GitHub
-token  = st.secrets["github"]["token"]
-repo   = st.secrets["github"]["repo"]
-branch = st.secrets["github"].get("branch", "main")
-
-gh_headers = {
+    ]
+    
+    TZ_CO = ZoneInfo("America/Bogota")
+    
+    
+    # ===================================================
+    # INICIO DEL TAB
+    # ===================================================
+    
+    st.markdown("## 🏭 Inventario E&C")
+    
+    # Credenciales GitHub
+    token  = st.secrets["github"]["token"]
+    repo   = st.secrets["github"]["repo"]
+    branch = st.secrets["github"].get("branch", "main")
+    
+    gh_headers = {
     "Authorization": f"Bearer {token}",
     "Accept": "application/vnd.github+json",
-}
-
-# -------------------------------------------------
-# CARGAR CATÁLOGO
-# -------------------------------------------------
-catalogo_raw, catalogo_sha = gh_get("CATALOGO.json", gh_headers, repo, branch)
-if catalogo_raw is None:
+    }
+    
+    # -------------------------------------------------
+    # CARGAR CATÁLOGO
+    # -------------------------------------------------
+    catalogo_raw, catalogo_sha = gh_get("CATALOGO.json", gh_headers, repo, branch)
+    if catalogo_raw is None:
     catalogo = CATALOGO_DEFAULT
     catalogo_sha = None
-else:
+    else:
     catalogo = catalogo_raw
-
-# -------------------------------------------------
-# CARGAR MOVIMIENTOS
-# -------------------------------------------------
-movimientos_raw, mov_sha = gh_get("INVENTARIO_V2.json", gh_headers, repo, branch)
-if movimientos_raw is None:
+    
+    # -------------------------------------------------
+    # CARGAR MOVIMIENTOS
+    # -------------------------------------------------
+    movimientos_raw, mov_sha = gh_get("INVENTARIO_V2.json", gh_headers, repo, branch)
+    if movimientos_raw is None:
     movimientos = []
     mov_sha = None
-else:
+    else:
     movimientos = movimientos_raw
-
-
-# ===================================================
-# SUBPESTAÑAS
-# ===================================================
-sub_entradas, sub_salidas, sub_stock, sub_historial, sub_catalogo = st.tabs([
+    
+    
+    # ===================================================
+    # SUBPESTAÑAS
+    # ===================================================
+    sub_entradas, sub_salidas, sub_stock, sub_historial, sub_catalogo = st.tabs([
     "📥 Entradas",
     "📤 Salidas",
     "📊 Stock Actual",
     "📋 Historial",
     "⚙️ Catálogo",
-])
-
-
-# ===================================================
-# 📥 ENTRADAS
-# ===================================================
-with sub_entradas:
+    ])
+    
+    
+    # ===================================================
+    # 📥 ENTRADAS
+    # ===================================================
+    with sub_entradas:
     st.markdown("### 📥 Registrar entrada de mercancía")
     st.info("Usa este formulario cuando llegue mercancía nueva a la sede.")
-
+    
     with st.form("form_entrada", clear_on_submit=True):
-        col1, col2, col3 = st.columns(3)
-        sede_e      = col1.selectbox("Sede", SEDES, key="sede_entrada")
-        resp_e      = col2.selectbox("Responsable", RESPONSABLES, key="resp_entrada")
-        fecha_e     = col3.date_input("Fecha", key="fecha_entrada")
-        obs_e       = st.text_input("Observación (opcional)", key="obs_entrada")
-
-        st.markdown("#### Ítems recibidos")
-
-        items_entrada = []
-        for cat, items in catalogo.items():
-            st.markdown(f"**{cat}**")
-            cols_cat = st.columns(3)
-            for idx, (item, cfg) in enumerate(items.items()):
-                col = cols_cat[idx % 3]
-                with col:
-                    cantidad_e = st.number_input(
-                        item, min_value=0, step=1, key=f"ent_{cat}_{item}"
+    col1, col2, col3 = st.columns(3)
+    sede_e      = col1.selectbox("Sede", SEDES, key="sede_entrada")
+    resp_e      = col2.selectbox("Responsable", RESPONSABLES, key="resp_entrada")
+    fecha_e     = col3.date_input("Fecha", key="fecha_entrada")
+    obs_e       = st.text_input("Observación (opcional)", key="obs_entrada")
+    
+    st.markdown("#### Ítems recibidos")
+    
+    items_entrada = []
+    for cat, items in catalogo.items():
+        st.markdown(f"**{cat}**")
+        cols_cat = st.columns(3)
+        for idx, (item, cfg) in enumerate(items.items()):
+            col = cols_cat[idx % 3]
+            with col:
+                cantidad_e = st.number_input(
+                    item, min_value=0, step=1, key=f"ent_{cat}_{item}"
+                )
+                if cfg["tallas"]:
+                    talla_e = st.selectbox(
+                        f"Talla ({item})",
+                        cfg["opciones_talla"],
+                        key=f"ent_talla_{cat}_{item}"
                     )
-                    if cfg["tallas"]:
-                        talla_e = st.selectbox(
-                            f"Talla ({item})",
-                            cfg["opciones_talla"],
-                            key=f"ent_talla_{cat}_{item}"
-                        )
-                    else:
-                        talla_e = None
-
-                    if cantidad_e > 0:
-                        items_entrada.append({
-                            "categoria": cat,
-                            "item": item,
-                            "talla": talla_e,
-                            "cantidad": int(cantidad_e),
-                        })
-
-        submitted_e = st.form_submit_button("✅ Registrar entrada", use_container_width=True)
-
+                else:
+                    talla_e = None
+    
+                if cantidad_e > 0:
+                    items_entrada.append({
+                        "categoria": cat,
+                        "item": item,
+                        "talla": talla_e,
+                        "cantidad": int(cantidad_e),
+                    })
+    
+    submitted_e = st.form_submit_button("✅ Registrar entrada", use_container_width=True)
+    
     if submitted_e:
-        if not items_entrada:
-            st.warning("⚠️ Debes ingresar al menos un ítem con cantidad mayor a 0.")
+    if not items_entrada:
+        st.warning("⚠️ Debes ingresar al menos un ítem con cantidad mayor a 0.")
+    else:
+        ts = datetime.datetime.now(TZ_CO).strftime("%Y-%m-%d %H:%M:%S")
+        for it in items_entrada:
+            movimientos.append({
+                "tipo":        "ENTRADA",
+                "fecha":       str(fecha_e),
+                "timestamp":   ts,
+                "sede":        sede_e,
+                "responsable": resp_e,
+                "categoria":   it["categoria"],
+                "item":        it["item"],
+                "talla":       it["talla"],
+                "cantidad":    it["cantidad"],
+                "observacion": obs_e,
+                "inspector":   None,
+            })
+    
+        r_put = gh_put(
+            "INVENTARIO_V2.json", movimientos,
+            gh_headers, repo, sha=mov_sha, branch=branch,
+            mensaje="Entrada de inventario"
+        )
+        if r_put.status_code in (200, 201):
+            st.success(f"✅ Entrada registrada correctamente ({len(items_entrada)} ítem(s))")
+            mov_sha = r_put.json().get("content", {}).get("sha", mov_sha)
+        else:
+            st.error("❌ Error al guardar en GitHub")
+            st.json(r_put.json())
+    
+    
+    # ===================================================
+    # 📤 SALIDAS
+    # ===================================================
+    with sub_salidas:
+    st.markdown("### 📤 Registrar entrega a inspector")
+    st.info("Usa este formulario cuando entregues ítems a un inspector.")
+    
+    with st.form("form_salida", clear_on_submit=True):
+    col1, col2, col3 = st.columns(3)
+    sede_s      = col1.selectbox("Sede", SEDES, key="sede_salida")
+    resp_s      = col2.selectbox("Responsable", RESPONSABLES, key="resp_salida")
+    fecha_s     = col3.date_input("Fecha", key="fecha_salida")
+    
+    inspector_s = st.selectbox("Inspector", inspectores_lista, key="insp_salida")
+    obs_s       = st.text_input("Observación (opcional)", key="obs_salida")
+    
+    st.markdown("#### Ítems entregados")
+    
+    items_salida = []
+    for cat, items in catalogo.items():
+        st.markdown(f"**{cat}**")
+        cols_cat = st.columns(3)
+        for idx, (item, cfg) in enumerate(items.items()):
+            col = cols_cat[idx % 3]
+            with col:
+                cantidad_s = st.number_input(
+                    item, min_value=0, step=1, key=f"sal_{cat}_{item}"
+                )
+                if cfg["tallas"]:
+                    talla_s = st.selectbox(
+                        f"Talla ({item})",
+                        cfg["opciones_talla"],
+                        key=f"sal_talla_{cat}_{item}"
+                    )
+                else:
+                    talla_s = None
+    
+                if cantidad_s > 0:
+                    items_salida.append({
+                        "categoria": cat,
+                        "item":      item,
+                        "talla":     talla_s,
+                        "cantidad":  int(cantidad_s),
+                    })
+    
+    submitted_s = st.form_submit_button("✅ Registrar salida", use_container_width=True)
+    
+    if submitted_s:
+    if not items_salida:
+        st.warning("⚠️ Debes ingresar al menos un ítem con cantidad mayor a 0.")
+    else:
+        # Verificar stock suficiente
+        errores_stock = []
+        for it in items_salida:
+            key_item = (sede_s, it["categoria"], it["item"], it["talla"])
+            total_ent = sum(
+                m["cantidad"] for m in movimientos
+                if m["tipo"] == "ENTRADA"
+                and m["sede"] == sede_s
+                and m["categoria"] == it["categoria"]
+                and m["item"] == it["item"]
+                and m["talla"] == it["talla"]
+            )
+            total_sal = sum(
+                m["cantidad"] for m in movimientos
+                if m["tipo"] == "SALIDA"
+                and m["sede"] == sede_s
+                and m["categoria"] == it["categoria"]
+                and m["item"] == it["item"]
+                and m["talla"] == it["talla"]
+            )
+            stock_disp = total_ent - total_sal
+            if it["cantidad"] > stock_disp:
+                nombre_item = f"{it['item']}" + (f" T{it['talla']}" if it["talla"] else "")
+                errores_stock.append(
+                    f"❌ **{nombre_item}**: stock disponible {stock_disp}, solicitado {it['cantidad']}"
+                )
+    
+        if errores_stock:
+            st.error("⚠️ Stock insuficiente para los siguientes ítems:")
+            for e in errores_stock:
+                st.markdown(e)
         else:
             ts = datetime.datetime.now(TZ_CO).strftime("%Y-%m-%d %H:%M:%S")
-            for it in items_entrada:
+            for it in items_salida:
                 movimientos.append({
-                    "tipo":        "ENTRADA",
-                    "fecha":       str(fecha_e),
+                    "tipo":        "SALIDA",
+                    "fecha":       str(fecha_s),
                     "timestamp":   ts,
-                    "sede":        sede_e,
-                    "responsable": resp_e,
+                    "sede":        sede_s,
+                    "responsable": resp_s,
                     "categoria":   it["categoria"],
                     "item":        it["item"],
                     "talla":       it["talla"],
                     "cantidad":    it["cantidad"],
-                    "observacion": obs_e,
-                    "inspector":   None,
+                    "observacion": obs_s,
+                    "inspector":   inspector_s,
                 })
-
+    
             r_put = gh_put(
                 "INVENTARIO_V2.json", movimientos,
                 gh_headers, repo, sha=mov_sha, branch=branch,
-                mensaje="Entrada de inventario"
+                mensaje="Salida de inventario"
             )
             if r_put.status_code in (200, 201):
-                st.success(f"✅ Entrada registrada correctamente ({len(items_entrada)} ítem(s))")
+                st.success(f"✅ Salida registrada correctamente ({len(items_salida)} ítem(s))")
                 mov_sha = r_put.json().get("content", {}).get("sha", mov_sha)
             else:
                 st.error("❌ Error al guardar en GitHub")
-                st.json(r_put.json())
-
-
-# ===================================================
-# 📤 SALIDAS
-# ===================================================
-with sub_salidas:
-    st.markdown("### 📤 Registrar entrega a inspector")
-    st.info("Usa este formulario cuando entregues ítems a un inspector.")
-
-    with st.form("form_salida", clear_on_submit=True):
-        col1, col2, col3 = st.columns(3)
-        sede_s      = col1.selectbox("Sede", SEDES, key="sede_salida")
-        resp_s      = col2.selectbox("Responsable", RESPONSABLES, key="resp_salida")
-        fecha_s     = col3.date_input("Fecha", key="fecha_salida")
-
-        inspector_s = st.selectbox("Inspector", inspectores_lista, key="insp_salida")
-        obs_s       = st.text_input("Observación (opcional)", key="obs_salida")
-
-        st.markdown("#### Ítems entregados")
-
-        items_salida = []
-        for cat, items in catalogo.items():
-            st.markdown(f"**{cat}**")
-            cols_cat = st.columns(3)
-            for idx, (item, cfg) in enumerate(items.items()):
-                col = cols_cat[idx % 3]
-                with col:
-                    cantidad_s = st.number_input(
-                        item, min_value=0, step=1, key=f"sal_{cat}_{item}"
-                    )
-                    if cfg["tallas"]:
-                        talla_s = st.selectbox(
-                            f"Talla ({item})",
-                            cfg["opciones_talla"],
-                            key=f"sal_talla_{cat}_{item}"
-                        )
-                    else:
-                        talla_s = None
-
-                    if cantidad_s > 0:
-                        items_salida.append({
-                            "categoria": cat,
-                            "item":      item,
-                            "talla":     talla_s,
-                            "cantidad":  int(cantidad_s),
-                        })
-
-        submitted_s = st.form_submit_button("✅ Registrar salida", use_container_width=True)
-
-    if submitted_s:
-        if not items_salida:
-            st.warning("⚠️ Debes ingresar al menos un ítem con cantidad mayor a 0.")
-        else:
-            # Verificar stock suficiente
-            errores_stock = []
-            for it in items_salida:
-                key_item = (sede_s, it["categoria"], it["item"], it["talla"])
-                total_ent = sum(
-                    m["cantidad"] for m in movimientos
-                    if m["tipo"] == "ENTRADA"
-                    and m["sede"] == sede_s
-                    and m["categoria"] == it["categoria"]
-                    and m["item"] == it["item"]
-                    and m["talla"] == it["talla"]
-                )
-                total_sal = sum(
-                    m["cantidad"] for m in movimientos
-                    if m["tipo"] == "SALIDA"
-                    and m["sede"] == sede_s
-                    and m["categoria"] == it["categoria"]
-                    and m["item"] == it["item"]
-                    and m["talla"] == it["talla"]
-                )
-                stock_disp = total_ent - total_sal
-                if it["cantidad"] > stock_disp:
-                    nombre_item = f"{it['item']}" + (f" T{it['talla']}" if it["talla"] else "")
-                    errores_stock.append(
-                        f"❌ **{nombre_item}**: stock disponible {stock_disp}, solicitado {it['cantidad']}"
-                    )
-
-            if errores_stock:
-                st.error("⚠️ Stock insuficiente para los siguientes ítems:")
-                for e in errores_stock:
-                    st.markdown(e)
-            else:
-                ts = datetime.datetime.now(TZ_CO).strftime("%Y-%m-%d %H:%M:%S")
-                for it in items_salida:
-                    movimientos.append({
-                        "tipo":        "SALIDA",
-                        "fecha":       str(fecha_s),
-                        "timestamp":   ts,
-                        "sede":        sede_s,
-                        "responsable": resp_s,
-                        "categoria":   it["categoria"],
-                        "item":        it["item"],
-                        "talla":       it["talla"],
-                        "cantidad":    it["cantidad"],
-                        "observacion": obs_s,
-                        "inspector":   inspector_s,
-                    })
-
-                r_put = gh_put(
-                    "INVENTARIO_V2.json", movimientos,
-                    gh_headers, repo, sha=mov_sha, branch=branch,
-                    mensaje="Salida de inventario"
-                )
-                if r_put.status_code in (200, 201):
-                    st.success(f"✅ Salida registrada correctamente ({len(items_salida)} ítem(s))")
-                    mov_sha = r_put.json().get("content", {}).get("sha", mov_sha)
-                else:
-                    st.error("❌ Error al guardar en GitHub")
-
-
-# ===================================================
-# 📊 STOCK ACTUAL
-# ===================================================
-with sub_stock:
+    
+    
+    # ===================================================
+    # 📊 STOCK ACTUAL
+    # ===================================================
+    with sub_stock:
     st.markdown("### 📊 Stock actual por sede")
-
+    
     if not movimientos:
-        st.info("📭 Aún no hay movimientos registrados. Comienza registrando una entrada.")
+    st.info("📭 Aún no hay movimientos registrados. Comienza registrando una entrada.")
     else:
-        sede_stock = st.selectbox("Selecciona sede", SEDES, key="sede_stock")
-
-        # Calcular stock
-        stock_dict = {}
-        for m in movimientos:
-            if m["sede"] != sede_stock:
-                continue
-            key = (m["categoria"], m["item"], m["talla"])
-            if key not in stock_dict:
-                stock_dict[key] = {"entradas": 0, "salidas": 0}
-            if m["tipo"] == "ENTRADA":
-                stock_dict[key]["entradas"] += m["cantidad"]
-            elif m["tipo"] == "SALIDA":
-                stock_dict[key]["salidas"] += m["cantidad"]
-
-        if not stock_dict:
-            st.info(f"📭 No hay movimientos para la sede {sede_stock}.")
-        else:
-            filas = []
-            for (cat, item, talla), vals in stock_dict.items():
-                stock_actual = vals["entradas"] - vals["salidas"]
-                nombre_item = item + (f" (T{talla})" if talla else "")
-                filas.append({
-                    "Categoría":   cat,
-                    "Ítem":        nombre_item,
-                    "Entradas":    vals["entradas"],
-                    "Salidas":     vals["salidas"],
-                    "Stock actual": stock_actual,
-                })
-
-            df_stock = pd.DataFrame(filas).sort_values(["Categoría", "Ítem"])
-
-            # Estilo: rojo si stock = 0, amarillo si stock <= 3
-            def color_stock(row):
-                if row["Stock actual"] == 0:
-                    return ["background-color:#f8d7da; color:#721c24"] * len(row)
-                elif row["Stock actual"] <= 3:
-                    return ["background-color:#fff3cd; color:#856404"] * len(row)
-                return [""] * len(row)
-
-            st.dataframe(
-                df_stock.style.apply(color_stock, axis=1),
-                use_container_width=True,
-                hide_index=True
-            )
-
-            # Alertas
-            sin_stock = df_stock[df_stock["Stock actual"] == 0]
-            stock_bajo = df_stock[(df_stock["Stock actual"] > 0) & (df_stock["Stock actual"] <= 3)]
-
-            if not sin_stock.empty:
-                st.error(f"🚨 {len(sin_stock)} ítem(s) SIN STOCK en {sede_stock}")
-            if not stock_bajo.empty:
-                st.warning(f"⚠️ {len(stock_bajo)} ítem(s) con stock BAJO (≤ 3) en {sede_stock}")
-
-            # Gráfica por categoría
-            st.markdown("#### 📊 Stock por categoría")
-            df_cat = df_stock.groupby("Categoría")["Stock actual"].sum().reset_index()
-            fig_stock = px.bar(
-                df_cat,
-                x="Categoría",
-                y="Stock actual",
-                color="Categoría",
-                text="Stock actual",
-                title=f"Stock total por categoría — {sede_stock}"
-            )
-            fig_stock.update_traces(textposition="outside")
-            fig_stock.update_layout(showlegend=False, height=400)
-            st.plotly_chart(fig_stock, use_container_width=True)
-
-
-# ===================================================
-# 📋 HISTORIAL
-# ===================================================
-with sub_historial:
-    st.markdown("### 📋 Historial de movimientos")
-
-    if not movimientos:
-        st.info("📭 Aún no hay movimientos registrados.")
+    sede_stock = st.selectbox("Selecciona sede", SEDES, key="sede_stock")
+    
+    # Calcular stock
+    stock_dict = {}
+    for m in movimientos:
+        if m["sede"] != sede_stock:
+            continue
+        key = (m["categoria"], m["item"], m["talla"])
+        if key not in stock_dict:
+            stock_dict[key] = {"entradas": 0, "salidas": 0}
+        if m["tipo"] == "ENTRADA":
+            stock_dict[key]["entradas"] += m["cantidad"]
+        elif m["tipo"] == "SALIDA":
+            stock_dict[key]["salidas"] += m["cantidad"]
+    
+    if not stock_dict:
+        st.info(f"📭 No hay movimientos para la sede {sede_stock}.")
     else:
-        df_hist = pd.DataFrame(movimientos)
-
-        # Filtros
-        col1, col2, col3 = st.columns(3)
-        sede_h  = col1.selectbox("Sede", ["TODAS"] + SEDES, key="hist_sede")
-        tipo_h  = col2.selectbox("Tipo", ["TODOS", "ENTRADA", "SALIDA"], key="hist_tipo")
-        cat_h   = col3.selectbox(
-            "Categoría",
-            ["TODAS"] + list(catalogo.keys()),
-            key="hist_cat"
-        )
-
-        if sede_h != "TODAS":
-            df_hist = df_hist[df_hist["sede"] == sede_h]
-        if tipo_h != "TODOS":
-            df_hist = df_hist[df_hist["tipo"] == tipo_h]
-        if cat_h != "TODAS":
-            df_hist = df_hist[df_hist["categoria"] == cat_h]
-
-        df_hist["talla"] = df_hist["talla"].fillna("—")
-        df_hist["inspector"] = df_hist["inspector"].fillna("—")
-
-        columnas_hist = [
-            "fecha", "tipo", "sede", "categoria",
-            "item", "talla", "cantidad",
-            "inspector", "responsable", "observacion"
-        ]
-        columnas_disp = [c for c in columnas_hist if c in df_hist.columns]
-
-        def color_tipo(row):
-            if row["tipo"] == "ENTRADA":
-                return ["background-color:#d4edda; color:#155724"] * len(row)
-            return ["background-color:#f8d7da; color:#721c24"] * len(row)
-
+        filas = []
+        for (cat, item, talla), vals in stock_dict.items():
+            stock_actual = vals["entradas"] - vals["salidas"]
+            nombre_item = item + (f" (T{talla})" if talla else "")
+            filas.append({
+                "Categoría":   cat,
+                "Ítem":        nombre_item,
+                "Entradas":    vals["entradas"],
+                "Salidas":     vals["salidas"],
+                "Stock actual": stock_actual,
+            })
+    
+        df_stock = pd.DataFrame(filas).sort_values(["Categoría", "Ítem"])
+    
+        # Estilo: rojo si stock = 0, amarillo si stock <= 3
+        def color_stock(row):
+            if row["Stock actual"] == 0:
+                return ["background-color:#f8d7da; color:#721c24"] * len(row)
+            elif row["Stock actual"] <= 3:
+                return ["background-color:#fff3cd; color:#856404"] * len(row)
+            return [""] * len(row)
+    
         st.dataframe(
-            df_hist[columnas_disp]
-            .sort_values("fecha", ascending=False)
-            .style.apply(color_tipo, axis=1),
+            df_stock.style.apply(color_stock, axis=1),
             use_container_width=True,
             hide_index=True
         )
-
-        st.caption(f"Total de movimientos: {len(df_hist)}")
-
-
-# ===================================================
-# ⚙️ CATÁLOGO (AGREGAR ÍTEMS Y TALLAS)
-# ===================================================
-with sub_catalogo:
+    
+        # Alertas
+        sin_stock = df_stock[df_stock["Stock actual"] == 0]
+        stock_bajo = df_stock[(df_stock["Stock actual"] > 0) & (df_stock["Stock actual"] <= 3)]
+    
+        if not sin_stock.empty:
+            st.error(f"🚨 {len(sin_stock)} ítem(s) SIN STOCK en {sede_stock}")
+        if not stock_bajo.empty:
+            st.warning(f"⚠️ {len(stock_bajo)} ítem(s) con stock BAJO (≤ 3) en {sede_stock}")
+    
+        # Gráfica por categoría
+        st.markdown("#### 📊 Stock por categoría")
+        df_cat = df_stock.groupby("Categoría")["Stock actual"].sum().reset_index()
+        fig_stock = px.bar(
+            df_cat,
+            x="Categoría",
+            y="Stock actual",
+            color="Categoría",
+            text="Stock actual",
+            title=f"Stock total por categoría — {sede_stock}"
+        )
+        fig_stock.update_traces(textposition="outside")
+        fig_stock.update_layout(showlegend=False, height=400)
+        st.plotly_chart(fig_stock, use_container_width=True)
+    
+    
+    # ===================================================
+    # 📋 HISTORIAL
+    # ===================================================
+    with sub_historial:
+    st.markdown("### 📋 Historial de movimientos")
+    
+    if not movimientos:
+    st.info("📭 Aún no hay movimientos registrados.")
+    else:
+    df_hist = pd.DataFrame(movimientos)
+    
+    # Filtros
+    col1, col2, col3 = st.columns(3)
+    sede_h  = col1.selectbox("Sede", ["TODAS"] + SEDES, key="hist_sede")
+    tipo_h  = col2.selectbox("Tipo", ["TODOS", "ENTRADA", "SALIDA"], key="hist_tipo")
+    cat_h   = col3.selectbox(
+        "Categoría",
+        ["TODAS"] + list(catalogo.keys()),
+        key="hist_cat"
+    )
+    
+    if sede_h != "TODAS":
+        df_hist = df_hist[df_hist["sede"] == sede_h]
+    if tipo_h != "TODOS":
+        df_hist = df_hist[df_hist["tipo"] == tipo_h]
+    if cat_h != "TODAS":
+        df_hist = df_hist[df_hist["categoria"] == cat_h]
+    
+    df_hist["talla"] = df_hist["talla"].fillna("—")
+    df_hist["inspector"] = df_hist["inspector"].fillna("—")
+    
+    columnas_hist = [
+        "fecha", "tipo", "sede", "categoria",
+        "item", "talla", "cantidad",
+        "inspector", "responsable", "observacion"
+    ]
+    columnas_disp = [c for c in columnas_hist if c in df_hist.columns]
+    
+    def color_tipo(row):
+        if row["tipo"] == "ENTRADA":
+            return ["background-color:#d4edda; color:#155724"] * len(row)
+        return ["background-color:#f8d7da; color:#721c24"] * len(row)
+    
+    st.dataframe(
+        df_hist[columnas_disp]
+        .sort_values("fecha", ascending=False)
+        .style.apply(color_tipo, axis=1),
+        use_container_width=True,
+        hide_index=True
+    )
+    
+    st.caption(f"Total de movimientos: {len(df_hist)}")
+    
+    
+    # ===================================================
+    # ⚙️ CATÁLOGO (AGREGAR ÍTEMS Y TALLAS)
+    # ===================================================
+    with sub_catalogo:
     st.markdown("### ⚙️ Gestión del catálogo de ítems")
     st.info("Aquí puedes agregar nuevos ítems o tallas sin tocar el código.")
-
+    
     # --- Ver catálogo actual ---
     st.markdown("#### 📋 Catálogo actual")
     for cat, items in catalogo.items():
-        with st.expander(f"**{cat}** — {len(items)} ítem(s)"):
-            for item, cfg in items.items():
-                if cfg["tallas"]:
-                    tallas_str = ", ".join(cfg.get("opciones_talla", []))
-                    st.markdown(f"- **{item}** | Tallas: {tallas_str}")
-                else:
-                    st.markdown(f"- **{item}** | Sin tallas")
-
+    with st.expander(f"**{cat}** — {len(items)} ítem(s)"):
+        for item, cfg in items.items():
+            if cfg["tallas"]:
+                tallas_str = ", ".join(cfg.get("opciones_talla", []))
+                st.markdown(f"- **{item}** | Tallas: {tallas_str}")
+            else:
+                st.markdown(f"- **{item}** | Sin tallas")
+    
     st.divider()
-
+    
     # --- Agregar nuevo ítem ---
     st.markdown("#### ➕ Agregar nuevo ítem")
     with st.form("form_nuevo_item", clear_on_submit=True):
-        col1, col2 = st.columns(2)
-        cat_nueva   = col1.selectbox("Categoría", list(catalogo.keys()), key="cat_nuevo")
-        nombre_item = col2.text_input("Nombre del ítem", key="nombre_nuevo")
-        maneja_tallas = st.checkbox("¿Maneja tallas?", key="tallas_nuevo")
-        tallas_texto  = st.text_input(
-            "Tallas separadas por coma (ej: S,M,L,XL)",
-            key="tallas_texto_nuevo",
-            disabled=not maneja_tallas
-        )
-        submitted_ni = st.form_submit_button("➕ Agregar ítem")
-
+    col1, col2 = st.columns(2)
+    cat_nueva   = col1.selectbox("Categoría", list(catalogo.keys()), key="cat_nuevo")
+    nombre_item = col2.text_input("Nombre del ítem", key="nombre_nuevo")
+    maneja_tallas = st.checkbox("¿Maneja tallas?", key="tallas_nuevo")
+    tallas_texto  = st.text_input(
+        "Tallas separadas por coma (ej: S,M,L,XL)",
+        key="tallas_texto_nuevo",
+        disabled=not maneja_tallas
+    )
+    submitted_ni = st.form_submit_button("➕ Agregar ítem")
+    
     if submitted_ni:
-        if not nombre_item.strip():
-            st.warning("⚠️ Debes ingresar un nombre para el ítem.")
-        elif nombre_item.strip() in catalogo[cat_nueva]:
-            st.warning(f"⚠️ El ítem '{nombre_item}' ya existe en {cat_nueva}.")
+    if not nombre_item.strip():
+        st.warning("⚠️ Debes ingresar un nombre para el ítem.")
+    elif nombre_item.strip() in catalogo[cat_nueva]:
+        st.warning(f"⚠️ El ítem '{nombre_item}' ya existe en {cat_nueva}.")
+    else:
+        nuevo_cfg = {"tallas": maneja_tallas}
+        if maneja_tallas and tallas_texto.strip():
+            nuevo_cfg["opciones_talla"] = [
+                t.strip() for t in tallas_texto.split(",") if t.strip()
+            ]
+        catalogo[cat_nueva][nombre_item.strip()] = nuevo_cfg
+    
+        r_cat = gh_put(
+            "CATALOGO.json", catalogo,
+            gh_headers, repo, sha=catalogo_sha, branch=branch,
+            mensaje=f"Nuevo ítem: {nombre_item}"
+        )
+        if r_cat.status_code in (200, 201):
+            st.success(f"✅ Ítem '{nombre_item}' agregado a {cat_nueva}")
+            catalogo_sha = r_cat.json().get("content", {}).get("sha", catalogo_sha)
         else:
-            nuevo_cfg = {"tallas": maneja_tallas}
-            if maneja_tallas and tallas_texto.strip():
-                nuevo_cfg["opciones_talla"] = [
-                    t.strip() for t in tallas_texto.split(",") if t.strip()
-                ]
-            catalogo[cat_nueva][nombre_item.strip()] = nuevo_cfg
-
-            r_cat = gh_put(
-                "CATALOGO.json", catalogo,
-                gh_headers, repo, sha=catalogo_sha, branch=branch,
-                mensaje=f"Nuevo ítem: {nombre_item}"
-            )
-            if r_cat.status_code in (200, 201):
-                st.success(f"✅ Ítem '{nombre_item}' agregado a {cat_nueva}")
-                catalogo_sha = r_cat.json().get("content", {}).get("sha", catalogo_sha)
-            else:
-                st.error("❌ Error al guardar el catálogo en GitHub")
-
+            st.error("❌ Error al guardar el catálogo en GitHub")
+    
     st.divider()
-
+    
     # --- Agregar talla a ítem existente ---
     st.markdown("#### 📐 Agregar talla a ítem existente")
     items_con_talla = [
-        (cat, item)
-        for cat, items in catalogo.items()
-        for item, cfg in items.items()
-        if cfg["tallas"]
+    (cat, item)
+    for cat, items in catalogo.items()
+    for item, cfg in items.items()
+    if cfg["tallas"]
     ]
-
+    
     if not items_con_talla:
-        st.info("No hay ítems con tallas en el catálogo.")
+    st.info("No hay ítems con tallas en el catálogo.")
     else:
-        with st.form("form_nueva_talla", clear_on_submit=True):
-            opciones_items = [f"{cat} → {item}" for cat, item in items_con_talla]
-            item_sel_str   = st.selectbox("Ítem", opciones_items, key="item_talla_sel")
-            nueva_talla    = st.text_input("Nueva talla", key="nueva_talla_input")
-            submitted_nt   = st.form_submit_button("➕ Agregar talla")
-
-        if submitted_nt:
-            if not nueva_talla.strip():
-                st.warning("⚠️ Debes ingresar una talla.")
+    with st.form("form_nueva_talla", clear_on_submit=True):
+        opciones_items = [f"{cat} → {item}" for cat, item in items_con_talla]
+        item_sel_str   = st.selectbox("Ítem", opciones_items, key="item_talla_sel")
+        nueva_talla    = st.text_input("Nueva talla", key="nueva_talla_input")
+        submitted_nt   = st.form_submit_button("➕ Agregar talla")
+    
+    if submitted_nt:
+        if not nueva_talla.strip():
+            st.warning("⚠️ Debes ingresar una talla.")
+        else:
+            idx_sel  = opciones_items.index(item_sel_str)
+            cat_sel, item_sel = items_con_talla[idx_sel]
+            tallas_act = catalogo[cat_sel][item_sel].get("opciones_talla", [])
+            if nueva_talla.strip() in tallas_act:
+                st.warning(f"⚠️ La talla '{nueva_talla}' ya existe en {item_sel}.")
             else:
-                idx_sel  = opciones_items.index(item_sel_str)
-                cat_sel, item_sel = items_con_talla[idx_sel]
-                tallas_act = catalogo[cat_sel][item_sel].get("opciones_talla", [])
-                if nueva_talla.strip() in tallas_act:
-                    st.warning(f"⚠️ La talla '{nueva_talla}' ya existe en {item_sel}.")
+                catalogo[cat_sel][item_sel]["opciones_talla"].append(nueva_talla.strip())
+                r_cat = gh_put(
+                    "CATALOGO.json", catalogo,
+                    gh_headers, repo, sha=catalogo_sha, branch=branch,
+                    mensaje=f"Nueva talla {nueva_talla} en {item_sel}"
+                )
+                if r_cat.status_code in (200, 201):
+                    st.success(f"✅ Talla '{nueva_talla}' agregada a {item_sel}")
+                    catalogo_sha = r_cat.json().get("content", {}).get("sha", catalogo_sha)
                 else:
-                    catalogo[cat_sel][item_sel]["opciones_talla"].append(nueva_talla.strip())
-                    r_cat = gh_put(
-                        "CATALOGO.json", catalogo,
-                        gh_headers, repo, sha=catalogo_sha, branch=branch,
-                        mensaje=f"Nueva talla {nueva_talla} en {item_sel}"
-                    )
-                    if r_cat.status_code in (200, 201):
-                        st.success(f"✅ Talla '{nueva_talla}' agregada a {item_sel}")
-                        catalogo_sha = r_cat.json().get("content", {}).get("sha", catalogo_sha)
-                    else:
-                        st.error("❌ Error al guardar el catálogo en GitHub")
-
+                    st.error("❌ Error al guardar el catálogo en GitHub")
+    
     
