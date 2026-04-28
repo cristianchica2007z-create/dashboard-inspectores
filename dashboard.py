@@ -1064,6 +1064,7 @@ with tab2:
 
   
 # ===================================================
+# ===================================================
 # 🚨 INSPECTORES SIN ACTIVIDAD EN LA FECHA
 # ===================================================
 st.markdown("### 🚨 Inspectores sin actividad registrada")
@@ -1071,14 +1072,19 @@ st.markdown("### 🚨 Inspectores sin actividad registrada")
 # Inspectores que SÍ aparecen en la bitácora para esa fecha
 inspectores_con_actividad = set(df2["inspector"].str.upper().str.strip().unique())
 
-# Inspectores de la lista maestra que NO aparecen
-inspectores_sin_actividad = [
+# Filtrar lista maestra solo por supervisores seleccionados en el filtro
+inspectores_del_filtro = [
     insp for insp in inspectores_lista
+    if supervisores_dict.get(insp.upper(), "SIN SUPERVISOR") in supervisores_sel
+]
+
+# De esos, los que NO tienen actividad
+inspectores_sin_actividad = [
+    insp for insp in inspectores_del_filtro
     if insp.upper().strip() not in inspectores_con_actividad
 ]
 
 if inspectores_sin_actividad:
-    # Agregar su supervisor
     df_sin_actividad = pd.DataFrame({
         "Inspector": inspectores_sin_actividad
     })
