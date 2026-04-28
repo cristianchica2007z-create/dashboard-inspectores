@@ -1004,12 +1004,10 @@ with tab2:
     )
 
     st.dataframe(styled_tabla, use_container_width=True)
-    # ===================================================
 
     # ===================================================
-# ===================================================
-# 🚨 INSPECTORES SIN ACTIVIDAD EN LA FECHA
-# ===================================================
+    # 🚨 INSPECTORES SIN ACTIVIDAD EN LA FECHA
+    # ===================================================
 st.markdown("### 🚨 Inspectores sin actividad registrada")
 
 # Inspectores que SÍ aparecen en la bitácora para esa fecha
