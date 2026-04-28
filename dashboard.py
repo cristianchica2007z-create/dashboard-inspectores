@@ -1005,7 +1005,45 @@ with tab2:
 
     st.dataframe(styled_tabla, use_container_width=True)
     # ===================================================
+
+    # ===================================================
+# ===================================================
+# 🚨 INSPECTORES SIN ACTIVIDAD EN LA FECHA
+# ===================================================
+st.markdown("### 🚨 Inspectores sin actividad registrada")
+
+# Inspectores que SÍ aparecen en la bitácora para esa fecha
+inspectores_con_actividad = set(df2["inspector"].str.upper().str.strip().unique())
+
+# Filtrar lista maestra solo por supervisores seleccionados en el filtro
+inspectores_del_filtro = [
+    insp for insp in inspectores_lista
+    if supervisores_dict.get(insp.upper(), "SIN SUPERVISOR") in supervisores_sel
+]
+
+# De esos, los que NO tienen actividad
+inspectores_sin_actividad = [
+    insp for insp in inspectores_del_filtro
+    if insp.upper().strip() not in inspectores_con_actividad
+]
+
+if inspectores_sin_actividad:
+    df_sin_actividad = pd.DataFrame({
+        "Inspector": inspectores_sin_actividad
+    })
+    df_sin_actividad["Supervisor"] = df_sin_actividad["Inspector"].apply(
+        lambda x: supervisores_dict.get(x.upper(), "SIN SUPERVISOR")
+    )
+    df_sin_actividad = df_sin_actividad.sort_values("Supervisor")
+
+    st.error(f"🚨 {len(inspectores_sin_actividad)} inspector(es) sin actividad registrada para {fecha_sel}")
+    st.dataframe(df_sin_actividad, use_container_width=True)
+else:
+    st.success("✅ Todos los inspectores tienen actividad registrada para esta fecha.")
+
  # ===================================================
+
+    
     # 📊 Producción por inspector (órdenes efectivas)
     # ===================================================
     st.markdown("## 📊 Producción por inspector (órdenes efectivas)")
@@ -1063,40 +1101,6 @@ with tab2:
 
 
   
-# ===================================================
-# ===================================================
-# 🚨 INSPECTORES SIN ACTIVIDAD EN LA FECHA
-# ===================================================
-st.markdown("### 🚨 Inspectores sin actividad registrada")
-
-# Inspectores que SÍ aparecen en la bitácora para esa fecha
-inspectores_con_actividad = set(df2["inspector"].str.upper().str.strip().unique())
-
-# Filtrar lista maestra solo por supervisores seleccionados en el filtro
-inspectores_del_filtro = [
-    insp for insp in inspectores_lista
-    if supervisores_dict.get(insp.upper(), "SIN SUPERVISOR") in supervisores_sel
-]
-
-# De esos, los que NO tienen actividad
-inspectores_sin_actividad = [
-    insp for insp in inspectores_del_filtro
-    if insp.upper().strip() not in inspectores_con_actividad
-]
-
-if inspectores_sin_actividad:
-    df_sin_actividad = pd.DataFrame({
-        "Inspector": inspectores_sin_actividad
-    })
-    df_sin_actividad["Supervisor"] = df_sin_actividad["Inspector"].apply(
-        lambda x: supervisores_dict.get(x.upper(), "SIN SUPERVISOR")
-    )
-    df_sin_actividad = df_sin_actividad.sort_values("Supervisor")
-
-    st.error(f"🚨 {len(inspectores_sin_actividad)} inspector(es) sin actividad registrada para {fecha_sel}")
-    st.dataframe(df_sin_actividad, use_container_width=True)
-else:
-    st.success("✅ Todos los inspectores tienen actividad registrada para esta fecha.")
 
 # ===================================================
 # ===================================================
