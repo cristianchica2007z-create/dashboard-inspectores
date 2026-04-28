@@ -1917,7 +1917,7 @@ with sub_aus:
 # ===================================================
 
 with tab_inv:
-def gh_get(filename, headers, repo, branch="main"):
+    def gh_get(filename, headers, repo, branch="main"):
     """Lee un archivo JSON desde GitHub. Retorna (data, sha)."""
     url = f"https://api.github.com/repos/{repo}/contents/{filename}"
     r = requests.get(url, headers=headers)
