@@ -1063,7 +1063,34 @@ with tab2:
 
 
   
+# ===================================================
+# 🚨 INSPECTORES SIN ACTIVIDAD EN LA FECHA
+# ===================================================
+st.markdown("### 🚨 Inspectores sin actividad registrada")
 
+# Inspectores que SÍ aparecen en la bitácora para esa fecha
+inspectores_con_actividad = set(df2["inspector"].str.upper().str.strip().unique())
+
+# Inspectores de la lista maestra que NO aparecen
+inspectores_sin_actividad = [
+    insp for insp in inspectores_lista
+    if insp.upper().strip() not in inspectores_con_actividad
+]
+
+if inspectores_sin_actividad:
+    # Agregar su supervisor
+    df_sin_actividad = pd.DataFrame({
+        "Inspector": inspectores_sin_actividad
+    })
+    df_sin_actividad["Supervisor"] = df_sin_actividad["Inspector"].apply(
+        lambda x: supervisores_dict.get(x.upper(), "SIN SUPERVISOR")
+    )
+    df_sin_actividad = df_sin_actividad.sort_values("Supervisor")
+
+    st.error(f"🚨 {len(inspectores_sin_actividad)} inspector(es) sin actividad registrada para {fecha_sel}")
+    st.dataframe(df_sin_actividad, use_container_width=True)
+else:
+    st.success("✅ Todos los inspectores tienen actividad registrada para esta fecha.")
 
 # ===================================================
 # ===================================================
