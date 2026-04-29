@@ -1897,6 +1897,8 @@ with sub_aus:
 
 # ===================================================
 # TAB INVENTARIO E&C — Estilo corporativo rojo
+# ===================================================
+# TAB INVENTARIO E&C — Estilo corporativo rojo
 # Menú lateral dinámico con submenús colapsables
 # ===================================================
 # INSTRUCCIONES:
