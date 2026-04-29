@@ -1,0 +1,15 @@
+[
+  {
+    "tipo": "ENTRADA",
+    "fecha": "2026-04-29",
+    "timestamp": "2026-04-29 14:32:57",
+    "sede": "CALDAS",
+    "responsable": "CRISTIAN CHICA",
+    "categoria": "Dotación",
+    "item": "Camisa",
+    "talla": "S",
+    "cantidad": 5,
+    "observacion": "",
+    "inspector": null
+  }
+]
