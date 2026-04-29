@@ -1896,7 +1896,6 @@ with sub_aus:
 
 
 # ===================================================
-# ===================================================
 # TAB INVENTARIO E&C
 # ===================================================
 with tab_inv:
@@ -2260,3 +2259,4 @@ with tab_inv:
                             catalogo_sha = r_cat.json().get("content", {}).get("sha", catalogo_sha)
                         else:
                             st.error("❌ Error al guardar el catálogo en GitHub")
+
