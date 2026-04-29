@@ -1896,8 +1896,28 @@ with sub_aus:
 
 
 # ===================================================
+# ===================================================
 # TAB INVENTARIO E&C
 # ===================================================
+
+def gh_get(filename, gh_headers, repo, branch="main"):
+    url = f"https://api.github.com/repos/{repo}/contents/{filename}"
+    r = requests.get(url, headers=gh_headers)
+    if r.status_code == 200:
+        raw = base64.b64decode(r.json()["content"]).decode("utf-8")
+        return json.loads(raw), r.json().get("sha")
+    return None, None
+
+def gh_put(filename, data, gh_headers, repo, sha=None, branch="main", mensaje="Actualización"):
+    url = f"https://api.github.com/repos/{repo}/contents/{filename}"
+    contenido = base64.b64encode(
+        json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
+    ).decode("utf-8")
+    payload = {"message": mensaje, "content": contenido, "branch": branch}
+    if sha:
+        payload["sha"] = sha
+    return requests.put(url, headers=gh_headers, json=payload)
+
 with tab_inv:
     st.markdown("## 🏭 Inventario E&C")
 
@@ -1936,7 +1956,6 @@ with tab_inv:
         "JENNY (DOTACIÓN)",
     ]
 
-    # Credenciales GitHub
     inv_token  = st.secrets["github"]["token"]
     inv_repo   = st.secrets["github"]["repo"]
     inv_branch = st.secrets["github"].get("branch", "main")
@@ -1946,29 +1965,14 @@ with tab_inv:
         "Accept": "application/vnd.github+json",
     }
 
-    # Cargar catálogo
     catalogo_raw, catalogo_sha = gh_get("CATALOGO.json", inv_headers, inv_repo, inv_branch)
-    if catalogo_raw is None:
-        catalogo = CATALOGO_DEFAULT
-        catalogo_sha = None
-    else:
-        catalogo = catalogo_raw
+    catalogo = catalogo_raw if catalogo_raw is not None else CATALOGO_DEFAULT
 
-    # Cargar movimientos
     movimientos_raw, mov_sha = gh_get("INVENTARIO_V2.json", inv_headers, inv_repo, inv_branch)
-    if movimientos_raw is None:
-        movimientos = []
-        mov_sha = None
-    else:
-        movimientos = movimientos_raw
+    movimientos = movimientos_raw if movimientos_raw is not None else []
 
-    # Subpestañas
     sub_entradas, sub_salidas, sub_stock, sub_historial, sub_catalogo = st.tabs([
-        "📥 Entradas",
-        "📤 Salidas",
-        "📊 Stock Actual",
-        "📋 Historial",
-        "⚙️ Catálogo",
+        "📥 Entradas", "📤 Salidas", "📊 Stock Actual", "📋 Historial", "⚙️ Catálogo",
     ])
 
     # ===================================================
@@ -1987,7 +1991,6 @@ with tab_inv:
 
             st.markdown("#### Ítems recibidos")
             items_entrada = []
-
             for cat, items in catalogo.items():
                 st.markdown(f"**{cat}**")
                 cols_cat = st.columns(3)
@@ -2039,7 +2042,6 @@ with tab_inv:
 
             st.markdown("#### Ítems entregados")
             items_salida = []
-
             for cat, items in catalogo.items():
                 st.markdown(f"**{cat}**")
                 cols_cat = st.columns(3)
@@ -2098,7 +2100,6 @@ with tab_inv:
             st.info("📭 Aún no hay movimientos registrados. Comienza registrando una entrada.")
         else:
             sede_stock = st.selectbox("Selecciona sede", SEDES_INV, key="sede_stock")
-
             stock_dict = {}
             for m in movimientos:
                 if m["sede"] != sede_stock:
@@ -2131,9 +2132,8 @@ with tab_inv:
 
                 st.dataframe(df_stock.style.apply(color_stock, axis=1), use_container_width=True, hide_index=True)
 
-                sin_stock = df_stock[df_stock["Stock actual"] == 0]
+                sin_stock  = df_stock[df_stock["Stock actual"] == 0]
                 stock_bajo = df_stock[(df_stock["Stock actual"] > 0) & (df_stock["Stock actual"] <= 3)]
-
                 if not sin_stock.empty:
                     st.error(f"🚨 {len(sin_stock)} ítem(s) SIN STOCK en {sede_stock}")
                 if not stock_bajo.empty:
@@ -2156,7 +2156,6 @@ with tab_inv:
             st.info("📭 Aún no hay movimientos registrados.")
         else:
             df_hist = pd.DataFrame(movimientos)
-
             col1, col2, col3 = st.columns(3)
             sede_h = col1.selectbox("Sede", ["TODAS"] + SEDES_INV, key="hist_sede")
             tipo_h = col2.selectbox("Tipo", ["TODOS", "ENTRADA", "SALIDA"], key="hist_tipo")
@@ -2195,8 +2194,7 @@ with tab_inv:
             with st.expander(f"**{cat}** — {len(items)} ítem(s)"):
                 for item, cfg in items.items():
                     if cfg["tallas"]:
-                        tallas_str = ", ".join(cfg.get("opciones_talla", []))
-                        st.markdown(f"- **{item}** | Tallas: {tallas_str}")
+                        st.markdown(f"- **{item}** | Tallas: {', '.join(cfg.get('opciones_talla', []))}")
                     else:
                         st.markdown(f"- **{item}** | Sin tallas")
 
@@ -2248,8 +2246,7 @@ with tab_inv:
                 else:
                     idx_sel = opciones_items.index(item_sel_str)
                     cat_sel, item_sel = items_con_talla[idx_sel]
-                    tallas_act = catalogo[cat_sel][item_sel].get("opciones_talla", [])
-                    if nueva_talla.strip() in tallas_act:
+                    if nueva_talla.strip() in catalogo[cat_sel][item_sel].get("opciones_talla", []):
                         st.warning(f"⚠️ La talla '{nueva_talla}' ya existe en {item_sel}.")
                     else:
                         catalogo[cat_sel][item_sel]["opciones_talla"].append(nueva_talla.strip())
@@ -2259,4 +2256,3 @@ with tab_inv:
                             catalogo_sha = r_cat.json().get("content", {}).get("sha", catalogo_sha)
                         else:
                             st.error("❌ Error al guardar el catálogo en GitHub")
-
