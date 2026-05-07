@@ -1002,6 +1002,607 @@ with tab2:
         hide_index=True
     )
 
+     # ===================================================
+ # 🚨 INSPECTORES SIN ACTIVIDAD EN LA FECHA
+    # ===================================================
+    st.markdown("### 🚨 Inspectores sin actividad registrada")
+
+    inspectores_con_actividad = set(df2["inspector"].str.upper().str.strip().unique())
+
+    inspectores_del_filtro = [
+        insp for insp in inspectores_lista
+        if supervisores_dict.get(insp.upper(), "SIN SUPERVISOR") in supervisores_sel
+    ]
+
+    inspectores_sin_actividad = [
+        insp for insp in inspectores_del_filtro
+        if insp.upper().strip() not in inspectores_con_actividad
+    ]
+
+    if inspectores_sin_actividad:
+        df_sin_actividad = pd.DataFrame({
+            "Inspector": inspectores_sin_actividad
+        })
+        df_sin_actividad["Supervisor"] = df_sin_actividad["Inspector"].apply(
+            lambda x: supervisores_dict.get(x.upper(), "SIN SUPERVISOR")
+        )
+        df_sin_actividad = df_sin_actividad.sort_values("Supervisor")
+
+        st.error(f"🚨 {len(inspectores_sin_actividad)} inspector(es) sin actividad registrada para {fecha_sel}")
+        st.dataframe(df_sin_actividad, use_container_width=True)
+    else:
+        st.success("✅ Todos los inspectores tienen actividad registrada para esta fecha.")
+
+    # ===================================================
+    # 📊 Producción por inspector (órdenes efectivas)
+  
+    # ===================================================
+    st.markdown("## 📊 Producción por inspector (órdenes efectivas)")
+
+    df_prod = (
+        df2[df2["efectiva"] == True]
+        .groupby("inspector")
+        .size()
+        .reset_index(name="Órdenes efectivas")
+        .sort_values("Órdenes efectivas", ascending=True)
+    )
+
+    if df_prod.empty:
+        st.info("⚠️ No hay órdenes efectivas para esta fecha.")
+    else:
+        # Colores según producción
+        def color_por_produccion(valor):
+            if valor <= 3:
+                return "#dc3545"      # rojo
+            elif valor <= 6:
+                return "#f5b7b1"      # rosado
+            elif valor <= 8:
+                return "#f7dc6f"      # amarillo
+            else:
+                return "#28a745"      # verde
+
+        df_prod["color"] = df_prod["Órdenes efectivas"].apply(color_por_produccion)
+
+        fig_prod = px.bar(
+            df_prod,
+            y="inspector",
+            x="Órdenes efectivas",
+            orientation="h",
+            text="Órdenes efectivas",
+            title="Órdenes efectivas por inspector"
+        )
+
+        # Colores y barras más gruesas
+        fig_prod.update_traces(
+            marker_color=df_prod["color"],
+            textposition="outside",
+            textfont_size=28,
+            cliponaxis=False
+        )
+
+        fig_prod.update_layout(
+            bargap=0.15,              # barras más gruesas
+            xaxis_title="Órdenes efectivas",
+            yaxis_title="Inspector",
+            font=dict(size=18),
+            height=650
+        )
+
+        st.plotly_chart(fig_prod, use_container_width=True)
+ 
+
+# ===================================================
+# ===================================================
+# ✅ TAB 3 — ADMINISTRACIÓN DE BITÁCORA (PROTEGIDO)
+# Guarda / reemplaza BITACORA.xlsx en GitHub
+# Guarda fecha y hora en BITACORA_INFO.json
+# ===================================================
+with tab3:
+    st.subheader("🔐 Administración de Bitácora Compartida")
+
+    # -------------------------------------------------
+    # VALIDACIÓN DE ADMINISTRADOR
+    # -------------------------------------------------
+ #    clave_ingresada = st.text_input(
+  #       "Contraseña de administrador",
+#         type="password",
+#         placeholder="Ingresa la clave para administrar la bitácora"
+#     )
+# 
+#     clave_real = st.secrets["admin"]["password"]
+
+ #    if clave_ingresada != clave_real:
+#         st.warning(
+#             "⛔ Acceso restringido.\n\n"
+#             "Solo personal autorizado puede cargar o actualizar la bitácora."
+#         )
+ #        st.stop()
+
+    # -------------------------------------------------
+    # CONTENIDO SOLO PARA ADMIN
+    # -------------------------------------------------
+    st.success("✅ Acceso autorizado")
+
+    st.info(
+        "Desde aquí se sube la bitácora OFICIAL.\n\n"
+        "Al cargar un nuevo archivo, este reemplazará el anterior y "
+        "todos los usuarios verán la MISMA información en la pestaña "
+        "🕒 Seguimiento Diario (TAB 2)."
+    )
+
+    archivo = st.file_uploader(
+        "Sube el archivo BITACORA.xlsx",
+        type=["xls", "xlsx"]
+    )
+
+    if archivo is not None:
+        import base64
+        import requests
+        import json
+        import datetime
+        from zoneinfo import ZoneInfo
+
+        # -----------------------------
+        # ZONA HORARIA
+        # -----------------------------
+        TZ_UTC = ZoneInfo("UTC")
+
+        # -----------------------------
+        # LEER SECRETS DE GITHUB
+        # -----------------------------
+        token = st.secrets["github"]["token"]
+        repo = st.secrets["github"]["repo"]
+        branch = st.secrets["github"].get("branch", "main")
+
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github+json"
+        }
+
+        # =================================================
+        # 1️⃣ GUARDAR / REEMPLAZAR BITACORA.xlsx
+        # =================================================
+        contenido_excel = archivo.read()
+        contenido_excel_b64 = base64.b64encode(
+            contenido_excel
+        ).decode("utf-8")
+
+        url_excel = f"https://api.github.com/repos/{repo}/contents/BITACORA.xlsx"
+
+        r_excel = requests.get(url_excel, headers=headers)
+        sha_excel = r_excel.json().get("sha") if r_excel.status_code == 200 else None
+
+        payload_excel = {
+            "message": "Actualización de BITACORA.xlsx desde Streamlit",
+            "content": contenido_excel_b64,
+            "branch": branch
+        }
+
+        if sha_excel:
+            payload_excel["sha"] = sha_excel
+
+        r_put_excel = requests.put(
+            url_excel,
+            headers=headers,
+            json=payload_excel
+        )
+
+        if r_put_excel.status_code not in (200, 201):
+            st.error("❌ Error al guardar BITACORA.xlsx en GitHub")
+            st.json(r_put_excel.json())
+            st.stop()
+
+        # =================================================
+        # 2️⃣ GUARDAR FECHA, HORA Y USUARIO (BITACORA_INFO.json)
+        # =================================================
+        info = {
+            "ultima_actualizacion": datetime.datetime.now(TZ_UTC).strftime(
+                "%Y-%m-%d %H:%M:%S"
+            ),
+            "usuario_actualizo": st.session_state.usuario
+        }
+
+        contenido_info_b64 = base64.b64encode(
+            json.dumps(info, indent=2).encode("utf-8")
+        ).decode("utf-8")
+
+        url_info = f"https://api.github.com/repos/{repo}/contents/BITACORA_INFO.json"
+
+        r_info = requests.get(url_info, headers=headers)
+        sha_info = r_info.json().get("sha") if r_info.status_code == 200 else None
+
+        payload_info = {
+            "message": "Actualización de BITACORA_INFO.json",
+            "content": contenido_info_b64,
+            "branch": branch
+        }
+
+        if sha_info:
+            payload_info["sha"] = sha_info
+
+        requests.put(
+            url_info,
+            headers=headers,
+            json=payload_info
+        )
+
+        # =================================================
+        # ✅ CONFIRMACIÓN FINAL
+        # =================================================
+        st.success("✅ Bitácora actualizada correctamente")
+        st.caption(f"🕓 Hora UTC guardada: {info['ultima_actualizacion']}")
+
+  # =================================================
+#PESTAÑA 4 SEGUIMIENTO AGENDAS
+with tab4:
+    # ======================================================
+    # TÍTULO PRINCIPAL
+    # ======================================================
+    st.markdown("## 🗂️ Control agendas")
+
+    # ======================================================
+    # CARGAR BITÁCORA DESDE GITHUB (FORMA CORRECTA)
+    # ======================================================
+    archivo_bitacora = "BITACORA.xlsx"
+    token = st.secrets["github"]["token"]
+    repo = st.secrets["github"]["repo"]
+
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+        "Cache-Control": "no-cache"
+    }
+
+    url_metadata = f"https://api.github.com/repos/{repo}/contents/{archivo_bitacora}"
+    r_meta = requests.get(url_metadata, headers=headers)
+
+    if r_meta.status_code != 200:
+        st.error("❌ No se pudo obtener la información del archivo desde GitHub.")
+        st.stop()
+
+    download_url = r_meta.json().get("download_url")
+
+    if not download_url:
+        st.error("❌ No se pudo obtener la URL de descarga del archivo.")
+        st.stop()
+
+    r_file = requests.get(download_url, headers=headers)
+
+    if r_file.status_code != 200:
+        st.error("❌ No se pudo descargar el archivo desde GitHub.")
+        st.stop()
+
+    buffer = io.BytesIO(r_file.content)
+    df = pd.read_excel(buffer)
+    df.columns = df.columns.str.strip().str.lower()
+
+
+    # ======================================================
+    # NORMALIZAR Y VALIDAR COLUMNAS
+    # ======================================================
+    df.columns = df.columns.str.strip().str.lower()
+
+    columnas_req = [
+        "grupo", "prioridad", "estado",
+        "fecha de visita", "fecha de ejecucion",
+        "inspector", "contrato", "direccion",
+        "localidad", "detalle de tarea"
+    ]
+
+    for c in columnas_req:
+        if c not in df.columns:
+            st.error(f"❌ Falta la columna requerida: {c}")
+            st.stop()
+
+    # ======================================================
+    # FILTRO FIJO DE GRUPO
+    # ======================================================
+    df["grupo"] = df["grupo"].astype(str).str.upper().str.strip()
+    grupos_validos = ["INSP-CALDAS", "INSP-RIS"]
+    df = df[df["grupo"].isin(grupos_validos)].copy()
+
+    # ======================================================
+    # FECHAS Y ALERTAS
+    # ======================================================
+    df["fecha de visita"] = pd.to_datetime(df["fecha de visita"], errors="coerce")
+    df["fecha de ejecucion"] = pd.to_datetime(df["fecha de ejecucion"], errors="coerce")
+
+    ahora_colombia = datetime.datetime.now(
+        ZoneInfo("America/Bogota")
+    ).replace(tzinfo=None)
+
+    df["estado_alerta"] = df["fecha de visita"].apply(
+        lambda x: "ALERTA" if pd.notna(x) and x <= ahora_colombia else "OK"
+    )
+
+    # ======================================================
+    # COLUMNAS BASE A MOSTRAR
+    # ======================================================
+    columnas_base = [
+        "inspector",
+        "contrato",
+        "direccion",
+        "estado",
+        "fecha de visita",
+        "localidad",
+        "detalle de tarea",
+        "estado_alerta"
+    ]
+
+    # ======================================================
+    # SUBPESTAÑAS
+    # ======================================================
+    t_fin, t_prox, t_pen = st.tabs(
+        ["✅ Finalizadas", "⏳ Próximas", "🚨 Pendientes"]
+    )
+
+    # ======================================================
+    # ✅ FINALIZADAS
+    # ======================================================
+    with t_fin:
+        st.markdown("### ✅ Agendas finalizadas")
+
+        # -------- Filtro Zona (checkbox estilo Tab2)
+        zonas_sel = []
+        with st.expander("Seleccionar Zona"):
+            for z in grupos_validos:
+                if st.checkbox(z, value=True, key=f"fin_zona_{z}"):
+                    zonas_sel.append(z)
+
+        # -------- Filtro Inicio de tarea
+        inicios_sel = []
+        with st.expander("Filtrar por inicio de la tarea"):
+            for i in ["INICIO TARDE", "INICIO A TIEMPO"]:
+                if st.checkbox(i, value=True, key=f"fin_inicio_{i}"):
+                    inicios_sel.append(i)
+
+        df_final = df[df["estado"].str.upper() == "FINALIZADA"].copy()
+
+        if zonas_sel:
+            df_final = df_final[df_final["grupo"].isin(zonas_sel)]
+
+        def evaluar_inicio_tarde(row):
+            if pd.isna(row["fecha de ejecucion"]) or pd.isna(row["fecha de visita"]):
+                return "SIN DATO"
+            limite = row["fecha de visita"] + pd.Timedelta(minutes=15)
+            return "INICIO TARDE" if row["fecha de ejecucion"] > limite else "INICIO A TIEMPO"
+
+        df_final["inicio_tarea"] = df_final.apply(evaluar_inicio_tarde, axis=1)
+
+        if inicios_sel:
+            df_final = df_final[df_final["inicio_tarea"].isin(inicios_sel)]
+
+        columnas_fin = columnas_base[:-1] + ["inicio_tarea"]
+
+        if df_final.empty:
+            st.info("✅ No hay agendas finalizadas con esos filtros.")
+        else:
+            st.dataframe(
+                df_final[columnas_fin].sort_values("fecha de visita"),
+                use_container_width=True
+            )
+
+    # ======================================================
+    # ⏳ PRÓXIMAS (NO INICIADAS)
+    # ======================================================
+    with t_prox:
+        st.markdown("### ⏳ Agendas próximas (no iniciadas)")
+
+        zonas_sel = []
+        with st.expander("Seleccionar Zona"):
+            for z in grupos_validos:
+                if st.checkbox(z, value=True, key=f"prox_zona_{z}"):
+                    zonas_sel.append(z)
+
+        df_prox = df[
+            (df["estado"].str.upper() == "ASIGNADA") &
+            (df["fecha de ejecucion"].isna()) &
+            (df["fecha de visita"] > ahora_colombia)
+        ].copy()
+
+        if zonas_sel:
+            df_prox = df_prox[df_prox["grupo"].isin(zonas_sel)]
+
+        if df_prox.empty:
+            st.info("✅ No hay agendas próximas.")
+        else:
+            st.dataframe(
+                df_prox[columnas_base].sort_values("fecha de visita"),
+                use_container_width=True
+            )
+
+    # ======================================================
+    # 🚨 PENDIENTES (ALERTAS REALES)
+    # ======================================================
+    with t_pen:
+        st.markdown("### 🚨 Agendas en ALERTA")
+
+        zonas_sel = []
+        with st.expander("Seleccionar Zona"):
+            for z in grupos_validos:
+                if st.checkbox(z, value=True, key=f"pen_zona_{z}"):
+                    zonas_sel.append(z)
+
+        df_alerta = df[
+            (df["estado"].str.upper() == "ASIGNADA") &
+            (df["prioridad"].str.upper() == "ALTA") &
+            (df["estado_alerta"] == "ALERTA")
+        ].copy()
+
+        if zonas_sel:
+            df_alerta = df_alerta[df_alerta["grupo"].isin(zonas_sel)]
+
+        if df_alerta.empty:
+            st.info("✅ No hay agendas en ALERTA para la zona seleccionada.")
+        else:
+            st.dataframe(
+                df_alerta[columnas_base].sort_values("fecha de visita"),
+                use_container_width=True
+            )
+            st.error(f"🚨 TOTAL ALERTAS: {len(df_alerta)}")
+
+with tab5:
+    st.markdown("## 📌 Órdenes ASIGNADAS")
+
+    # ===================================================
+    # VALIDAR Y CARGAR BITÁCORA LOCAL
+    # ===================================================
+    archivo_bitacora = "BITACORA.xlsx"
+
+    if not os.path.exists(archivo_bitacora):
+        st.warning("⚠️ No hay una bitácora cargada.")
+        st.stop()
+
+    df = pd.read_excel(archivo_bitacora)
+    df.columns = df.columns.str.strip().str.lower()
+
+    # ===================================================
+    # ✅ EXCLUIR GRUPOS NO OPERATIVOS (MISMA REGLA QUE TAB 2)
+    # ===================================================
+    if "grupo" in df.columns:
+        df["grupo"] = (
+            df["grupo"]
+            .astype(str)
+            .str.upper()
+            .str.strip()
+        )
+
+        grupos_no_operativos = [
+            "SST-NAL",
+            "SUPERVISIONES",
+            "SUSP-ANT"
+        ]
+
+        df = df[~df["grupo"].isin(grupos_no_operativos)]
+
+    if df.empty:
+        st.warning("⚠️ No hay datos operativos después del filtro de grupos.")
+        st.stop()
+
+    # ===================================================
+    # VALIDAR COLUMNAS NECESARIAS
+    # ===================================================
+    columnas_requeridas = ["inspector", "estado", "prioridad", "grupo"]
+    for col in columnas_requeridas:
+        if col not in df.columns:
+            st.error(f"❌ Falta la columna requerida: {col}")
+            st.stop()
+
+    # ===================================================
+    # FILTRAR SOLO ÓRDENES ASIGNADAS
+    # ===================================================
+    df_asignadas = df[
+        df["estado"]
+        .astype(str)
+        .str.contains("Asignad", case=False, na=False)
+    ].copy()
+
+    if df_asignadas.empty:
+        st.info("✅ No hay órdenes ASIGNADAS en la bitácora.")
+        st.stop()
+
+    # ===================================================
+    # ================= FILTROS =================
+    # ===================================================
+    st.markdown("### 🔎 Filtros")
+
+    # -------- FILTRO POR GRUPO --------
+    grupos_disponibles = sorted(df_asignadas["grupo"].dropna().unique())
+    grupos_sel = []
+
+    with st.expander("Seleccionar Grupo", expanded=True):
+        for g in grupos_disponibles:
+            if st.checkbox(g, value=True, key=f"tab5_grupo_{g}"):
+                grupos_sel.append(g)
+
+    if grupos_sel:
+        df_asignadas = df_asignadas[df_asignadas["grupo"].isin(grupos_sel)]
+
+    # -------- FILTRO POR PRIORIDAD --------
+    prioridades_disponibles = sorted(df_asignadas["prioridad"].dropna().unique())
+    prioridades_sel = []
+
+    with st.expander("Seleccionar Prioridad", expanded=True):
+        for p in prioridades_disponibles:
+            if st.checkbox(p, value=True, key=f"tab5_prio_{p}"):
+                prioridades_sel.append(p)
+
+    if prioridades_sel:
+        df_asignadas = df_asignadas[df_asignadas["prioridad"].isin(prioridades_sel)]
+
+    if df_asignadas.empty:
+        st.warning("⚠️ No hay datos con los filtros seleccionados.")
+        st.stop()
+
+    # ===================================================
+    # AGRUPAR POR INSPECTOR Y PRIORIDAD (DATOS REALES)
+    # ===================================================
+    df_prio = (
+        df_asignadas
+        .groupby(["inspector", "prioridad"])
+        .size()
+        .reset_index(name="cantidad")
+    )
+
+    # Ordenar inspectores por carga total
+    orden_inspectores = (
+        df_prio.groupby("inspector")["cantidad"]
+        .sum()
+        .sort_values(ascending=False)
+        .index
+        .tolist()
+    )
+
+    # ===================================================
+    # MAPA DE COLORES POR PRIORIDAD
+    # ===================================================
+    color_prioridad = {
+        "Alta": "#dc3545",        # 🔴 rojo
+        "Media": "#ffc107",       # 🟡 amarillo
+        "Baja": "#7cd992",        # 🟢 verde claro
+        "Critica": "#fd7e14",     # 🟠 naranja
+        "Prioridad": "#6f4e37",    # 🟤 café
+        
+        "60 Meses": "#6f42c1",        # 🟣 morado
+        "Segunda visita": "#ff8c00"   # 🟠 naranja
+
+    }
+
+    # ===================================================
+    # GRÁFICA ACUMULADA
+    # ===================================================
+    fig = px.bar(
+        df_prio,
+        y="inspector",
+        x="cantidad",
+        color="prioridad",
+        orientation="h",
+        category_orders={"inspector": orden_inspectores},
+        color_discrete_map=color_prioridad,
+        text="cantidad",
+        title="Órdenes ASIGNADAS por inspector (según filtros)"
+    )
+
+    fig.update_traces(
+        textposition="inside",
+        textfont_size=16
+    )
+
+    fig.update_layout(
+        barmode="stack",
+        xaxis_title="Cantidad de órdenes ASIGNADAS",
+        yaxis_title="Inspector",
+        legend_title="Prioridad",
+        height=700
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+
+    # ===================================================
+    df_sst = df_bitacora_base.copy()
+
+
     # ---------------------------------------------------
     # ✅ TAB 6 — SST (Placeholder logic)
     # ---------------------------------------------------
