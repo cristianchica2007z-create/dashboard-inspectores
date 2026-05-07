@@ -1871,6 +1871,11 @@ with tab7:
         # Normalizar nombres de columnas para facilitar la búsqueda
         df_p.columns = df_p.columns.str.strip().str.lower()
 
+        # Filtrar por tipos de trabajo específicos solicitados
+        codigos_validos = ["12163", "12164", "10793", "12170", "10842", "10772", "10445"]
+        if "codigo_tipo_trabajo" in df_p.columns:
+            df_p = df_p[df_p["codigo_tipo_trabajo"].astype(str).isin(codigos_validos)]
+
         # Buscar la columna de fecha de asignación (heurística de nombres comunes)
         col_fecha = None
         posibles_nombres = ["fecha de asignacion", "fecha asignacion", "asignacion", "fecha_asignacion", "fecha"]
