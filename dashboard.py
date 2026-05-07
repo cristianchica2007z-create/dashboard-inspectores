@@ -207,7 +207,7 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab_inv, tab7 = st.tabs([
     "📈 Subir Archivos",
      "📅 Seguimiento agendas",
     "📌 Órdenes Asignadas",
-    "## 🦺 SST",
+    "🦺 SST",
     "🏭 Inventario V2",
     "🏭 SEGUIMIENTO ADICIONALES",
     
@@ -714,24 +714,19 @@ with tab2:
 
     # -------------------------------------------
     # ⏱️ TIEMPO DE RECORRIDO
-    # Diferencia: hora_inicio - hora_inicio_recorrido (por orden)
+    # (hora_inicio - hora_inicio_recorrido). Se promedia luego por inspector.
     # -------------------------------------------
 
     def calcular_tiempo_recorrido(row):
         hi = row.get("hora_inicio")
         hr = row.get("hora_inicio_recorrido")
-
-        # Si falta cualquiera de las 2 horas, no se puede calcular
         if not isinstance(hi, datetime.time) or not isinstance(hr, datetime.time):
             return pd.NaT
-
         dt_hi = datetime.datetime.combine(datetime.date.today(), hi)
         dt_hr = datetime.datetime.combine(datetime.date.today(), hr)
-
-        # Evitar negativos por datos inconsistentes
         return dt_hi - dt_hr if dt_hi >= dt_hr else pd.NaT
 
-    # Cálculo por orden (si no existe recorrido queda NaT)
+    # Cálculo por orden
     try:
         df2["tiempo_recorrido_td"] = df2.apply(calcular_tiempo_recorrido, axis=1)
     except Exception:
@@ -940,9 +935,6 @@ with tab2:
     # ---------------------------------------------------
     # RESUMEN POR INSPECTOR (SOLO PARA CÁLCULO)
     # ---------------------------------------------------
-    # ---------------------------------------------------
-    # RESUMEN POR INSPECTOR
-    # ---------------------------------------------------
     resumen = (
         df2.groupby("inspector")
         .apply(lambda x: pd.Series({
@@ -954,14 +946,19 @@ with tab2:
             "promedio_tiempo_tarea":
                 td_to_str(
                     x.loc[x["efectiva"], "tiempo_tarea_td"].mean()
-                ),
-            "ordenes_sin_recorrido": x["tiempo_recorrido_td"].isna().sum(),
-            "promedio_tiempo_recorrido": td_to_str(x["tiempo_recorrido_td"].mean())
+                )
         }))
         .reset_index()
     )
 
-    df_tabla = df_agrupado.merge(resumen, on="inspector", how="left")
+    # ---------------------------------------------------
+   # TABLA CONSOLIDADA DEL DÍA (UNA SOLA)
+    # ---------------------------------------------------
+    df_tabla = df_agrupado.merge(
+        resumen,
+        on="inspector",
+        how="left"
+    )
 
     df_tabla = df_tabla.fillna({
         "hora_inicio": "—",
@@ -970,12 +967,44 @@ with tab2:
         "estado": "SIN ACTIVIDAD",
         "total_ordenes": 0,
         "ordenes_efectivas": 0,
-        "ordenes_sin_recorrido": 0,
+        "ordenes_sin_recorrido": 0,          # ✅ NUEVA
         "porcentaje_efectividad": 0,
         "promedio_tiempo_tarea": "—",
-        "promedio_tiempo_recorrido": "—"
+        "promedio_tiempo_recorrido": "—"     # ✅ NUEVA
     })
 
+
+# ===================================================
+  # ===================================================
+    # ✅ TAB 2 — PARTE 5 / 5
+    # Estilos y tabla final
+    # ===================================================
+
+    # ---------------------------------------------------
+    # 🎨 ESTILO SOLO PARA LA COLUMNA hora_inicio
+    # (FORMA ESTABLE – NO SE ROMPE)
+    # ---------------------------------------------------
+    def color_hora_inicio(col):
+        estilos = []
+        for valor, estado in zip(col, df_tabla["estado"]):
+            if estado == "Muy tarde":
+                estilos.append("background-color: #f8d7da; color: #721c24")
+            elif estado == "Tarde":
+                estilos.append("background-color: #fff3cd; color: #856404")
+            elif estado == "Puntual":
+                estilos.append("background-color: #d4edda; color: #155724")
+            else:
+                estilos.append("")
+        return estilos
+
+    # ---------------------------------------------------
+    # 📋 Tabla de inspecciones del día
+    # ---------------------------------------------------
+    st.markdown("### 📋 Tabla de inspecciones del día")
+
+    # ---------------------------------------------------
+    # 📋 Tabla de inspecciones del día (SEGURA)
+    # ---------------------------------------------------
     columnas_tabla = [
         "inspector",
         "supervisor",
@@ -984,25 +1013,33 @@ with tab2:
         "hora_final",
         "localidad",
         "estado",
+        "promedio_tiempo_recorrido",  # ✅ NUEVA
         "total_ordenes",
         "ordenes_efectivas",
-        "ordenes_sin_recorrido",
+        "ordenes_sin_recorrido",  # ✅ NUEVA
         "porcentaje_efectividad",
-        "promedio_tiempo_tarea",
-        "promedio_tiempo_recorrido"
+        "promedio_tiempo_tarea"
     ]
 
-    # Filtrar solo las que existen para evitar errores
-    columnas_disponibles = [c for c in columnas_tabla if c in df_tabla.columns]
+    columnas_disponibles = [
+        c for c in columnas_tabla if c in df_tabla.columns
+    ]
 
-    st.markdown("### 📋 Tabla de inspecciones del día")
-    st.dataframe(
-        df_tabla[columnas_disponibles],
-        use_container_width=True,
-        hide_index=True
+    tabla_mostrar = df_tabla[columnas_disponibles]
+
+    styled_tabla = (
+        tabla_mostrar
+        .style
+        .apply(color_hora_inicio, subset=["hora_inicio"])
     )
 
-     # ===================================================
+    st.dataframe(styled_tabla, use_container_width=True)
+
+    st.write("✅ df_tabla.columns:", df_tabla.columns.tolist())
+    st.write("✅ columnas_disponibles:", columnas_disponibles)
+
+
+    # ===================================================
  # 🚨 INSPECTORES SIN ACTIVIDAD EN LA FECHA
     # ===================================================
     st.markdown("### 🚨 Inspectores sin actividad registrada")
@@ -1089,7 +1126,9 @@ with tab2:
         )
 
         st.plotly_chart(fig_prod, use_container_width=True)
- 
+
+
+  
 
 # ===================================================
 # ===================================================
@@ -1603,143 +1642,429 @@ with tab5:
     df_sst = df_bitacora_base.copy()
 
 
-    # ---------------------------------------------------
-    # ✅ TAB 6 — SST (Placeholder logic)
-    # ---------------------------------------------------
-with tab6:
-    st.subheader("🦺 Seguridad y Salud en el Trabajo")
-    st.info("Módulo en desarrollo.")
+
+
+    # ===================================================
+    # ===================================================
+# 🚫 AUSENTISMO – EJE
+
+
+
 
 # ===================================================
-# ✅ TAB_INV — INVENTARIO V2
+# TAB INVENTARIO E&C — Estilo corporativo rojo
 # ===================================================
+# TAB INVENTARIO E&C — Estilo corporativo rojo
+# Menú lateral dinámico con submenús colapsables
+# ===================================================
+# INSTRUCCIONES:
+# 1. En tu lista de tabs agrega tab_inv:
+#    tab1, tab2, ..., tab6, tab_inv = st.tabs([..., "🏭 Inventario E&C"])
+# 2. Pega este bloque completo AL FINAL de tu dashboard.py
+# ===================================================
+
+def gh_get_inv(filename, gh_headers, repo, branch="main"):
+    url = f"https://api.github.com/repos/{repo}/contents/{filename}"
+    r = requests.get(url, headers=gh_headers)
+    if r.status_code == 200:
+        raw = base64.b64decode(r.json()["content"]).decode("utf-8")
+        return json.loads(raw), r.json().get("sha")
+    return None, None
+
+def gh_put_inv(filename, data, gh_headers, repo, sha=None, branch="main", mensaje="Actualización"):
+    url = f"https://api.github.com/repos/{repo}/contents/{filename}"
+    contenido = base64.b64encode(
+        json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
+    ).decode("utf-8")
+    payload = {"message": mensaje, "content": contenido, "branch": branch}
+    if sha:
+        payload["sha"] = sha
+    return requests.put(url, headers=gh_headers, json=payload)
+
 with tab_inv:
-    # Note: The following code snippet appears to be part of a larger logic 
-    # for 'tab_inv' that was partially truncated in the original file.
-    # This fix ensures the syntax is valid for the provided context.
-    if 'df_st' in locals() and 'sede_st' in locals():
-        sin_st   = df_st[df_st["Stock actual"] == 0]
-        bajo_st  = df_st[(df_st["Stock actual"] > 0) & (df_st["Stock actual"] <= 3)]
-        if not sin_st.empty:  st.error(f"🚨 {len(sin_st)} ítem(s) SIN STOCK en {sede_st}")
-        if not bajo_st.empty: st.warning(f"⚠️ {len(bajo_st)} ítem(s) con stock BAJO (≤ 3) en {sede_st}")
 
-        df_cat = df_st.groupby("Categoría")["Stock actual"].sum().reset_index()
-        fig_st = px.bar(df_cat, x="Categoría", y="Stock actual", color="Categoría",
-                        text="Stock actual", title=f"Stock por categoría — {sede_st}",
-                        color_discrete_sequence=["#c0392b"])
-        fig_st.update_traces(textposition="outside")
-        fig_st.update_layout(showlegend=False, height=320, margin=dict(t=40,b=0))
-        st.plotly_chart(fig_st, use_container_width=True)
+    CATALOGO_DEFAULT = {
+        "EPPs": {
+            "Monogafas":  {"tallas": False},
+            "Guantes":    {"tallas": False},
+            "Piernera":   {"tallas": False},
+            "Botas":      {"tallas": True, "opciones_talla": ["36","37","38","39","40","41","42","43","44","45","46"]},
+        },
+        "Dotación": {
+            "Camisa":   {"tallas": True, "opciones_talla": ["XS","S","M","L","XL","XXL"]},
+            "Pantalón": {"tallas": True, "opciones_talla": ["28","30","32","34","36","38","40"]},
+            "Chaleco":  {"tallas": True, "opciones_talla": ["XS","S","M","L","XL","XXL"]},
+        },
+        "Papelería": {
+            "Isométricos (paquete x200)": {"tallas": False},
+            "Stickers":                   {"tallas": False},
+            "Papelería general":          {"tallas": False},
+        },
+        "Herramientas": {
+            "Cepo":           {"tallas": False},
+            "Llaves de cepo": {"tallas": False},
+        },
+    }
 
-    if 'seccion' in locals():
+    SEDES_INV       = ["CALDAS", "RISARALDA"]
+    RESPONSABLES_INV = [
+        "ANDRES ARROYAVE", "CRISTIAN CHICA", "DANNY DE LA CRUZ",
+        "JANIER MARIN", "CAMILA (RESIDENTE)", "ANDRES CARMONA (SST)", "JENNY (DOTACIÓN)",
+    ]
+    CATEGORIAS = ["EPPs", "Dotación", "Papelería", "Herramientas"]
+    COLORES_CAT = {"EPPs": "#c0392b", "Dotación": "#c0392b", "Papelería": "#c0392b", "Herramientas": "#c0392b"}
+
+    inv_token   = st.secrets["github"]["token"]
+    inv_repo    = st.secrets["github"]["repo"]
+    inv_branch  = st.secrets["github"].get("branch", "main")
+    inv_headers = {"Authorization": f"Bearer {inv_token}", "Accept": "application/vnd.github+json"}
+
+    catalogo_raw, catalogo_sha = gh_get_inv("CATALOGO.json", inv_headers, inv_repo, inv_branch)
+    catalogo = catalogo_raw if catalogo_raw is not None else CATALOGO_DEFAULT
+
+    mov_raw, mov_sha_raw = gh_get_inv("INVENTARIO_V2.json", inv_headers, inv_repo, inv_branch)
+    movimientos = mov_raw if mov_raw is not None else []
+
+    if "inv_seccion"        not in st.session_state: st.session_state.inv_seccion        = "entrada_EPPs"
+    if "inv_sede"           not in st.session_state: st.session_state.inv_sede           = SEDES_INV[0]
+    if "inv_resp"           not in st.session_state: st.session_state.inv_resp           = RESPONSABLES_INV[0]
+    if "inv_mov_sha"        not in st.session_state: st.session_state.inv_mov_sha        = mov_sha_raw
+    if "inv_cat_sha"        not in st.session_state: st.session_state.inv_cat_sha        = catalogo_sha
+    if "inv_menu_entradas"  not in st.session_state: st.session_state.inv_menu_entradas  = True
+    if "inv_menu_salidas"   not in st.session_state: st.session_state.inv_menu_salidas   = False
+    if "inv_menu_consultas" not in st.session_state: st.session_state.inv_menu_consultas = True
+    if "inv_menu_config"    not in st.session_state: st.session_state.inv_menu_config    = True
+
+    # ── CSS corporativo rojo ─────────────────────────────────────────────
+    st.markdown("""
+    <style>
+    [data-testid="stVerticalBlock"] .inv-sidebar-btn button {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        padding: 0 !important;
+        text-align: left !important;
+        width: 100% !important;
+        justify-content: flex-start !important;
+        color: rgba(255,255,255,0.6) !important;
+        font-size: 11px !important;
+        font-weight: 400 !important;
+    }
+    [data-testid="stVerticalBlock"] .inv-sidebar-btn button:hover {
+        background: rgba(255,255,255,0.05) !important;
+        color: #fff !important;
+    }
+    .inv-header-box {
+        background: #fff;
+        border-bottom: 1px solid #e0e0e0;
+        padding: 12px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 14px;
+        border-radius: 6px;
+        border-left: 4px solid #c0392b;
+    }
+    .inv-breadcrumb { font-size: 10px; color: #999; margin-bottom: 2px; }
+    .inv-page-title { font-size: 17px; font-weight: 700; color: #1a2332; text-transform: uppercase; letter-spacing: 0.03em; }
+    .inv-badge { background: #c0392b; color: #fff; font-size: 10px; font-weight: 700; padding: 4px 14px; border-radius: 4px; letter-spacing: 0.05em; }
+    .inv-card { background: #fff; border-radius: 6px; border: 1px solid #e0e0e0; margin-bottom: 14px; overflow: hidden; }
+    .inv-card-header { padding: 9px 16px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; background: #fafafa; }
+    .inv-card-bar { width: 4px; height: 16px; border-radius: 2px; background: #c0392b; }
+    .inv-card-title { font-size: 11px; font-weight: 700; color: #1a2332; text-transform: uppercase; letter-spacing: 0.05em; }
+    .inv-card-body { padding: 14px 16px; }
+    .inv-section-label {
+        font-size: 9px; font-weight: 700; color: #c0392b;
+        text-transform: uppercase; letter-spacing: 0.07em;
+        margin-bottom: 8px; display: flex; align-items: center; gap: 8px;
+    }
+    .inv-section-label::after { content: ''; flex: 1; height: 1px; background: #f0f0f0; }
+    .inv-item-card {
+        border: 1px solid #e8e8e8; border-radius: 6px;
+        padding: 10px 12px; background: #fafafa;
+    }
+    .inv-item-card:hover { border-color: #c0392b; background: #fff; }
+    .inv-item-name { font-size: 12px; font-weight: 600; color: #1a2332; margin-bottom: 6px; }
+    .inv-talla-row { display: flex; gap: 3px; flex-wrap: wrap; margin-bottom: 6px; }
+    .inv-talla-chip { font-size: 9px; font-weight: 600; padding: 2px 7px; border: 1px solid #d0d0d0; border-radius: 3px; color: #555; background: #fff; display: inline-block; }
+    .inv-talla-sel { background: #c0392b !important; color: #fff !important; border-color: #c0392b !important; }
+    .inv-footer { background: #fff; border-top: 1px solid #e0e0e0; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; border-radius: 0 0 6px 6px; margin-top: 4px; }
+    .inv-footer-info { font-size: 11px; color: #999; }
+    .sidebar-group-lbl {
+        font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.3);
+        text-transform: uppercase; letter-spacing: 0.08em;
+        padding: 10px 12px 3px; display: block;
+    }
+    .sidebar-nav-header {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 8px 12px; font-size: 12px; font-weight: 600;
+        color: rgba(255,255,255,0.8); cursor: pointer;
+        border-left: 3px solid transparent;
+    }
+    .sidebar-nav-header:hover { background: rgba(255,255,255,0.05); color: #fff; }
+    .sidebar-nav-header.active { color: #fff; background: rgba(192,57,43,0.2); border-left: 3px solid #c0392b; }
+    .sidebar-sub-item {
+        padding: 6px 12px 6px 32px; font-size: 11px;
+        color: rgba(255,255,255,0.5); cursor: pointer;
+        border-left: 3px solid transparent; display: flex; align-items: center; gap: 5px;
+    }
+    .sidebar-sub-item:hover { color: rgba(255,255,255,0.85); background: rgba(255,255,255,0.04); }
+    .sidebar-sub-item.active { color: #fff; background: rgba(192,57,43,0.25); border-left: 3px solid #c0392b; font-weight: 600; }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # ── Layout: sidebar + contenido ──────────────────────────────────────
+    col_side, col_main = st.columns([1, 3.8], gap="small")
+
+    # ════════════════════════════════════════════════════════════════════
+    # SIDEBAR dinámico
+    # ════════════════════════════════════════════════════════════════════
+    with col_side:
+        st.markdown("""
+        <div style="background:#1a2332;border-radius:8px;padding:14px 12px 8px;margin-bottom:0;">
+            <div style="font-size:13px;font-weight:700;color:#fff;line-height:1.4;">E&C INGENIERÍA</div>
+            <div style="font-size:10px;color:#c0392b;font-weight:700;letter-spacing:0.05em;margin-top:2px;">INVENTARIO</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        with st.container():
+            st.markdown('<div style="background:#1a2332;border-radius:0 0 8px 8px;padding:6px 0 10px;">', unsafe_allow_html=True)
+
+            # ── ENTRADAS
+            st.markdown('<span class="sidebar-group-lbl">MOVIMIENTOS</span>', unsafe_allow_html=True)
+            ent_open = st.session_state.inv_menu_entradas
+            ent_active = st.session_state.inv_seccion.startswith("entrada_")
+            if st.button(
+                f"{'▾' if ent_open else '▸'}  ↓  Entradas",
+                key="toggle_entradas",
+                use_container_width=True,
+            ):
+                st.session_state.inv_menu_entradas = not st.session_state.inv_menu_entradas
+                st.rerun()
+
+            if st.session_state.inv_menu_entradas:
+                for cat in CATEGORIAS:
+                    key = f"entrada_{cat}"
+                    activo = st.session_state.inv_seccion == key
+                    label = f"{'●' if activo else '·'}  {cat}"
+                    if st.button(label, key=f"nav_{key}", use_container_width=True):
+                        st.session_state.inv_seccion = key
+                        st.rerun()
+
+            # ── SALIDAS
+            sal_open = st.session_state.inv_menu_salidas
+            if st.button(
+                f"{'▾' if sal_open else '▸'}  ↑  Salidas",
+                key="toggle_salidas",
+                use_container_width=True,
+            ):
+                st.session_state.inv_menu_salidas = not st.session_state.inv_menu_salidas
+                st.rerun()
+
+            if st.session_state.inv_menu_salidas:
+                for cat in CATEGORIAS:
+                    key = f"salida_{cat}"
+                    activo = st.session_state.inv_seccion == key
+                    label = f"{'●' if activo else '·'}  {cat}"
+                    if st.button(label, key=f"nav_{key}", use_container_width=True):
+                        st.session_state.inv_seccion = key
+                        st.rerun()
+
+            # ── CONSULTAS
+            st.markdown('<span class="sidebar-group-lbl">CONSULTAS</span>', unsafe_allow_html=True)
+            cons_open = st.session_state.inv_menu_consultas
+            if st.button(
+                f"{'▾' if cons_open else '▸'}  Consultas",
+                key="toggle_consultas",
+                use_container_width=True,
+            ):
+                st.session_state.inv_menu_consultas = not st.session_state.inv_menu_consultas
+                st.rerun()
+
+            if st.session_state.inv_menu_consultas:
+                for label, key in [("·  Stock actual", "stock"), ("·  Historial", "historial")]:
+                    activo = st.session_state.inv_seccion == key
+                    btn_label = label.replace("·", "●") if activo else label
+                    if st.button(btn_label, key=f"nav_{key}", use_container_width=True):
+                        st.session_state.inv_seccion = key
+                        st.rerun()
+
+            # ── CONFIGURACIÓN
+            st.markdown('<span class="sidebar-group-lbl">CONFIGURACIÓN</span>', unsafe_allow_html=True)
+            cfg_open = st.session_state.inv_menu_config
+            if st.button(
+                f"{'▾' if cfg_open else '▸'}  Configuración",
+                key="toggle_config",
+                use_container_width=True,
+            ):
+                st.session_state.inv_menu_config = not st.session_state.inv_menu_config
+                st.rerun()
+
+            if st.session_state.inv_menu_config:
+                activo = st.session_state.inv_seccion == "catalogo"
+                if st.button("●  Catálogo" if activo else "·  Catálogo", key="nav_catalogo", use_container_width=True):
+                    st.session_state.inv_seccion = "catalogo"
+                    st.rerun()
+
+            st.markdown('</div>', unsafe_allow_html=True)
+
+    # ════════════════════════════════════════════════════════════════════
+    # CONTENIDO PRINCIPAL
+    # ════════════════════════════════════════════════════════════════════
+    with col_main:
+        seccion  = st.session_state.inv_seccion
+        es_mov   = seccion.startswith("entrada_") or seccion.startswith("salida_")
+        tipo_mov = "ENTRADA" if seccion.startswith("entrada_") else "SALIDA"
+        cat_activa = seccion.split("_", 1)[1] if "_" in seccion and es_mov else ""
+
+        # ── ENTRADAS y SALIDAS
+        if es_mov:
+            seccion_label = "Entradas" if tipo_mov == "ENTRADA" else "Salidas"
+            st.markdown(f"""
+            <div class="inv-header-box">
+                <div>
+                    <div class="inv-breadcrumb">Inventario E&C / {seccion_label}</div>
+                    <div class="inv-page-title">{seccion_label} — {cat_activa}</div>
+                </div>
+                <span class="inv-badge">{st.session_state.inv_sede}</span>
+            </div>
+            """, unsafe_allow_html=True)
+
+            # Tarjeta info general
+            st.markdown('<div class="inv-card"><div class="inv-card-header"><div class="inv-card-bar"></div><div class="inv-card-title">Información general</div></div><div class="inv-card-body">', unsafe_allow_html=True)
+            c1, c2, c3 = st.columns(3)
+            st.session_state.inv_sede = c1.selectbox("Sede", SEDES_INV, key=f"sede_{seccion}", index=SEDES_INV.index(st.session_state.inv_sede))
+            st.session_state.inv_resp = c2.selectbox("Responsable", RESPONSABLES_INV, key=f"resp_{seccion}", index=RESPONSABLES_INV.index(st.session_state.inv_resp))
+            fecha_mov = c3.date_input("Fecha", key=f"fecha_{seccion}")
+            if tipo_mov == "SALIDA":
+                inspector_sel = st.selectbox("Inspector", inspectores_lista, key=f"insp_{seccion}")
+            obs_mov = st.text_input("Observación (opcional)", key=f"obs_{seccion}", placeholder="Ej: Pedido mensual")
+            st.markdown('</div></div>', unsafe_allow_html=True)
+
+            # Tarjeta ítems
+            items_cat = catalogo.get(cat_activa, {})
+            sin_talla = {k: v for k, v in items_cat.items() if not v["tallas"]}
+            con_talla = {k: v for k, v in items_cat.items() if v["tallas"]}
+            cantidades = {}
+            tallas_sel = {}
+
+            st.markdown(f'<div class="inv-card"><div class="inv-card-header"><div class="inv-card-bar"></div><div class="inv-card-title">{cat_activa}</div></div><div class="inv-card-body">', unsafe_allow_html=True)
+
+            if sin_talla:
+                st.markdown('<div class="inv-section-label">Sin talla</div>', unsafe_allow_html=True)
+                cols_st = st.columns(min(len(sin_talla), 3))
+                for idx, (item, _) in enumerate(sin_talla.items()):
+                    with cols_st[idx % 3]:
+                        st.markdown(f'<div class="inv-item-card"><div class="inv-item-name">{item}</div>', unsafe_allow_html=True)
+                        cantidades[item] = st.number_input("Cantidad", min_value=0, step=1, key=f"{seccion}_{item}", label_visibility="collapsed")
+                        st.markdown('</div>', unsafe_allow_html=True)
+
+            if con_talla:
+                st.markdown('<div class="inv-section-label" style="margin-top:12px;">Con talla</div>', unsafe_allow_html=True)
+                for item, cfg in con_talla.items():
+                    st.markdown(f'<div class="inv-item-card" style="margin-bottom:8px;"><div class="inv-item-name">{item}</div>', unsafe_allow_html=True)
+                    ca, cb = st.columns([2, 1])
+                    tallas_sel[item] = ca.selectbox(f"Talla", cfg["opciones_talla"], key=f"{seccion}_talla_{item}", label_visibility="visible")
+                    cantidades[item] = cb.number_input("Cantidad", min_value=0, step=1, key=f"{seccion}_qty_{item}", label_visibility="visible")
+                    st.markdown('</div>', unsafe_allow_html=True)
+
+            st.markdown('</div></div>', unsafe_allow_html=True)
+
+            # Footer con botón
+            items_a_guardar = [
+                {"categoria": cat_activa, "item": item, "talla": tallas_sel.get(item), "cantidad": int(cant)}
+                for item, cant in cantidades.items() if cant > 0
+            ]
+            resumen = f"{len(items_a_guardar)} ítem(s) seleccionado(s)" if items_a_guardar else "Ningún ítem seleccionado"
+
+            col_info, col_btn_c, col_btn_g = st.columns([3, 1, 1])
+            col_info.caption(resumen)
+            if col_btn_g.button(
+                f"✅ Registrar {'entrada' if tipo_mov=='ENTRADA' else 'salida'}",
+                key=f"btn_{seccion}",
+                use_container_width=True,
+                type="primary",
+            ):
+                if not items_a_guardar:
+                    st.warning("⚠️ Debes ingresar al menos un ítem con cantidad mayor a 0.")
+                else:
+                    errores = []
+                    if tipo_mov == "SALIDA":
+                        for it in items_a_guardar:
+                            ent = sum(m["cantidad"] for m in movimientos if m["tipo"]=="ENTRADA" and m["sede"]==st.session_state.inv_sede and m["categoria"]==it["categoria"] and m["item"]==it["item"] and m["talla"]==it["talla"])
+                            sal = sum(m["cantidad"] for m in movimientos if m["tipo"]=="SALIDA" and m["sede"]==st.session_state.inv_sede and m["categoria"]==it["categoria"] and m["item"]==it["item"] and m["talla"]==it["talla"])
+                            if it["cantidad"] > (ent - sal):
+                                nombre = it["item"] + (f" T{it['talla']}" if it["talla"] else "")
+                                errores.append(f"❌ **{nombre}**: disponible {ent-sal}, solicitado {it['cantidad']}")
+                    if errores:
+                        st.error("Stock insuficiente:")
+                        for e in errores: st.markdown(e)
+                    else:
+                        ts = datetime.datetime.now(TZ_CO).strftime("%Y-%m-%d %H:%M:%S")
+                        for it in items_a_guardar:
+                            movimientos.append({
+                                "tipo": tipo_mov, "fecha": str(fecha_mov), "timestamp": ts,
+                                "sede": st.session_state.inv_sede, "responsable": st.session_state.inv_resp,
+                                "categoria": it["categoria"], "item": it["item"], "talla": it["talla"],
+                                "cantidad": it["cantidad"], "observacion": obs_mov,
+                                "inspector": inspector_sel if tipo_mov=="SALIDA" else None,
+                            })
+                        r = gh_put_inv("INVENTARIO_V2.json", movimientos, inv_headers, inv_repo, sha=st.session_state.inv_mov_sha, branch=inv_branch, mensaje=f"{tipo_mov} {cat_activa}")
+                        if r.status_code in (200, 201):
+                            st.session_state.inv_mov_sha = r.json().get("content", {}).get("sha")
+                            st.success(f"✅ {tipo_mov.capitalize()} registrada — {len(items_a_guardar)} ítem(s)")
+                        else:
+                            st.error("❌ Error al guardar en GitHub")
+
         # ════════════════════════════════════════════════════════════════
-        # HISTORIAL
+        # STOCK ACTUAL
         # ════════════════════════════════════════════════════════════════
-        if seccion == "historial":
+        elif seccion == "stock":
             st.markdown("""
             <div class="inv-header-box">
                 <div>
                     <div class="inv-breadcrumb">Inventario E&C / Consultas</div>
-                    <div class="inv-page-title">Historial de Movimientos</div>
+                    <div class="inv-page-title">Stock Actual</div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
+
+            sede_st = st.selectbox("Sede", SEDES_INV, key="stock_sede")
 
             if not movimientos:
                 st.info("📭 No hay movimientos registrados aún.")
             else:
-                df_h = pd.DataFrame(movimientos)
-                c1, c2, c3 = st.columns(3)
-                sede_h = c1.selectbox("Sede",      ["TODAS"] + SEDES_INV,            key="h_sede")
-                tipo_h = c2.selectbox("Tipo",      ["TODOS","ENTRADA","SALIDA"],      key="h_tipo")
-                cat_h  = c3.selectbox("Categoría", ["TODAS"] + CATEGORIAS,           key="h_cat")
+                stock_dict = {}
+                for m in movimientos:
+                    if m["sede"] != sede_st: continue
+                    k = (m["categoria"], m["item"], m["talla"])
+                    stock_dict.setdefault(k, {"entradas": 0, "salidas": 0})
+                    if m["tipo"] == "ENTRADA": stock_dict[k]["entradas"] += m["cantidad"]
+                    elif m["tipo"] == "SALIDA": stock_dict[k]["salidas"] += m["cantidad"]
 
-                if sede_h != "TODAS":  df_h = df_h[df_h["sede"] == sede_h]
-                if tipo_h != "TODOS":  df_h = df_h[df_h["tipo"] == tipo_h]
-                if cat_h  != "TODAS":  df_h = df_h[df_h["categoria"] == cat_h]
+                if not stock_dict:
+                    st.info(f"📭 No hay movimientos para {sede_st}.")
+                else:
+                    filas = [{"Categoría": cat, "Ítem": item + (f" (T{talla})" if talla else ""), "Entradas": v["entradas"], "Salidas": v["salidas"], "Stock actual": v["entradas"]-v["salidas"]} for (cat, item, talla), v in stock_dict.items()]
+                    df_st = pd.DataFrame(filas).sort_values(["Categoría", "Ítem"])
 
-                df_h["talla"]     = df_h["talla"].fillna("—")
-                df_h["inspector"] = df_h["inspector"].fillna("—")
-                cols_h = ["fecha","tipo","sede","categoria","item","talla","cantidad","inspector","responsable","observacion"]
-                cols_d = [c for c in cols_h if c in df_h.columns]
+                    def color_stock(row):
+                        if row["Stock actual"] == 0: return ["background-color:#f8d7da;color:#721c24"]*len(row)
+                        elif row["Stock actual"] <= 3: return ["background-color:#fff3cd;color:#856404"]*len(row)
+                        return [""]*len(row)
 
-                def color_tipo_h(row):
-                    if row["tipo"] == "ENTRADA": return ["background-color:#d4edda;color:#155724"]*len(row)
-                    return ["background-color:#f8d7da;color:#721c24"]*len(row)
+                    st.dataframe(df_st.style.apply(color_stock, axis=1), use_container_width=True, hide_index=True)
 
-                st.dataframe(df_h[cols_d].sort_values("fecha", ascending=False).style.apply(color_tipo_h, axis=1), use_container_width=True, hide_index=True)
-                st.caption(f"Total: {len(df_h)} movimiento(s)")
+                    sin_st   = df_st[df_st["Stock actual"] == 0]
+                    bajo_st  = df_st[(df_st["Stock actual"] > 0) & (df_st["Stock actual"] <= 3)]
+                    if not sin_st.empty:  st.error(f"🚨 {len(sin_st)} ítem(s) SIN STOCK en {sede_st}")
+                    if not bajo_st.empty: st.warning(f"⚠️ {len(bajo_st)} ítem(s) con stock BAJO (≤ 3) en {sede_st}")
 
-        # ════════════════════════════════════════════════════════════════
-        # CATÁLOGO
-        # ════════════════════════════════════════════════════════════════
-        elif seccion == "catalogo":
-            st.markdown("""
-            <div class="inv-header-box">
-                <div>
-                    <div class="inv-breadcrumb">Inventario E&C / Configuración</div>
-                    <div class="inv-page-title">Catálogo de Ítems</div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-
-            for cat, items in catalogo.items():
-                with st.expander(f"**{cat}** — {len(items)} ítem(s)"):
-                    for item, cfg in items.items():
-                        if cfg["tallas"]:
-                            st.markdown(f"- **{item}** | Tallas: {', '.join(cfg.get('opciones_talla', []))}")
-                        else:
-                            st.markdown(f"- **{item}** | Sin tallas")
-
-            st.divider()
-            st.markdown("#### ➕ Agregar nuevo ítem")
-            with st.form("form_nuevo_item_v3", clear_on_submit=True):
-                c1, c2 = st.columns(2)
-                cat_n    = c1.selectbox("Categoría", CATEGORIAS)
-                nombre_n = c2.text_input("Nombre del ítem")
-                usa_t    = st.checkbox("¿Maneja tallas?")
-                tallas_t = st.text_input("Tallas separadas por coma (ej: S,M,L)", disabled=not usa_t)
-                if st.form_submit_button("➕ Agregar ítem", type="primary"):
-                    if not nombre_n.strip():
-                        st.warning("⚠️ Ingresa un nombre.")
-                    elif nombre_n.strip() in catalogo[cat_n]:
-                        st.warning("⚠️ Ya existe ese ítem.")
-                    else:
-                        nuevo = {"tallas": usa_t}
-                        if usa_t and tallas_t.strip():
-                            nuevo["opciones_talla"] = [t.strip() for t in tallas_t.split(",") if t.strip()]
-                        catalogo[cat_n][nombre_n.strip()] = nuevo
-                        r = gh_put_inv("CATALOGO.json", catalogo, inv_headers, inv_repo, sha=st.session_state.inv_cat_sha, branch=inv_branch, mensaje=f"Nuevo ítem: {nombre_n}")
-                        if r.status_code in (200, 201):
-                            st.session_state.inv_cat_sha = r.json().get("content", {}).get("sha")
-                            st.success(f"✅ Ítem '{nombre_n}' agregado a {cat_n}")
-                        else:
-                            st.error("❌ Error al guardar en GitHub")
-
-            st.divider()
-            st.markdown("#### 📐 Agregar talla a ítem existente")
-            items_t = [(c, i) for c, its in catalogo.items() for i, cfg in its.items() if cfg["tallas"]]
-            if items_t:
-                with st.form("form_nueva_talla_v3", clear_on_submit=True):
-                    opciones = [f"{c} → {i}" for c, i in items_t]
-                    sel_str  = st.selectbox("Ítem", opciones)
-                    t_nueva  = st.text_input("Nueva talla")
-                    if st.form_submit_button("➕ Agregar talla", type="primary"):
-                        if not t_nueva.strip():
-                            st.warning("⚠️ Ingresa una talla.")
-                        else:
-                            idx = opciones.index(sel_str)
-                            cs, its2 = items_t[idx]
-                            if t_nueva.strip() in catalogo[cs][its2].get("opciones_talla", []):
-                                st.warning("⚠️ Esa talla ya existe.")
-                            else:
-                                catalogo[cs][its2]["opciones_talla"].append(t_nueva.strip())
-                                r = gh_put_inv("CATALOGO.json", catalogo, inv_headers, inv_repo, sha=st.session_state.inv_cat_sha, branch=inv_branch, mensaje=f"Nueva talla {t_nueva} en {its2}")
-                                if r.status_code in (200, 201):
-                                    st.session_state.inv_cat_sha = r.json().get("content", {}).get("sha")
-                                    st.success(f"✅ Talla '{t_nueva}' agregada")
-                                else:
-                                    st.error("❌ Error al guardar en GitHub")
+                    df_cat = df_st.groupby("Categoría")["Stock actual"].sum().reset_index()
+                    fig_st = px.bar(df_cat, x="Categoría", y="Stock actual", color="Categoría",
+                                    text="Stock actual", title=f"Stock por categoría — {sede_st}",
+                                    color_discrete_sequence=["#c0392b"])
                     fig_st.update_traces(textposition="outside")
                     fig_st.update_layout(showlegend=False, height=320, margin=dict(t=40,b=0))
                     st.plotly_chart(fig_st, use_container_width=True)
@@ -1852,3 +2177,59 @@ with tab_inv:
                                     st.success(f"✅ Talla '{t_nueva}' agregada")
                                 else:
                                     st.error("❌ Error al guardar en GitHub")
+
+# ===================================================
+# ✅ TAB 7 — SEGUIMIENTO ADICIONALES
+# ===================================================
+with tab7:
+    st.subheader("🏭 Seguimiento de Adicionales")
+    st.info("Carga el archivo de programación para visualizar el estado de asignación de los contratos.")
+
+    archivo_prog = st.file_uploader(
+        "Subir archivo de PROGRAMACIÓN (Excel)",
+        type=["xlsx", "xls"],
+        key="uploader_adicionales"
+    )
+
+    if archivo_prog:
+        df_p = pd.read_excel(archivo_prog)
+        # Normalizar nombres de columnas
+        df_p.columns = df_p.columns.str.strip().str.lower()
+
+        # Intentar identificar la columna de fecha de asignación
+        col_fecha = None
+        posibles_nombres = ["fecha de asignacion", "fecha asignacion", "asignacion", "fecha_asignacion"]
+        for c in df_p.columns:
+            if c in posibles_nombres:
+                col_fecha = c
+                break
+
+        if not col_fecha:
+            st.error("❌ No se encontró una columna de 'fecha de asignacion' en el archivo.")
+            st.write("Columnas detectadas:", list(df_p.columns))
+        else:
+            # Convertir a datetime y calcular días
+            df_p[col_fecha] = pd.to_datetime(df_p[col_fecha], errors="coerce")
+            hoy = datetime.datetime.now(TZ_CO).date()
+            
+            df_p["dias de asignacion"] = df_p[col_fecha].apply(
+                lambda x: (hoy - x.date()).days if pd.notna(x) else 0
+            )
+
+            # Columnas requeridas
+            cols_req = ["contrato", "inspector", "direccion", "dias de asignacion"]
+            cols_final = [c for c in cols_req if c in df_p.columns]
+            
+            df_mostrar = df_p[cols_final].copy()
+
+            # Función de estilo para las filas
+            def color_semaforo(row):
+                dias = row["dias de asignacion"]
+                if dias < 3:
+                    return ["background-color: #d4edda; color: #155724"] * len(row)  # Verde
+                elif dias == 3:
+                    return ["background-color: #fff3cd; color: #856404"] * len(row)  # Amarillo
+                else:
+                    return ["background-color: #f8d7da; color: #721c24"] * len(row)  # Rojo
+
+            st.dataframe(df_mostrar.style.apply(color_semaforo, axis=1), use_container_width=True)
