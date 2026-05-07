@@ -592,7 +592,7 @@ with tab2:
         return f"{h}h {m}m {s2}s" if h > 0 else f"{m}m {s2}s"
     columnas_necesarias = [
         "fecha de ejecucion", "hora inicio", "hora final",
-        "hora inicio de recorrido",
+        "hora inicio de recorrido",  # ✅ NUEVA
         "inspector", "localidad", "cierre", "tiempo de tarea"
     ]
 
@@ -714,7 +714,7 @@ with tab2:
 
     # -------------------------------------------
     # ⏱️ TIEMPO DE RECORRIDO
-    # Promedio por inspector del tiempo entre "hora inicio de recorrido" y "hora inicio"
+    # (hora_inicio - hora_inicio_recorrido). Se promedia luego por inspector.
     # -------------------------------------------
 
     def calcular_tiempo_recorrido(row):
@@ -726,7 +726,7 @@ with tab2:
         dt_hr = datetime.datetime.combine(datetime.date.today(), hr)
         return dt_hi - dt_hr if dt_hi >= dt_hr else pd.NaT
 
-    # Calcula por orden
+    # Cálculo por orden
     try:
         df2["tiempo_recorrido_td"] = df2.apply(calcular_tiempo_recorrido, axis=1)
     except Exception:
@@ -1010,12 +1010,12 @@ with tab2:
         "hora_final",
         "localidad",
         "estado",
+        "promedio_tiempo_recorrido",  # ✅ NUEVA
         "total_ordenes",
         "ordenes_efectivas",
-        "ordenes_sin_recorrido",
+        "ordenes_sin_recorrido",  # ✅ NUEVA
         "porcentaje_efectividad",
         "promedio_tiempo_tarea"
-        "promedio_tiempo_recorrido",
     ]
 
     columnas_disponibles = [
