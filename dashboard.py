@@ -9,6 +9,48 @@ import base64
 import requests
 import io
 
+# -------------------------------------------------
+# ✅ FUNCIONES DE CACHÉ (MEJORA DE RENDIMIENTO)
+# -------------------------------------------------
+
+@st.cache_data(ttl=600)  # Cache por 10 minutos para datos de GitHub
+def fetch_github_excel(repo, path, token, branch="main"):
+    headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
+    url = f"https://api.github.com/repos/{repo}/contents/{path}"
+    r = requests.get(url, headers=headers)
+    if r.status_code == 200:
+        content = base64.b64decode(r.json()["content"])
+        return pd.read_excel(io.BytesIO(content), engine="openpyxl"), r.json().get("sha")
+    return pd.DataFrame(), None
+
+@st.cache_data
+def load_local_bitacora(path):
+    if os.path.exists(path):
+        df = pd.read_excel(path)
+        df.columns = df.columns.str.strip().str.lower()
+        return df
+    return None
+
+@st.cache_data
+def extract_excel_links(path):
+    from openpyxl import load_workbook
+    if not os.path.exists(path): return pd.DataFrame()
+    wb = load_workbook(path, data_only=True)
+    ws = wb.active
+    headers = [str(cell.value).strip().lower() if cell.value else "" for cell in ws[1]]
+    try:
+        c_ins, c_fac, c_vp = headers.index("inspector")+1, headers.index("foto de fachada")+1, headers.index("foto de vp")+1
+    except ValueError: return pd.DataFrame()
+    
+    links = []
+    for row in ws.iter_rows(min_row=2):
+        links.append({
+            "inspector": row[c_ins-1].value,
+            "link_fachada": row[c_fac-1].hyperlink.target if row[c_fac-1].hyperlink else None,
+            "link_vp": row[c_vp-1].hyperlink.target if row[c_vp-1].hyperlink else None
+        })
+    return pd.DataFrame(links)
+
 
 
 # -------------------------------------------------
@@ -231,20 +273,9 @@ with tab1:
     repo = st.secrets["github"]["repo"]
     branch = st.secrets["github"].get("branch", "main")
 
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Accept": "application/vnd.github+json"
-    }
-
-    url_inv = f"https://api.github.com/repos/{repo}/contents/{archivo_inventario}"
-    r = requests.get(url_inv, headers=headers)
-
-    if r.status_code == 200:
-        contenido = r.json()["content"]
-        binario = base64.b64decode(contenido)
-        buffer = io.BytesIO(binario)
-        df_inv = pd.read_excel(buffer, engine="openpyxl")
-    else:
+    df_inv, sha_inv = fetch_github_excel(repo, archivo_inventario, token, branch)
+    
+    if df_inv.empty:
         df_inv = pd.DataFrame(columns=[
             "Fecha", "Sede", "Inspector",
             "Responsable", "Observación", "Ítems"
@@ -327,6 +358,11 @@ with tab1:
             buffer.seek(0)
 
             contenido_b64 = base64.b64encode(buffer.read()).decode("utf-8")
+            
+            # Para el PUT necesitamos el SHA actual (esto no se cachea para evitar conflictos)
+            headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
+            url_inv = f"https://api.github.com/repos/{repo}/contents/{archivo_inventario}"
+            r = requests.get(url_inv, headers=headers)
             sha = r.json().get("sha") if r.status_code == 200 else None
 
             payload = {
@@ -340,6 +376,7 @@ with tab1:
 
             requests.put(url_inv, headers=headers, json=payload)
 
+            st.cache_data.clear() # Limpiar caché para forzar recarga
             st.success("✅ Entrega registrada y guardada correctamente")
 
     # ===================================================
@@ -439,58 +476,15 @@ with tab2:
     # ===================================================
     # USAR COPIA PARA TAB 2 (NO TOCAR LA BASE)
     # ===================================================
-    df_tab2 = df_bitacora_base.copy()
-    # (SIN MODIFICAR EL ARCHIVO)
-    # -------------------------------------------------
-    from openpyxl import load_workbook
+    df_bitacora = load_local_bitacora(archivo_bitacora)
+    df_links = extract_excel_links(archivo_bitacora)
 
-    wb = load_workbook(archivo_bitacora, data_only=True)
-    ws = wb.active
-
- # Encabezados normalizados (igual que en pandas)
-    headers_raw = [cell.value for cell in ws[1]]
-    headers = [
-        str(h).strip().lower() if h is not None else ""
-        for h in headers_raw
-    ]
-
-    # Buscar posiciones de columnas de forma segura
-    try:
-        col_inspector = headers.index("inspector") + 1
-        col_fachada = headers.index("foto de fachada") + 1
-        col_vp = headers.index("foto de vp") + 1
-    except ValueError as e:
+    if df_bitacora is None or df_links.empty:
         st.error(
-            "❌ No se encontraron columnas requeridas en el Excel.\n\n"
-            f"Columnas encontradas:\n{headers_raw}"
+            "❌ Error al procesar la bitácora o los enlaces."
         )
         st.stop()
 
-    links_fotos = []
-
-    for row in ws.iter_rows(min_row=2):
-        inspector = row[col_inspector - 1].value
-
-        cell_fachada = row[col_fachada - 1]
-        cell_vp = row[col_vp - 1]
-
-        link_fachada = (
-            cell_fachada.hyperlink.target
-            if cell_fachada.hyperlink else None
-        )
-
-        link_vp = (
-            cell_vp.hyperlink.target
-            if cell_vp.hyperlink else None
-        )
-
-        links_fotos.append({
-            "inspector": inspector,
-            "link_fachada": link_fachada,
-            "link_vp": link_vp
-        })
-
-    df_links = pd.DataFrame(links_fotos)
     # -------------------------------------------------
     # ✅ EXCLUIR GRUPOS NO OPERATIVOS
     # -------------------------------------------------
@@ -1226,6 +1220,7 @@ with tab3:
             json=payload_info
         )
 
+        st.cache_data.clear() # IMPORTANTÍSIMO: Limpiar caché al subir nueva bitácora
         # =================================================
         # ✅ CONFIRMACIÓN FINAL
         # =================================================
@@ -1247,33 +1242,9 @@ with tab4:
     token = st.secrets["github"]["token"]
     repo = st.secrets["github"]["repo"]
 
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Accept": "application/vnd.github+json",
-        "Cache-Control": "no-cache"
-    }
-
-    url_metadata = f"https://api.github.com/repos/{repo}/contents/{archivo_bitacora}"
-    r_meta = requests.get(url_metadata, headers=headers)
-
-    if r_meta.status_code != 200:
-        st.error("❌ No se pudo obtener la información del archivo desde GitHub.")
+    df, _ = fetch_github_excel(repo, archivo_bitacora, token)
+    if df.empty:
         st.stop()
-
-    download_url = r_meta.json().get("download_url")
-
-    if not download_url:
-        st.error("❌ No se pudo obtener la URL de descarga del archivo.")
-        st.stop()
-
-    r_file = requests.get(download_url, headers=headers)
-
-    if r_file.status_code != 200:
-        st.error("❌ No se pudo descargar el archivo desde GitHub.")
-        st.stop()
-
-    buffer = io.BytesIO(r_file.content)
-    df = pd.read_excel(buffer)
     df.columns = df.columns.str.strip().str.lower()
 
 
