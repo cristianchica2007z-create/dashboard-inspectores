@@ -1772,16 +1772,53 @@ with tab_inv:
 # ===================================================
 with tab7:
     st.subheader("🏭 Seguimiento de Adicionales")
-    st.info("Carga el archivo de programación para visualizar el estado de asignación de los contratos.")
 
-    archivo_prog = st.file_uploader(
-        "Subir archivo de PROGRAMACIÓN (Excel)",
-        type=["xlsx", "xls"],
-        key="uploader_adicionales_final"
-    )
+    # --- CONFIGURACIÓN DE PERSISTENCIA EN GITHUB ---
+    token_ad = st.secrets["github"]["token"]
+    repo_ad = st.secrets["github"]["repo"]
+    branch_ad = st.secrets["github"].get("branch", "main")
+    nombre_archivo_git = "PROGRAMACION.xlsx"
 
-    if archivo_prog:
-        df_p = pd.read_excel(archivo_prog)
+    # --- SECCIÓN PARA ACTUALIZAR EL ARCHIVO (Sincronizado con GitHub) ---
+    with st.expander("⬆️ Actualizar Base de Datos de Programación"):
+        archivo_nuevo = st.file_uploader(
+            "Sube el nuevo archivo PROGRAMACION.xlsx para actualizar el dashboard global",
+            type=["xlsx", "xls"],
+            key="uploader_adicionales_github"
+        )
+        if st.button("🚀 Guardar y compartir con el equipo", key="btn_subir_adicionales"):
+            if archivo_nuevo is not None:
+                contenido_bin = archivo_nuevo.read()
+                contenido_b64_ad = base64.b64encode(contenido_bin).decode("utf-8")
+                
+                url_ad = f"https://api.github.com/repos/{repo_ad}/contents/{nombre_archivo_git}"
+                headers_ad = {"Authorization": f"Bearer {token_ad}", "Accept": "application/vnd.github+json"}
+                
+                # Obtener el SHA actual para permitir el reemplazo (evita conflictos de versión)
+                resp_get = requests.get(url_ad, headers=headers_ad)
+                sha_ad = resp_get.json().get("sha") if resp_get.status_code == 200 else None
+                
+                payload_ad = {
+                    "message": "Actualización global de PROGRAMACION.xlsx desde Dashboard",
+                    "content": contenido_b64_ad,
+                    "branch": branch_ad
+                }
+                if sha_ad: payload_ad["sha"] = sha_ad
+                
+                resp_put = requests.put(url_ad, headers=headers_ad, json=payload_ad)
+                if resp_put.status_code in (200, 201):
+                    st.success("✅ Archivo guardado correctamente en la nube. Ahora todos los usuarios verán esta versión.")
+                    st.cache_data.clear() # Limpiar caché para forzar la lectura del nuevo archivo
+                    st.rerun()
+                else:
+                    st.error(f"❌ Error al sincronizar con GitHub: {resp_put.text}")
+            else:
+                st.warning("⚠️ Por favor selecciona un archivo antes de intentar guardar.")
+
+    # --- CARGA DEL ARCHIVO DESDE GITHUB (Datos compartidos) ---
+    df_p, _ = fetch_github_excel(repo_ad, nombre_archivo_git, token_ad, branch_ad)
+
+    if not df_p.empty:
         # Normalizar nombres de columnas para facilitar la búsqueda
         df_p.columns = df_p.columns.str.strip().str.lower()
 
@@ -1824,3 +1861,5 @@ with tab7:
                     return ["background-color: #f8d7da; color: #721c24"] * len(row)  # Rojo
 
             st.dataframe(df_p[cols_final].style.apply(color_semaforo, axis=1), use_container_width=True, hide_index=True)
+    else:
+        st.info("ℹ️ No hay un archivo de programación activo. Utiliza el panel superior para subir 'PROGRAMACION.xlsx'.")
