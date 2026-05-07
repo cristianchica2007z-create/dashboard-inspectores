@@ -207,7 +207,7 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab_inv, tab7 = st.tabs([
     "📈 Subir Archivos",
      "📅 Seguimiento agendas",
     "📌 Órdenes Asignadas",
-    "🦺 SST",
+    "## 🦺 SST",
     "🏭 Inventario V2",
     "🏭 SEGUIMIENTO ADICIONALES",
     
@@ -714,19 +714,24 @@ with tab2:
 
     # -------------------------------------------
     # ⏱️ TIEMPO DE RECORRIDO
-    # (hora_inicio - hora_inicio_recorrido). Se promedia luego por inspector.
+    # Diferencia: hora_inicio - hora_inicio_recorrido (por orden)
     # -------------------------------------------
 
     def calcular_tiempo_recorrido(row):
         hi = row.get("hora_inicio")
         hr = row.get("hora_inicio_recorrido")
+
+        # Si falta cualquiera de las 2 horas, no se puede calcular
         if not isinstance(hi, datetime.time) or not isinstance(hr, datetime.time):
             return pd.NaT
+
         dt_hi = datetime.datetime.combine(datetime.date.today(), hi)
         dt_hr = datetime.datetime.combine(datetime.date.today(), hr)
+
+        # Evitar negativos por datos inconsistentes
         return dt_hi - dt_hr if dt_hi >= dt_hr else pd.NaT
 
-    # Cálculo por orden
+    # Cálculo por orden (si no existe recorrido queda NaT)
     try:
         df2["tiempo_recorrido_td"] = df2.apply(calcular_tiempo_recorrido, axis=1)
     except Exception:
@@ -952,7 +957,7 @@ with tab2:
     )
 
     # ---------------------------------------------------
-   # TABLA CONSOLIDADA DEL DÍA (UNA SOLA)
+    # TABLA CONSOLIDADA DEL DÍA (UNA SOLA)
     # ---------------------------------------------------
     df_tabla = df_agrupado.merge(
         resumen,
@@ -967,12 +972,9 @@ with tab2:
         "estado": "SIN ACTIVIDAD",
         "total_ordenes": 0,
         "ordenes_efectivas": 0,
-        "ordenes_sin_recorrido": 0,          # ✅ NUEVA
         "porcentaje_efectividad": 0,
-        "promedio_tiempo_tarea": "—",
-        "promedio_tiempo_recorrido": "—"     # ✅ NUEVA
+        "promedio_tiempo_tarea": "—"
     })
-
 
 # ===================================================
   # ===================================================
@@ -1013,12 +1015,12 @@ with tab2:
         "hora_final",
         "localidad",
         "estado",
-        "promedio_tiempo_recorrido",  # ✅ NUEVA
         "total_ordenes",
         "ordenes_efectivas",
-        "ordenes_sin_recorrido",  # ✅ NUEVA
+        "ordenes_sin_recorrido",
         "porcentaje_efectividad",
         "promedio_tiempo_tarea"
+        "promedio_tiempo_recorrido",
     ]
 
     columnas_disponibles = [
@@ -1034,10 +1036,6 @@ with tab2:
     )
 
     st.dataframe(styled_tabla, use_container_width=True)
-
-    st.write("✅ df_tabla.columns:", df_tabla.columns.tolist())
-    st.write("✅ columnas_disponibles:", columnas_disponibles)
-
 
     # ===================================================
  # 🚨 INSPECTORES SIN ACTIVIDAD EN LA FECHA
