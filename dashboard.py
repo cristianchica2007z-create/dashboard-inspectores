@@ -9,6 +9,14 @@ import base64
 import requests
 import io
 
+# ---------------------------------------------------
+# ✅ CONFIGURACIÓN GENERAL DEL DASHBOARD
+# ---------------------------------------------------
+st.set_page_config(
+    page_title="DASHBOARD INSPECTORES e&c",
+    layout="wide"
+)
+
 # -------------------------------------------------
 # ✅ FUNCIONES DE CACHÉ (MEJORA DE RENDIMIENTO)
 # -------------------------------------------------
@@ -110,46 +118,47 @@ def cargar_usuarios():
     return {}
 
 if st.session_state.usuario is None:
-
+    # Estilos CSS para mejorar la interfaz de inicio de sesión y centrar los elementos
     st.markdown("""
         <style>
-        .login-card {
-            max-width: 420px;
-            margin: 4rem auto;
-            padding: 2.5rem;
-            border-radius: 18px;
-            background-color: #ffffff;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        /* Fondo con gradiente moderno */
+        .stApp {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
         }
-        .login-title {
+        /* Centrado de los mensajes de error y botones */
+        div[data-testid="stVerticalBlock"] > div:has(div.stButton) {
             text-align: center;
-            font-size: 1.4rem;
-            font-weight: 600;
-            margin-bottom: 2rem;
-            color: #0d3b66;
         }
         </style>
     """, unsafe_allow_html=True)
 
-    st.image("logo.png", width=420)
+    # Layout de columnas para centrar horizontalmente el login
+    _, col_login, _ = st.columns([1, 1.5, 1])
 
-    st.markdown('<div class="login-card">', unsafe_allow_html=True)
-    st.markdown('<div class="login-title">INICIAR SESIÓN</div>', unsafe_allow_html=True)
+    with col_login:
+        st.write("") # Espaciado vertical superior
+        st.write("")
+        
+        # El logo ahora se ajusta al contenedor central, garantizando su centrado respecto al formulario
+        st.image("logo.png", use_container_width=True)
+        
+        # Uso de container con borde para crear un efecto de tarjeta (Card)
+        with st.container(border=True):
+            st.markdown("<h2 style='text-align: center; color: #0d3b66; margin-bottom: 20px;'>INICIAR SESIÓN</h2>", unsafe_allow_html=True)
+            
+            usuarios = cargar_usuarios()
+            usuario = st.text_input("Usuario", placeholder="Tu nombre de usuario")
+            pin = st.text_input("PIN", type="password", max_chars=4, placeholder="****")
 
-    usuarios = cargar_usuarios()
+            st.write("")
+            if st.button("🔐 ACCEDER", use_container_width=True, type="primary"):
+                if usuario in usuarios and pin == usuarios[usuario]["pin"]:
+                    st.session_state.usuario = usuario
+                    st.session_state.rol = usuarios[usuario]["rol"]
+                    st.rerun()
+                else:
+                    st.error("❌ Usuario o PIN incorrectos")
 
-    usuario = st.text_input("Usuario")
-    pin = st.text_input("PIN (4 dígitos)", type="password", max_chars=4)
-
-    if st.button("🔐 INICIAR SESIÓN", use_container_width=True):
-        if usuario in usuarios and pin == usuarios[usuario]["pin"]:
-            st.session_state.usuario = usuario
-            st.session_state.rol = usuarios[usuario]["rol"]
-            st.rerun()
-        else:
-            st.error("❌ Usuario o PIN incorrectos")
-
-    st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
 
 # -------------------------------------------------
@@ -226,14 +235,6 @@ inspectores_lista = sorted([
     "CHICA RAMIREZ CRISTIAN ALBERTO",
 ])
 # ---------------------------------------------------
-# ✅ CONFIGURACIÓN GENERAL DEL DASHBOARD
-# ---------------------------------------------------
-st.set_page_config(      
-    page_title="DASHBOARD INSPECTORES e&c",
-       layout="wide"
-)
-
-# -------------------------------------------------
 # HEADER CON LOGO A LA DERECHA (CORRECTO)
 # -------------------------------------------------
 col_titulo, col_logo = st.columns([8, 2])
