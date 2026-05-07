@@ -951,9 +951,12 @@ with tab2:
             "promedio_tiempo_tarea":
                 td_to_str(
                     x.loc[x["efectiva"], "tiempo_tarea_td"].mean()
-                )
+                ),
+            "ordenes_sin_recorrido": x["tiempo_recorrido_td"].isna().sum(),
+            "promedio_tiempo_recorrido": td_to_str(x["tiempo_recorrido_td"].mean())
         }))
         .reset_index()
+    )
     )
 
     # ---------------------------------------------------
@@ -972,10 +975,10 @@ with tab2:
         "estado": "SIN ACTIVIDAD",
         "total_ordenes": 0,
         "ordenes_efectivas": 0,
-        "ordenes_sin_recorrido": 0,
         "porcentaje_efectividad": 0,
         "promedio_tiempo_tarea": "—",
-        "promedio_tiempo_recorrido": "—"
+        "promedio_tiempo_recorrido": "—",
+        "ordenes_sin_recorrido": 0
     })
 
 # ===================================================
@@ -1021,8 +1024,8 @@ with tab2:
         "ordenes_efectivas",
         "ordenes_sin_recorrido",
         "porcentaje_efectividad",
-        "promedio_tiempo_tarea",
-        "promedio_tiempo_recorrido"
+        "promedio_tiempo_tarea"
+        "promedio_tiempo_recorrido",
     ]
 
     columnas_disponibles = [
