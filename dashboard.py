@@ -432,6 +432,8 @@ with tab1:
 
 # ===================================================
 # ===================================================
+# ===================================================
+# ===================================================
 with tab2:
     st.subheader("🕒 Control Operativo e&c")
     st.subheader("Eje Cafetero")
@@ -591,9 +593,8 @@ with tab2:
         s2 = s % 60
         return f"{h}h {m}m {s2}s" if h > 0 else f"{m}m {s2}s"
     columnas_necesarias = [
-        "fecha de ejecucion", "hora inicio", 
-        "hora inicio de recorrido",  # ✅ NUEVA
-"hora final",
+        "fecha de ejecucion", "hora inicio", "hora final",
+        "hora inicio de recorrido",
         "inspector", "localidad", "cierre", "tiempo de tarea"
     ]
 
@@ -622,7 +623,6 @@ with tab2:
     ).dt.date
 
     df_bitacora["hora_inicio"] = df_bitacora["hora inicio"].apply(parse_hora)
-
     df_bitacora["hora_inicio_recorrido"] = df_bitacora["hora inicio de recorrido"].apply(parse_hora)
     df_bitacora["hora_final"] = df_bitacora["hora final"].apply(parse_hora)
 
@@ -714,49 +714,26 @@ with tab2:
     df2 = df_bitacora[df_bitacora["fecha"] == fecha_sel]
 
 
-
     # -------------------------------------------
-
     # ⏱️ TIEMPO DE RECORRIDO
-
     # Promedio por inspector del tiempo entre "hora inicio de recorrido" y "hora inicio"
-
     # -------------------------------------------
-
 
     def calcular_tiempo_recorrido(row):
-
         hi = row.get("hora_inicio")
-
         hr = row.get("hora_inicio_recorrido")
-
-
-        # Si falta cualquiera de las 2 horas, no se puede calcular
-
         if not isinstance(hi, datetime.time) or not isinstance(hr, datetime.time):
-
             return pd.NaT
-
-
         dt_hi = datetime.datetime.combine(datetime.date.today(), hi)
-
         dt_hr = datetime.datetime.combine(datetime.date.today(), hr)
-
-
-        # Evitar negativos por datos inconsistentes
-
         return dt_hi - dt_hr if dt_hi >= dt_hr else pd.NaT
 
-
     # Calcula por orden
-
     try:
-
         df2["tiempo_recorrido_td"] = df2.apply(calcular_tiempo_recorrido, axis=1)
-
     except Exception:
-
         df2["tiempo_recorrido_td"] = pd.NaT
+
     # -------------------------------------------
     # FILTRO DE SUPERVISORES (CHECKLIST TIPO EXCEL ✅)
     # -------------------------------------------
@@ -1037,12 +1014,11 @@ with tab2:
         "estado",
         "total_ordenes",
         "ordenes_efectivas",
-        
         "ordenes_sin_recorrido",
-"porcentaje_efectividad",
+        "porcentaje_efectividad",
         "promedio_tiempo_tarea"
-,
-        "promedio_tiempo_recorrido"    ]
+        "promedio_tiempo_recorrido",
+    ]
 
     columnas_disponibles = [
         c for c in columnas_tabla if c in df_tabla.columns
@@ -1145,6 +1121,7 @@ with tab2:
         )
 
         st.plotly_chart(fig_prod, use_container_width=True)
+
 
   
 
