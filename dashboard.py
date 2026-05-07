@@ -1897,7 +1897,7 @@ with tab7:
             )
 
             # Selección de columnas solicitadas
-            cols_req = ["contrato", "inspector", "direccion", "dias de asignacion"]
+            cols_req = ["contrato", "nombre_inspector", "DIRECCION BARRIO", "dias de asignacion"]
             cols_final = [c for c in cols_req if c in df_p.columns]
             
             def color_semaforo(row):
