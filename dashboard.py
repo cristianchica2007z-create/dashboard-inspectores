@@ -1841,7 +1841,7 @@ with tab_inv:
                                     st.error("❌ Error al guardar en GitHub")
 
 # ===================================================
-# ✅ TAB 7 — SEGUIMIENTO ADICIONALES
+# ✅ TAB 7 — SEGUIMIENTO ADICIONALESs
 # ===================================================
 with tab7:
     st.subheader("🏭 Seguimiento de Adicionales")
@@ -1883,7 +1883,7 @@ with tab7:
                 lambda x: (hoy - x.date()).days if pd.notna(x) else 0
             )
 
-            # Selección de columnas solicitadas
+            # Selección de columnas solicitadass
             cols_req = ["contrato", "nombre_inspector", "direccion barrio","codigo_tipo_trabajo", "dias de asignacion"]
             cols_final = [c for c in cols_req if c in df_p.columns]
             
