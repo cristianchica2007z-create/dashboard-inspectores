@@ -972,8 +972,10 @@ with tab2:
         "estado": "SIN ACTIVIDAD",
         "total_ordenes": 0,
         "ordenes_efectivas": 0,
+        "ordenes_sin_recorrido": 0,
         "porcentaje_efectividad": 0,
-        "promedio_tiempo_tarea": "—"
+        "promedio_tiempo_tarea": "—",
+        "promedio_tiempo_recorrido": "—"
     })
 
 # ===================================================
@@ -1019,8 +1021,8 @@ with tab2:
         "ordenes_efectivas",
         "ordenes_sin_recorrido",
         "porcentaje_efectividad",
-        "promedio_tiempo_tarea"
-        "promedio_tiempo_recorrido",
+        "promedio_tiempo_tarea",
+        "promedio_tiempo_recorrido"
     ]
 
     columnas_disponibles = [
