@@ -971,7 +971,7 @@ with tab2:
     "porcentaje_efectividad": 0,
     "promedio_tiempo_tarea": "—",
     "promedio_tiempo_recorrido": "—"    # ✅ NUEVA
-})
+    })
 
 
 # ===================================================
