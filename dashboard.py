@@ -207,7 +207,7 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab_inv, tab7 = st.tabs([
     "📈 Subir Archivos",
      "📅 Seguimiento agendas",
     "📌 Órdenes Asignadas",
-    "## 🦺 SST",
+    "🦺 SST",
     "🏭 Inventario V2",
     "🏭 SEGUIMIENTO ADICIONALES",
     
