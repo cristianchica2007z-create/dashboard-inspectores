@@ -201,14 +201,15 @@ df_bitacora_base = df_bitacora.copy()
 
 # ✅ CREAR PESTAÑAS
 # ---------------------------------------------------
-tab1, tab2, tab3, tab4, tab5, tab6, tab_inv = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab_inv, tab7 = st.tabs([
     "📦 Inventario Papelería",
     "🕒 Seguimiento Diario",
     "📈 Subir Archivos",
      "📅 Seguimiento agendas",
     "📌 Órdenes Asignadas",
     "## 🦺 SST",
-    "🏭 Inventario V2"
+    "🏭 Inventario V2",
+    "🏭 SEGUIMIENTO ADICIONALES",
     
 
     
