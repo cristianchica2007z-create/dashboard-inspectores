@@ -39,6 +39,20 @@ def fetch_github_excel(repo, path, token, branch="main"):
             return pd.DataFrame(), sha
     return pd.DataFrame(), None
 
+@st.cache_data(ttl=300)
+def fetch_github_json(repo, path, token):
+    headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
+    url = f"https://api.github.com/repos/{repo}/contents/{path}"
+    r = requests.get(url, headers=headers)
+    if r.status_code == 200:
+        try:
+            data = r.json()
+            content = base64.b64decode(data["content"]).decode("utf-8")
+            return json.loads(content), data.get("sha")
+        except Exception:
+            return {}, None
+    return {}, None
+
 @st.cache_data
 def load_local_bitacora(path):
     if os.path.exists(path):
@@ -1577,16 +1591,52 @@ with tab5:
 with tab6:
     st.subheader("🦺 Seguridad y Salud en el Trabajo")
     st.info("Visualización de registros SST operativos.")
-    if 'df_bitacora_base' in locals():
-        df_sst_view = df_bitacora_base[df_bitacora_base["grupo"].astype(str).str.contains("SST", na=False)]
-        st.dataframe(df_sst_view, use_container_width=True)
+    # Filtro insensible a mayúsculas para asegurar que se encuentre la información
+    df_sst_view = df_bitacora_base[df_bitacora_base["grupo"].astype(str).str.upper().str.contains("SST", na=False)]
+    if not df_sst_view.empty:
+        st.dataframe(df_sst_view, use_container_width=True, hide_index=True)
+    else:
+        st.warning("⚠️ No se encontraron registros con el grupo 'SST' en la bitácora.")
 
 # ===================================================
 # ✅ TAB_INV — INVENTARIO V2
 # ===================================================
 with tab_inv:
-    
-    if 'df_st' in locals() and 'sede_st' in locals():
+    st.markdown("## 🏭 Inventario General V2")
+
+    # 1. Definición de Constantes y Configuración
+    SEDES_INV = ["CALDAS", "RISARALDA"]
+    CATEGORIAS = ["EPP", "HERRAMIENTAS", "PAPELERIA", "VESTUARIO"]
+    inv_token = st.secrets["github"]["token"]
+    inv_repo  = st.secrets["github"]["repo"]
+
+    # 2. Carga de datos maestros desde GitHub
+    stock, _       = fetch_github_json(inv_repo, "STOCK.json", inv_token)
+    movimientos, _ = fetch_github_json(inv_repo, "MOVIMIENTOS.json", inv_token)
+    catalogo, _    = fetch_github_json(inv_repo, "CATALOGO.json", inv_token)
+
+    # 3. Navegación y Selección de Sede
+    col_nav, col_sede = st.columns([2, 2])
+    with col_nav:
+        seccion = st.radio("Sección", ["Dashboard", "Historial", "Catálogo"], horizontal=True, key="inv_nav_v2")
+    with col_sede:
+        sede_st = st.selectbox("Sede a consultar", SEDES_INV, key="inv_sede_v2")
+
+    # 4. Procesamiento de Stock a DataFrame
+    df_st = pd.DataFrame()
+    if stock and sede_st in stock:
+        rows = []
+        for cat, items in stock[sede_st].items():
+            for item, data in items.items():
+                if isinstance(data, dict): # Manejo de ítems con tallas
+                    for talla, cant in data.items():
+                        rows.append({"Categoría": cat, "Ítem": item, "Talla": talla, "Stock actual": cant})
+                else: # Ítems sin tallas
+                    rows.append({"Categoría": cat, "Ítem": item, "Talla": "N/A", "Stock actual": data})
+        df_st = pd.DataFrame(rows)
+
+    # 5. Visualización de Dashboard
+    if not df_st.empty:
         sin_st   = df_st[df_st["Stock actual"] == 0]
         bajo_st  = df_st[(df_st["Stock actual"] > 0) & (df_st["Stock actual"] <= 3)]
         if not sin_st.empty:  st.error(f"🚨 {len(sin_st)} ítem(s) SIN STOCK en {sede_st}")
@@ -1600,11 +1650,10 @@ with tab_inv:
         fig_st.update_layout(showlegend=False, height=320, margin=dict(t=40,b=0))
         st.plotly_chart(fig_st, use_container_width=True)
 
-    # Si las variables no están definidas, mostramos un mensaje amigable
     else:
-        st.info("ℹ️ El sistema de inventario V2 requiere la carga de datos maestros para activarse.")
+        st.info("ℹ️ No se encontraron datos en STOCK.json para la sede seleccionada o el archivo no existe en el repositorio.")
 
-    if 'seccion' in locals(): # Este bloque se ejecutará solo si existe la variable
+    if 'seccion' in locals() and not df_st.empty:
         # ════════════════════════════════════════════════════════════════
         # HISTORIAL
         # ════════════════════════════════════════════════════════════════
