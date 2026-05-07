@@ -1852,3 +1852,56 @@ with tab_inv:
                                     st.success(f"✅ Talla '{t_nueva}' agregada")
                                 else:
                                     st.error("❌ Error al guardar en GitHub")
+
+# ===================================================
+# ✅ TAB 7 — SEGUIMIENTO ADICIONALES
+# ===================================================
+with tab7:
+    st.subheader("🏭 Seguimiento de Adicionales")
+    st.info("Carga el archivo de programación para visualizar el estado de asignación de los contratos.")
+
+    archivo_prog = st.file_uploader(
+        "Subir archivo de PROGRAMACIÓN (Excel)",
+        type=["xlsx", "xls"],
+        key="uploader_adicionales_final"
+    )
+
+    if archivo_prog:
+        df_p = pd.read_excel(archivo_prog)
+        # Normalizar nombres de columnas para facilitar la búsqueda
+        df_p.columns = df_p.columns.str.strip().str.lower()
+
+        # Buscar la columna de fecha de asignación (heurística de nombres comunes)
+        col_fecha = None
+        posibles_nombres = ["fecha de asignacion", "fecha asignacion", "asignacion", "fecha_asignacion", "fecha"]
+        for c in df_p.columns:
+            if c in posibles_nombres:
+                col_fecha = c
+                break
+
+        if not col_fecha:
+            st.error("❌ No se encontró una columna de fecha (ej: 'fecha de asignacion') en el archivo.")
+            st.write("Columnas detectadas:", list(df_p.columns))
+        else:
+            # Conversión a fecha y cálculo de días transcurridos
+            df_p[col_fecha] = pd.to_datetime(df_p[col_fecha], errors="coerce")
+            hoy = datetime.datetime.now(TZ_CO).date()
+            
+            df_p["dias de asignacion"] = df_p[col_fecha].apply(
+                lambda x: (hoy - x.date()).days if pd.notna(x) else 0
+            )
+
+            # Selección de columnas solicitadas
+            cols_req = ["contrato", "inspector", "direccion", "dias de asignacion"]
+            cols_final = [c for c in cols_req if c in df_p.columns]
+            
+            def color_semaforo(row):
+                dias = row["dias de asignacion"]
+                if dias < 3:
+                    return ["background-color: #d4edda; color: #155724"] * len(row)  # Verde
+                elif dias == 3:
+                    return ["background-color: #fff3cd; color: #856404"] * len(row)  # Amarillo
+                else:
+                    return ["background-color: #f8d7da; color: #721c24"] * len(row)  # Rojo
+
+            st.dataframe(df_p[cols_final].style.apply(color_semaforo, axis=1), use_container_width=True, hide_index=True)
