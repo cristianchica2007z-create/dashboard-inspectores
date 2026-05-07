@@ -761,16 +761,13 @@ with tab2:
                 key=f"sup_{fecha_sel}_{sup}"
             ):
                 supervisores_sel.append(sup)
+    
+    # Reemplazado st.stop por condicional
+    if not supervisores_sel:
+        st.warning("⚠️ Selecciona al menos un supervisor para ver datos.")
 
-    if supervisores_sel:
-        df2 = df2[df2["supervisor"].isin(supervisores_sel)]
-    else:
-        st.warning("⚠️ Selecciona al menos un supervisor.")
-        st.stop()
-
-    if df2.empty:
+    elif df2.empty:
         st.warning("⚠️ No hay datos para los supervisores seleccionados.")
-        st.stop()
 
     # -------------------------------------------
     # FILTRO DE INSPECTORES (DEPENDIENTE)
@@ -783,11 +780,9 @@ with tab2:
         default=inspectores_disponibles
     )
 
-    if inspectores_sel:
+    if inspectores_sel and not df2.empty:
         df2 = df2[df2["inspector"].isin(inspectores_sel)]
-    else:
-        st.warning("⚠️ Selecciona al menos un inspector.")
-        st.stop()
+
 # ===================================================
   # ===================================================
     # ✅ TAB 2 — PARTE 4 / 5
@@ -1462,7 +1457,6 @@ with tab5:
     for col in columnas_requeridas:
         if col not in df.columns:
             st.error(f"❌ Falta la columna requerida: {col}")
-            st.stop()
 
     # ===================================================
     # FILTRAR SOLO ÓRDENES ASIGNADAS
@@ -1582,13 +1576,15 @@ with tab5:
     # ---------------------------------------------------
 with tab6:
     st.subheader("🦺 Seguridad y Salud en el Trabajo")
-    st.info("Módulo en desarrollo.")
+    st.info("Visualización de registros SST operativos.")
+    if 'df_bitacora_base' in locals():
+        df_sst_view = df_bitacora_base[df_bitacora_base["grupo"].astype(str).str.contains("SST", na=False)]
+        st.dataframe(df_sst_view, use_container_width=True)
 
 # ===================================================
 # ✅ TAB_INV — INVENTARIO V2
 # ===================================================
 with tab_inv:
-    st.markdown("## 🏭 Inventario General V2")
     
     if 'df_st' in locals() and 'sede_st' in locals():
         sin_st   = df_st[df_st["Stock actual"] == 0]
@@ -1717,9 +1713,10 @@ with tab_inv:
                                     st.success(f"✅ Talla '{t_nueva}' agregada")
                                 else:
                                     st.error("❌ Error al guardar en GitHub")
-                    fig_st.update_traces(textposition="outside")
-                    fig_st.update_layout(showlegend=False, height=320, margin=dict(t=40,b=0))
-                    st.plotly_chart(fig_st, use_container_width=True)
+                    if 'fig_st' in locals():
+                        fig_st.update_traces(textposition="outside")
+                        fig_st.update_layout(showlegend=False, height=320, margin=dict(t=40,b=0))
+                        st.plotly_chart(fig_st, use_container_width=True)
 
 # ===================================================
 # ✅ TAB 7 — SEGUIMIENTO ADICIONALESs
