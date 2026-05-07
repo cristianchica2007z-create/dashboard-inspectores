@@ -19,8 +19,24 @@ def fetch_github_excel(repo, path, token, branch="main"):
     url = f"https://api.github.com/repos/{repo}/contents/{path}"
     r = requests.get(url, headers=headers)
     if r.status_code == 200:
-        content = base64.b64decode(r.json()["content"])
-        return pd.read_excel(io.BytesIO(content), engine="openpyxl"), r.json().get("sha")
+        data = r.json()
+        sha = data.get("sha")
+        try:
+            # Usar download_url es más confiable para archivos binarios y evita el límite de 1MB de la API
+            download_url = data.get("download_url")
+            if download_url:
+                resp = requests.get(download_url, headers=headers)
+                content = resp.content
+            elif "content" in data:
+                content = base64.b64decode(data["content"])
+            else:
+                return pd.DataFrame(), sha
+            
+            # Dejamos que pandas detecte el motor (engine) automáticamente para soportar .xls y .xlsx
+            return pd.read_excel(io.BytesIO(content)), sha
+        except Exception as e:
+            st.error(f"❌ Error al procesar el Excel '{path}' desde GitHub: {e}")
+            return pd.DataFrame(), sha
     return pd.DataFrame(), None
 
 @st.cache_data
