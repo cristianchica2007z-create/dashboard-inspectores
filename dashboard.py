@@ -960,16 +960,19 @@ with tab2:
         how="left"
     )
 
-    df_tabla = df_tabla.fillna({
-        "hora_inicio": "—",
-        "hora_final": "—",
-        "localidad": "—",
-        "estado": "SIN ACTIVIDAD",
-        "total_ordenes": 0,
-        "ordenes_efectivas": 0,
-        "porcentaje_efectividad": 0,
-        "promedio_tiempo_tarea": "—"
-    })
+   df_tabla = df_tabla.fillna({
+    "hora_inicio": "—",
+    "hora_final": "—",
+    "localidad": "—",
+    "estado": "SIN ACTIVIDAD",
+    "total_ordenes": 0,
+    "ordenes_efectivas": 0,
+    "ordenes_sin_recorrido": 0,         # ✅ NUEVA
+    "porcentaje_efectividad": 0,
+    "promedio_tiempo_tarea": "—",
+    "promedio_tiempo_recorrido": "—"    # ✅ NUEVA
+})
+
 
 # ===================================================
   # ===================================================
