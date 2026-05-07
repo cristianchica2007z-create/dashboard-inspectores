@@ -1032,6 +1032,10 @@ with tab2:
 
     st.dataframe(styled_tabla, use_container_width=True)
 
+    st.write("✅ df_tabla.columns:", df_tabla.columns.tolist())
+    st.write("✅ columnas_disponibles:", columnas_disponibles)
+
+
     # ===================================================
  # 🚨 INSPECTORES SIN ACTIVIDAD EN LA FECHA
     # ===================================================
