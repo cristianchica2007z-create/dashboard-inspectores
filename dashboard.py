@@ -1259,13 +1259,11 @@ with tab4:
     repo = st.secrets["github"]["repo"]
 
     df, _ = fetch_github_excel(repo, archivo_bitacora, token)
-    if not df.empty:
+    if df is not None and not df.empty:
+        # ======================================================
+        # NORMALIZAR Y VALIDAR COLUMNAS
+        # ======================================================
         df.columns = df.columns.str.strip().str.lower()
-
-    # ======================================================
-    # NORMALIZAR Y VALIDAR COLUMNAS
-    # ======================================================
-    df.columns = df.columns.str.strip().str.lower()
 
     columnas_req = [
         "grupo", "prioridad", "estado",
@@ -1277,13 +1275,13 @@ with tab4:
     for c in columnas_req:
         if c not in df.columns:
             st.error(f"❌ Falta la columna requerida: {c}") # No st.stop
-
-    # ======================================================
-    # FILTRO FIJO DE GRUPO
-    # ======================================================
-    df["grupo"] = df["grupo"].astype(str).str.upper().str.strip()
-    grupos_validos = ["INSP-CALDAS", "INSP-RIS"]
-    df = df[df["grupo"].isin(grupos_validos)].copy()
+        else:
+            # ======================================================
+            # FILTRO FIJO DE GRUPO
+            # ======================================================
+            df["grupo"] = df["grupo"].astype(str).str.upper().str.strip()
+            grupos_validos = ["INSP-CALDAS", "INSP-RIS"]
+            df = df[df["grupo"].isin(grupos_validos)].copy()
 
     # ======================================================
     # FECHAS Y ALERTAS
@@ -1424,9 +1422,6 @@ with tab4:
                 use_container_width=True
             )
             st.error(f"🚨 TOTAL ALERTAS: {len(df_alerta)}")
-    else:
-        st.info("No se pudo cargar la bitácora desde GitHub para agendas.")
-
 with tab5:
     st.markdown("## 📌 Órdenes ASIGNADAS")
 
