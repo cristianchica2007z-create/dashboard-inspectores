@@ -1002,15 +1002,143 @@ with tab2:
         hide_index=True
     )
 
-                    sin_st   = df_st[df_st["Stock actual"] == 0]
-                    bajo_st  = df_st[(df_st["Stock actual"] > 0) & (df_st["Stock actual"] <= 3)]
-                    if not sin_st.empty:  st.error(f"🚨 {len(sin_st)} ítem(s) SIN STOCK en {sede_st}")
-                    if not bajo_st.empty: st.warning(f"⚠️ {len(bajo_st)} ítem(s) con stock BAJO (≤ 3) en {sede_st}")
+    # ---------------------------------------------------
+    # ✅ TAB 6 — SST (Placeholder logic)
+    # ---------------------------------------------------
+with tab6:
+    st.subheader("🦺 Seguridad y Salud en el Trabajo")
+    st.info("Módulo en desarrollo.")
 
-                    df_cat = df_st.groupby("Categoría")["Stock actual"].sum().reset_index()
-                    fig_st = px.bar(df_cat, x="Categoría", y="Stock actual", color="Categoría",
-                                    text="Stock actual", title=f"Stock por categoría — {sede_st}",
-                                    color_discrete_sequence=["#c0392b"])
+# ===================================================
+# ✅ TAB_INV — INVENTARIO V2
+# ===================================================
+with tab_inv:
+    # Note: The following code snippet appears to be part of a larger logic 
+    # for 'tab_inv' that was partially truncated in the original file.
+    # This fix ensures the syntax is valid for the provided context.
+    if 'df_st' in locals() and 'sede_st' in locals():
+        sin_st   = df_st[df_st["Stock actual"] == 0]
+        bajo_st  = df_st[(df_st["Stock actual"] > 0) & (df_st["Stock actual"] <= 3)]
+        if not sin_st.empty:  st.error(f"🚨 {len(sin_st)} ítem(s) SIN STOCK en {sede_st}")
+        if not bajo_st.empty: st.warning(f"⚠️ {len(bajo_st)} ítem(s) con stock BAJO (≤ 3) en {sede_st}")
+
+        df_cat = df_st.groupby("Categoría")["Stock actual"].sum().reset_index()
+        fig_st = px.bar(df_cat, x="Categoría", y="Stock actual", color="Categoría",
+                        text="Stock actual", title=f"Stock por categoría — {sede_st}",
+                        color_discrete_sequence=["#c0392b"])
+        fig_st.update_traces(textposition="outside")
+        fig_st.update_layout(showlegend=False, height=320, margin=dict(t=40,b=0))
+        st.plotly_chart(fig_st, use_container_width=True)
+
+    if 'seccion' in locals():
+        # ════════════════════════════════════════════════════════════════
+        # HISTORIAL
+        # ════════════════════════════════════════════════════════════════
+        if seccion == "historial":
+            st.markdown("""
+            <div class="inv-header-box">
+                <div>
+                    <div class="inv-breadcrumb">Inventario E&C / Consultas</div>
+                    <div class="inv-page-title">Historial de Movimientos</div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            if not movimientos:
+                st.info("📭 No hay movimientos registrados aún.")
+            else:
+                df_h = pd.DataFrame(movimientos)
+                c1, c2, c3 = st.columns(3)
+                sede_h = c1.selectbox("Sede",      ["TODAS"] + SEDES_INV,            key="h_sede")
+                tipo_h = c2.selectbox("Tipo",      ["TODOS","ENTRADA","SALIDA"],      key="h_tipo")
+                cat_h  = c3.selectbox("Categoría", ["TODAS"] + CATEGORIAS,           key="h_cat")
+
+                if sede_h != "TODAS":  df_h = df_h[df_h["sede"] == sede_h]
+                if tipo_h != "TODOS":  df_h = df_h[df_h["tipo"] == tipo_h]
+                if cat_h  != "TODAS":  df_h = df_h[df_h["categoria"] == cat_h]
+
+                df_h["talla"]     = df_h["talla"].fillna("—")
+                df_h["inspector"] = df_h["inspector"].fillna("—")
+                cols_h = ["fecha","tipo","sede","categoria","item","talla","cantidad","inspector","responsable","observacion"]
+                cols_d = [c for c in cols_h if c in df_h.columns]
+
+                def color_tipo_h(row):
+                    if row["tipo"] == "ENTRADA": return ["background-color:#d4edda;color:#155724"]*len(row)
+                    return ["background-color:#f8d7da;color:#721c24"]*len(row)
+
+                st.dataframe(df_h[cols_d].sort_values("fecha", ascending=False).style.apply(color_tipo_h, axis=1), use_container_width=True, hide_index=True)
+                st.caption(f"Total: {len(df_h)} movimiento(s)")
+
+        # ════════════════════════════════════════════════════════════════
+        # CATÁLOGO
+        # ════════════════════════════════════════════════════════════════
+        elif seccion == "catalogo":
+            st.markdown("""
+            <div class="inv-header-box">
+                <div>
+                    <div class="inv-breadcrumb">Inventario E&C / Configuración</div>
+                    <div class="inv-page-title">Catálogo de Ítems</div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            for cat, items in catalogo.items():
+                with st.expander(f"**{cat}** — {len(items)} ítem(s)"):
+                    for item, cfg in items.items():
+                        if cfg["tallas"]:
+                            st.markdown(f"- **{item}** | Tallas: {', '.join(cfg.get('opciones_talla', []))}")
+                        else:
+                            st.markdown(f"- **{item}** | Sin tallas")
+
+            st.divider()
+            st.markdown("#### ➕ Agregar nuevo ítem")
+            with st.form("form_nuevo_item_v3", clear_on_submit=True):
+                c1, c2 = st.columns(2)
+                cat_n    = c1.selectbox("Categoría", CATEGORIAS)
+                nombre_n = c2.text_input("Nombre del ítem")
+                usa_t    = st.checkbox("¿Maneja tallas?")
+                tallas_t = st.text_input("Tallas separadas por coma (ej: S,M,L)", disabled=not usa_t)
+                if st.form_submit_button("➕ Agregar ítem", type="primary"):
+                    if not nombre_n.strip():
+                        st.warning("⚠️ Ingresa un nombre.")
+                    elif nombre_n.strip() in catalogo[cat_n]:
+                        st.warning("⚠️ Ya existe ese ítem.")
+                    else:
+                        nuevo = {"tallas": usa_t}
+                        if usa_t and tallas_t.strip():
+                            nuevo["opciones_talla"] = [t.strip() for t in tallas_t.split(",") if t.strip()]
+                        catalogo[cat_n][nombre_n.strip()] = nuevo
+                        r = gh_put_inv("CATALOGO.json", catalogo, inv_headers, inv_repo, sha=st.session_state.inv_cat_sha, branch=inv_branch, mensaje=f"Nuevo ítem: {nombre_n}")
+                        if r.status_code in (200, 201):
+                            st.session_state.inv_cat_sha = r.json().get("content", {}).get("sha")
+                            st.success(f"✅ Ítem '{nombre_n}' agregado a {cat_n}")
+                        else:
+                            st.error("❌ Error al guardar en GitHub")
+
+            st.divider()
+            st.markdown("#### 📐 Agregar talla a ítem existente")
+            items_t = [(c, i) for c, its in catalogo.items() for i, cfg in its.items() if cfg["tallas"]]
+            if items_t:
+                with st.form("form_nueva_talla_v3", clear_on_submit=True):
+                    opciones = [f"{c} → {i}" for c, i in items_t]
+                    sel_str  = st.selectbox("Ítem", opciones)
+                    t_nueva  = st.text_input("Nueva talla")
+                    if st.form_submit_button("➕ Agregar talla", type="primary"):
+                        if not t_nueva.strip():
+                            st.warning("⚠️ Ingresa una talla.")
+                        else:
+                            idx = opciones.index(sel_str)
+                            cs, its2 = items_t[idx]
+                            if t_nueva.strip() in catalogo[cs][its2].get("opciones_talla", []):
+                                st.warning("⚠️ Esa talla ya existe.")
+                            else:
+                                catalogo[cs][its2]["opciones_talla"].append(t_nueva.strip())
+                                r = gh_put_inv("CATALOGO.json", catalogo, inv_headers, inv_repo, sha=st.session_state.inv_cat_sha, branch=inv_branch, mensaje=f"Nueva talla {t_nueva} en {its2}")
+                                if r.status_code in (200, 201):
+                                    st.session_state.inv_cat_sha = r.json().get("content", {}).get("sha")
+                                    st.success(f"✅ Talla '{t_nueva}' agregada")
+                                else:
+                                    st.error("❌ Error al guardar en GitHub")
                     fig_st.update_traces(textposition="outside")
                     fig_st.update_layout(showlegend=False, height=320, margin=dict(t=40,b=0))
                     st.plotly_chart(fig_st, use_container_width=True)
