@@ -957,7 +957,7 @@ with tab2:
         }))
         .reset_index()
     )
-    )
+    
 
     # ---------------------------------------------------
     # TABLA CONSOLIDADA DEL DÍA (UNA SOLA)
