@@ -1570,6 +1570,47 @@ with tab6:
 # ✅ TAB_INV — INVENTARIO V2
 # ===================================================
 with tab_inv:
+    # --- ESTILOS INSPIRACIÓN ADIDAS ---
+    st.markdown("""
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&display=swap');
+            
+            .adidas-title {
+                font-family: 'Montserrat', sans-serif;
+                font-weight: 900;
+                text-transform: uppercase;
+                font-size: 2.8rem;
+                color: #000;
+                letter-spacing: -2px;
+                margin-bottom: 0px;
+                line-height: 0.9;
+            }
+            .adidas-sub {
+                font-family: 'Montserrat', sans-serif;
+                font-weight: 700;
+                text-transform: uppercase;
+                font-size: 1.1rem;
+                border-bottom: 5px solid #000;
+                padding-bottom: 2px;
+                margin-bottom: 25px;
+                display: inline-block;
+                letter-spacing: 1px;
+            }
+            .stButton>button {
+                border-radius: 0px !important;
+                border: 2px solid #000 !important;
+                text-transform: uppercase;
+                font-weight: 700;
+                letter-spacing: 1px;
+                transition: all 0.3s;
+            }
+            .stButton>button:hover {
+                background-color: #000 !important;
+                color: #fff !important;
+            }
+        </style>
+    """, unsafe_allow_html=True)
+
     # --- CONFIGURACIÓN Y CARGA DE DATOS ---
     CATALOGO_DEFAULT = {
         "EPPs": {
@@ -1606,17 +1647,22 @@ with tab_inv:
     if not isinstance(movimientos, list): movimientos = []
     if not isinstance(catalogo, dict) or not catalogo: catalogo = CATALOGO_DEFAULT.copy()
 
+    st.markdown('<h1 class="adidas-title">INVENTARIO V2 //</h1>', unsafe_allow_html=True)
+    st.markdown('<p style="font-weight:700; color:#666; margin-bottom:40px; letter-spacing:2px;">EQUIPAMIENTO TÉCNICO E&C</p>', unsafe_allow_html=True)
+
     # --- UI LAYOUT: SUB-PESTAÑAS A LA IZQUIERDA ---
-    col_nav, col_main = st.columns([0.8, 4]) # Ajustado el ancho de la columna de navegación
+    col_nav, col_main = st.columns([1, 4]) 
 
     with col_nav:
-        st.markdown("### 🛠️ Menú")
+        st.markdown('<p class="adidas-sub">ACCIONES</p>', unsafe_allow_html=True)
         opcion_inv = st.radio(
             "Seleccione una acción:",
             ["📊 Stock Actual", "➕ Registrar Entrada", "➖ Registrar Salida", "📜 Historial", "⚙️ Configuración Catálogo"],
             label_visibility="collapsed",
-            key="inv_menu_radio" # Añadido un key para evitar advertencias de Streamlit
+            key="inv_menu_radio"
         )
+        st.markdown("---")
+        st.image("https://www.adidas.co/glass/react/1239c80/assets/img/icon-adidas-logo.svg", width=40)
 
     with col_main:
         # --- FUNCIÓN DE CÁLCULO DE STOCK ---
@@ -1639,10 +1685,10 @@ with tab_inv:
             return pd.DataFrame(rows)
 
         if opcion_inv == "📊 Stock Actual":
-            st.header("📊 Resumen de Existencias")
-            c1, c2 = st.columns([2, 1])
-            sede_consulta = c1.selectbox("Filtrar por Sede", SEDES_INV, key="inv_sede_stock")
-            
+            st.markdown('<p class="adidas-sub">DISPONIBILIDAD DE ARTÍCULOS</p>', unsafe_allow_html=True)
+            sede_consulta = st.selectbox("📍 SELECCIONAR UBICACIÓN", SEDES_INV, key="inv_sede_stock")
+            st.write("")
+
             df_stock = obtener_stock_df(movimientos, sede_consulta)
             if not df_stock.empty:
                 st.dataframe(df_stock.sort_values(["Categoría", "Ítem", "Talla"]), use_container_width=True, hide_index=True)
@@ -1654,12 +1700,12 @@ with tab_inv:
                 st.info(f"No hay movimientos registrados para la sede {sede_consulta}.")
 
         elif opcion_inv == "➕ Registrar Entrada":
-            st.header("➕ Registrar Entrada de Inventario")
+            st.markdown('<p class="adidas-sub">REGISTRO DE NUEVO MATERIAL</p>', unsafe_allow_html=True)
             with st.container(border=True): # Contenedor para agrupar el formulario
                 c1, c2, c3 = st.columns(3)
-                m_sede = c1.selectbox("Sede", SEDES_INV, key="entrada_sede")
-                m_fecha = c2.date_input("Fecha Movimiento", key="entrada_fecha")
-                m_resp = c3.selectbox("Responsable", RESPONSABLES_INV, key="entrada_responsable")
+                m_sede = c1.selectbox("SEDE DESTINO", SEDES_INV, key="entrada_sede")
+                m_fecha = c2.date_input("FECHA DE CARGUE", key="entrada_fecha")
+                m_resp = c3.selectbox("RESPONSABLE", RESPONSABLES_INV, key="entrada_responsable")
                 
                 st.divider()
                 
@@ -1704,15 +1750,15 @@ with tab_inv:
                         st.error(f"❌ Error al guardar en GitHub: {resp.text}")
 
         elif opcion_inv == "➖ Registrar Salida":
-            st.header("➖ Registrar Salida de Inventario")
+            st.markdown('<p class="adidas-sub">ASIGNACIÓN Y SALIDA DE EQUIPO</p>', unsafe_allow_html=True)
             with st.container(border=True): # Contenedor para agrupar el formulario
                 c1, c2, c3 = st.columns(3)
-                m_sede = c1.selectbox("Sede", SEDES_INV, key="salida_sede")
-                m_fecha = c2.date_input("Fecha Movimiento", key="salida_fecha")
-                m_resp = c3.selectbox("Responsable", RESPONSABLES_INV, key="salida_responsable")
+                m_sede = c1.selectbox("SEDE ORIGEN", SEDES_INV, key="salida_sede")
+                m_fecha = c2.date_input("FECHA DE ENTREGA", key="salida_fecha")
+                m_resp = c3.selectbox("ENTREGADO POR", RESPONSABLES_INV, key="salida_responsable")
                 
                 c4, c5 = st.columns(2)
-                m_insp = c4.selectbox("Inspector", ["N/A"] + inspectores_lista, key="salida_inspector") # Inspector es más relevante en salidas
+                m_insp = c4.selectbox("TÉCNICO / INSPECTOR RECEPTOR", ["N/A"] + inspectores_lista, key="salida_inspector")
                 
                 st.divider()
                 
@@ -1771,15 +1817,15 @@ with tab_inv:
                         else:
                             st.error(f"❌ Error al guardar en GitHub: {resp.text}")
 
-        elif opcion_inv == " Historial":
-            st.header("📜 Historial de Movimientos")
+        elif opcion_inv == "📜 Historial":
+            st.markdown('<p class="adidas-sub">BITÁCORA DE MOVIMIENTOS RECIENTES</p>', unsafe_allow_html=True)
             if movimientos:
                 df_h = pd.DataFrame(movimientos)
                 # Añadir filtros al historial para que sea más útil
                 col_h1, col_h2, col_h3 = st.columns(3)
-                filter_sede = col_h1.selectbox("Filtrar por Sede", ["TODAS"] + SEDES_INV, key="hist_filter_sede")
-                filter_tipo = col_h2.selectbox("Filtrar por Tipo", ["TODOS", "ENTRADA", "SALIDA"], key="hist_filter_tipo")
-                filter_cat  = col_h3.selectbox("Filtrar por Categoría", ["TODAS"] + list(catalogo.keys()), key="hist_filter_cat")
+                filter_sede = col_h1.selectbox("📍 FILTRAR SEDE", ["TODAS"] + SEDES_INV, key="hist_filter_sede")
+                filter_tipo = col_h2.selectbox("MOVIMIENTO", ["TODOS", "ENTRADA", "SALIDA"], key="hist_filter_tipo")
+                filter_cat  = col_h3.selectbox("CATEGORÍA", ["TODAS"] + list(catalogo.keys()), key="hist_filter_cat")
 
                 filtered_df_h = df_h.copy()
                 if filter_sede != "TODAS":
@@ -1794,12 +1840,12 @@ with tab_inv:
                 st.info("No hay movimientos registrados.")
 
         elif opcion_inv == "⚙️ Configuración Catálogo":
-            st.header("⚙️ Configuración de Catálogo")
+            st.markdown('<p class="adidas-sub">CONFIGURACIÓN DE PRODUCTOS MAESTROS</p>', unsafe_allow_html=True)
             
             with st.expander("Ver Catálogo Actual"):
                 st.json(catalogo)
                 
-            st.markdown("### ➕ Agregar Nuevo Ítem")
+            st.markdown('<p class="adidas-sub">AÑADIR REFERENCIA AL CATÁLOGO</p>', unsafe_allow_html=True)
             with st.container(border=True): # Contenedor para agrupar el formulario
                 with st.form("form_config_cat", clear_on_submit=True):
                     c1, c2 = st.columns(2)
