@@ -1491,7 +1491,7 @@ with tab_asignadas:
 
 
 # ===================================================
-# ✅ TAB — INVENTARIO V2
+# ✅ TAB — INVENTARIO V2.
 # ===================================================
 with tab_inv_v2:
     st.markdown("""
