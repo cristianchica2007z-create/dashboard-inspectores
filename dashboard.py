@@ -66,6 +66,27 @@ st.markdown("""
     .stMainBlockContainer {
         background-color: #ffffff;
     }
+    /* Estilo de Tarjetas Profesionales para KPIs */
+    .metric-card {
+        background-color: #ffffff;
+        padding: 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        border-left: 5px solid #1e3a8a;
+        margin-bottom: 1rem;
+    }
+    .metric-label {
+        color: #64748b;
+        font-size: 0.85rem;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+    .metric-value {
+        color: #1e3a8a;
+        font-size: 1.75rem;
+        font-weight: 800;
+        margin-top: 5px;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -536,6 +557,14 @@ with tab_diario:
         s2 = s % 60
         return f"{h}h {m}m {s2}s" if h > 0 else f"{m}m {s2}s"
 
+    def render_kpi(label, value, icon=""):
+        st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-label">{icon} {label}</div>
+                <div class="metric-value">{value}</div>
+            </div>
+        """, unsafe_allow_html=True)
+
     # Renombrar columnas parseadas para lógica existente
     df_bitacora["hora_inicio"] = df_bitacora["hora inicio_parsed"].fillna("SIN HORA")
     df_bitacora["hora_inicio_recorrido"] = df_bitacora["hora inicio de recorrido_parsed"]
@@ -775,11 +804,18 @@ with tab_diario:
     c2.metric("🕒 Promedio fin", hora_prom_fin)
     c3.metric("🕓 Prom. tiempo por tarea", tiempo_prom_str)
     c4_kpi.metric("🚗 Prom. recorrido", prom_recorrido_global)
+    with c1: render_kpi("Promedio inicio", hora_prom_ini, "⏰")
+    with c2: render_kpi("Promedio fin", hora_prom_fin, "🕒")
+    with c3: render_kpi("Prom. tiempo tarea", tiempo_prom_str, "🕓")
+    with c4_kpi: render_kpi("Prom. recorrido", prom_recorrido_global, "🚗")
 
     c4, c5, c6 = st.columns(3)
     c4.metric("📋 Total tareas", total_ordenes)
     c5.metric("✅ Efectivas", total_efectivas)
     c6.metric("📈 % Efectividad", f"{porcentaje}%")
+    with c4: render_kpi("Total tareas", total_ordenes, "📋")
+    with c5: render_kpi("Efectivas", total_efectivas, "✅")
+    with c6: render_kpi("% Efectividad", f"{porcentaje}%", "📈")
 
     # ---------------------------------------------------
     # RESUMEN POR INSPECTOR (SOLO PARA CÁLCULO)
@@ -1469,15 +1505,15 @@ with tab_inv_v2:
     col_nav, col_main = st.columns([1, 4]) 
 
     with col_nav:
-        st.markdown('<div class="inv-menu-container">', unsafe_allow_html=True)
-        with st.expander("📂 MENÚ DE INVENTARIO", expanded=True): # Changed header text
-            opcion_inv = st.radio(
-                "Seleccione una acción:",
-                ["📊 Stock Actual", "➕ Registrar Entrada", "➖ Registrar Salida", "📜 Historial", "⚙️ Configuración Catálogo"],
-                key="inv_menu_radio",
-                label_visibility="collapsed"
-            )
-        st.markdown('</div>', unsafe_allow_html=True) # Close the inv-menu-container
+        st.markdown('<div class="left-nav-bar-content">', unsafe_allow_html=True)
+        st.markdown('<h3 class="left-nav-title">Inventario V2</h3>', unsafe_allow_html=True)
+        opcion_inv = st.radio(
+            "Seleccione una acción:",
+            ["📊 Stock Actual", "➕ Registrar Entrada", "➖ Registrar Salida", "📜 Historial", "⚙️ Configuración Catálogo"],
+            key="inv_menu_radio",
+            label_visibility="collapsed" # Oculta la etiqueta del grupo de radio
+        )
+        st.markdown('</div>', unsafe_allow_html=True)
 
     with col_main:
         # --- FUNCIÓN DE CÁLCULO DE STOCK ---
