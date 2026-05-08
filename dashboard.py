@@ -139,6 +139,9 @@ def process_adicionales_data(df):
     if df.empty: return df
     df.columns = df.columns.str.strip().str.lower()
     
+    # Inicializamos la columna para evitar KeyError si no se encuentra una fecha válida
+    df["dias de asignacion"] = 0
+
     # Filtro de códigos
     if "codigo_tipo_trabajo" in df.columns:
         df = df[df["codigo_tipo_trabajo"].astype(str).isin(CODIGOS_ADICIONALES)]
@@ -1777,6 +1780,9 @@ with tab7:
             cols_final = [c for c in cols_req if c in df_p.columns]
             
             def color_semaforo(row):
+                # Verificación segura de la existencia de la columna para evitar KeyError
+                if "dias de asignacion" not in row:
+                    return [""] * len(row)
                 dias = row["dias de asignacion"]
                 if dias < 3:
                     return ["background-color: #d4edda; color: #155724"] * len(row)  # Verde
