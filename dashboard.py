@@ -453,233 +453,20 @@ with st.spinner("🔄 Sincronizando datos con el servidor... Un momento por favo
 
 # ✅ CREAR PESTAÑAS
 # ---------------------------------------------------
-tab1, tab2, tab3, tab4, tab5, tab6, tab_inv, tab7 = st.tabs([
-    "📦 Inventario Papelería",
+tab_diario, tab_agendas, tab_adicionales, tab_asignadas, tab_inv_v2, tab_sst, tab_subir = st.tabs([
     "🕒 Seguimiento Diario",
-    "📈 Subir Archivos",
-     "📅 Seguimiento agendas",
-    "📌 Órdenes Asignadas",
-    "🦺 SST",
-    "🏭 Inventario V2",
+    "📅 Seguimiento agendas",
     "🏭 SEGUIMIENTO ADICIONALES",
-    
-
-    
+    "📌 Órdenes Asignadas",
+    "🏭 Inventario V2",
+    "🦺 SST",
+    "📈 Subir Archivos",
 ])
 
 # ===================================================
+# ✅ TAB — SEGUIMIENTO DIARIO
 # ===================================================
-# ✅ TAB 1 — INVENTARIO DE PAPELERÍA
-# ===================================================
-with tab1:
-    st.subheader("📦 Control de entrega de papelería e inventario")
-
-    # ==============================
-    # LEER INVENTARIO DESDE GITHUB
-    # ==============================
-    archivo_inventario = "inventario.xlsx"
-
-    token = st.secrets["github"]["token"]
-    repo = st.secrets["github"]["repo"]
-    branch = st.secrets["github"].get("branch", "main")
-
-    df_inv, sha_inv = fetch_github_excel(repo, archivo_inventario, token, branch)
-    
-    if df_inv.empty:
-        df_inv = pd.DataFrame(columns=[
-            "Fecha", "Sede", "Inspector",
-            "Responsable", "Observación", "Ítems"
-        ])
-
-    df_inv.columns = df_inv.columns.str.strip()
-
-    # ===================================================
-    # FORMULARIO DE REGISTRO
-    # ===================================================
-    with st.form("form_entrega", clear_on_submit=True):
-        st.markdown("### Registrar entrega")
-
-        col1, col2, col3 = st.columns(3)
-
-        sede = col1.selectbox("Sede", ["CALDAS", "RISARALDA"])
-        inspector = col2.selectbox("Inspector", inspectores_lista)
-        fecha = col3.date_input("Fecha")
-
-        responsable = st.selectbox(
-            "Responsable",
-            [
-                "JUAN DIEGO SANCHEZ",
-                "CRISTIAN CHICA",
-                "ANDRES ARROYAVE",
-                "MARIA CAMILA",
-                "JANIER",
-                "DANNY DE LA CRUZ"
-            ]
-        )
-
-        observacion = st.text_input("Observación (opcional)")
-
-        st.markdown("### Ítems entregados")
-
-        items_def = [
-            "Stickers 🔵", "Cepo 🔒", "Guantes 🧤", "Piernera 🦿",
-            "Monogafas 🥽", "Llaves de cepo 🗝️","Papelería general 📦"
-        ]
-
-        items_seleccionados = []
-
-        filas = [items_def[i:i+4] for i in range(0, len(items_def), 4)]
-        for f_idx, fila in enumerate(filas):
-            cols = st.columns(4)
-            for c_idx, item in enumerate(fila):
-                marcar = cols[c_idx].checkbox(item, key=f"item_{f_idx}_{c_idx}")
-                cantidad = cols[c_idx].number_input(
-                    "Cantidad",
-                    min_value=0,
-                    step=1,
-                    label_visibility="collapsed",
-                    key=f"qty_{f_idx}_{c_idx}"
-                )
-                if marcar and cantidad > 0:
-                    items_seleccionados.append(f"{item} x{cantidad}")
-
-        submitted = st.form_submit_button("✅ Guardar entrega")
-
-    # ===================================================
-    # GUARDAR ENTREGA (SOLO CUANDO SUBMITTED)
-    # ===================================================
-    if submitted:
-        if not items_seleccionados:
-            st.warning("⚠️ Debes seleccionar al menos un ítem con cantidad")
-        else:
-            nueva_fila = pd.DataFrame([{
-                "Fecha": fecha.strftime("%Y-%m-%d"),
-                "Sede": sede,
-                "Inspector": inspector,
-                "Responsable": responsable,
-                "Observación": observacion,
-                "Ítems": ", ".join(items_seleccionados)
-            }])
-
-            df_inv = pd.concat([df_inv, nueva_fila], ignore_index=True)
-
-            buffer = io.BytesIO()
-            df_inv.to_excel(buffer, index=False, engine="openpyxl")
-            buffer.seek(0)
-
-            contenido_b64 = base64.b64encode(buffer.read()).decode("utf-8")
-            
-            # Para el PUT necesitamos el SHA actual (esto no se cachea para evitar conflictos)
-            headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
-            url_inv = f"https://api.github.com/repos/{repo}/contents/{archivo_inventario}"
-            r = requests.get(url_inv, headers=headers)
-            sha = r.json().get("sha") if r.status_code == 200 else None
-
-            payload = {
-                "message": "Registro de entrega de papelería",
-                "content": contenido_b64,
-                "branch": branch
-            }
-
-            if sha:
-                payload["sha"] = sha
-
-            requests.put(url_inv, headers=headers, json=payload)
-
-            st.cache_data.clear() # Limpiar caché para forzar recarga
-            st.success("✅ Entrega registrada y guardada correctamente")
-
-    # ===================================================
-    # HISTORIAL (SIEMPRE SE MUESTRA)
-    # ===================================================
-    st.markdown("### 📋 Historial de entregas")
-
-    filtro_inspector = st.selectbox(
-        "Filtrar por inspector",
-        ["TODOS"] + inspectores_lista
-    )
-
-    df_hist = df_inv.copy()
-    if filtro_inspector != "TODOS":
-        df_hist = df_hist[df_hist["Inspector"] == filtro_inspector]
-
-    st.dataframe(df_hist, use_container_width=True)
-
-    # ===================================================
-    # CONSUMO MENSUAL
-    # ===================================================
-    st.markdown("## 📊 Consumo mensual consolidado por ítem")
-
-    df_cons = df_inv.copy()
-    df_cons["Fecha"] = pd.to_datetime(df_cons["Fecha"], errors="coerce")
-    df_cons["Mes"] = df_cons["Fecha"].dt.to_period("M").astype(str)
-
-    registros = []
-    for _, row in df_cons.iterrows():
-        if pd.isna(row["Ítems"]):
-            continue
-        for it in row["Ítems"].split(","):
-            it = it.strip()
-            nombre, cantidad = it.rsplit(" x", 1) if " x" in it else (it, 1)
-            registros.append({"Mes": row["Mes"], "Ítem": nombre, "Cantidad": int(cantidad)})
-
-    df_plot = pd.DataFrame(registros)
-    if not df_plot.empty:
-        df_plot = df_plot.groupby(["Mes", "Ítem"], as_index=False).sum()
-        fig = px.bar(df_plot, x="Mes", y="Cantidad", color="Ítem", barmode="group")
-        st.plotly_chart(fig, use_container_width=True)
-
-    for _, row in df_cons.iterrows():
-        if pd.isna(row["Ítems"]):
-            continue
-
-        for it in row["Ítems"].split(","):
-            it = it.strip()
-            if " x" in it:
-                nombre, cantidad = it.rsplit(" x", 1)
-                cantidad = int(cantidad)
-            else:
-                nombre = it
-                cantidad = 1
-
-            registros.append({
-                "Mes": row["Mes"],
-                "Ítem": nombre,
-                "Cantidad": cantidad
-            })
-
-    df_plot = pd.DataFrame(registros)
-
-    if not df_plot.empty:
-        df_plot = df_plot.groupby(
-            ["Mes", "Ítem"],
-            as_index=False
-        ).sum()
-
-        fig = px.bar(
-            df_plot,
-            x="Mes",
-            y="Cantidad",
-            color="Ítem",
-            barmode="group",
-            text="Cantidad",
-            title="Consumo mensual consolidado por ítem"
-        )
-
-        fig.update_traces(textposition="outside")
-        fig.update_layout(
-            xaxis_title="Mes",
-            yaxis_title="Cantidad entregada",
-            legend_title="Ítem"
-        )
-
-        st.plotly_chart(fig, use_container_width=True)
-
-
-
-# ===================================================
-# ===================================================
-with tab2:
+with tab_diario:
     st.subheader("🕒 Control Operativo e&c")
     st.subheader("Eje Cafetero")
 
@@ -1173,155 +960,12 @@ with tab2:
 
         st.plotly_chart(fig_prod, use_container_width=True)
  
-
-# ===================================================
-# ===================================================
-# ✅ TAB 3 — ADMINISTRACIÓN DE BITÁCORA (PROTEGIDO)
-# Guarda / reemplaza BITACORA.xlsx en GitHub
-# Guarda fecha y hora en BITACORA_INFO.json
-# ===================================================
-with tab3:
-    st.subheader("🔐 Administración de Bitácora Compartida")
-
-    # -------------------------------------------------
-    # VALIDACIÓN DE ADMINISTRADOR
-    # -------------------------------------------------
- #    clave_ingresada = st.text_input(
-  #       "Contraseña de administrador",
-#         type="password",
-#         placeholder="Ingresa la clave para administrar la bitácora"
-#     )
-# 
-#     clave_real = st.secrets["admin"]["password"]
-
- #    if clave_ingresada != clave_real:
-#         st.warning(
-#             "⛔ Acceso restringido.\n\n"
-#             "Solo personal autorizado puede cargar o actualizar la bitácora."
-#         )
- #        st.stop()
-
-    # -------------------------------------------------
-    # CONTENIDO SOLO PARA ADMIN
-    # -------------------------------------------------
-    st.success("✅ Acceso autorizado")
-
-    st.info(
-        "Desde aquí se sube la bitácora OFICIAL.\n\n"
-        "Al cargar un nuevo archivo, este reemplazará el anterior y "
-        "todos los usuarios verán la MISMA información en la pestaña "
-        "🕒 Seguimiento Diario (TAB 2)."
-    )
-
-    archivo = st.file_uploader(
-        "Sube el archivo BITACORA.xlsx",
-        type=["xls", "xlsx"]
-    )
-
-    if archivo is not None:
-        import base64
-        import requests
-        import json
-        import datetime
-        from zoneinfo import ZoneInfo
-
-        # -----------------------------
-        # ZONA HORARIA
-        # -----------------------------
-        TZ_UTC = ZoneInfo("UTC")
-
-        # -----------------------------
-        # LEER SECRETS DE GITHUB
-        # -----------------------------
-        token = st.secrets["github"]["token"]
-        repo = st.secrets["github"]["repo"]
-        branch = st.secrets["github"].get("branch", "main")
-
-        headers = {
-            "Authorization": f"Bearer {token}",
-            "Accept": "application/vnd.github+json"
-        }
-
-        # =================================================
-        # 1️⃣ GUARDAR / REEMPLAZAR BITACORA.xlsx
-        # =================================================
-        contenido_excel = archivo.read()
-        contenido_excel_b64 = base64.b64encode(
-            contenido_excel
-        ).decode("utf-8")
-
-        url_excel = f"https://api.github.com/repos/{repo}/contents/BITACORA.xlsx"
-
-        r_excel = requests.get(url_excel, headers=headers)
-        sha_excel = r_excel.json().get("sha") if r_excel.status_code == 200 else None
-
-        payload_excel = {
-            "message": "Actualización de BITACORA.xlsx desde Streamlit",
-            "content": contenido_excel_b64,
-            "branch": branch
-        }
-
-        if sha_excel:
-            payload_excel["sha"] = sha_excel
-
-        r_put_excel = requests.put(
-            url_excel,
-            headers=headers,
-            json=payload_excel
-        )
-
-        if r_put_excel.status_code not in (200, 201):
-            st.error("❌ Error al guardar BITACORA.xlsx en GitHub")
-            st.json(r_put_excel.json())
-            st.stop()
-
-        # =================================================
-        # 2️⃣ GUARDAR FECHA, HORA Y USUARIO (BITACORA_INFO.json)
-        # =================================================
-        info = {
-            "ultima_actualizacion": datetime.datetime.now(TZ_UTC).strftime(
-                "%Y-%m-%d %H:%M:%S"
-            ),
-            "usuario_actualizo": st.session_state.usuario
-        }
-
-        contenido_info_b64 = base64.b64encode(
-            json.dumps(info, indent=2).encode("utf-8")
-        ).decode("utf-8")
-
-        url_info = f"https://api.github.com/repos/{repo}/contents/BITACORA_INFO.json"
-
-        r_info = requests.get(url_info, headers=headers)
-        sha_info = r_info.json().get("sha") if r_info.status_code == 200 else None
-
-        payload_info = {
-            "message": "Actualización de BITACORA_INFO.json",
-            "content": contenido_info_b64,
-            "branch": branch
-        }
-
-        if sha_info:
-            payload_info["sha"] = sha_info
-
-        requests.put(
-            url_info,
-            headers=headers,
-            json=payload_info
-        )
-
-        st.cache_data.clear() # IMPORTANTÍSIMO: Limpiar caché al subir nueva bitácora
-        # =================================================
-        # ✅ CONFIRMACIÓN FINAL
-        # =================================================
-        st.success("✅ Bitácora actualizada correctamente")
-        st.caption(f"🕓 Hora UTC guardada: {info['ultima_actualizacion']}")
-
-  # =================================================
-#PESTAÑA 4 SEGUIMIENTO AGENDAS
-with tab4:
+# =================================================
+# ✅ TAB — SEGUIMIENTO AGENDAS
+# =================================================
+with tab_agendas:
     # ======================================================
     # TÍTULO PRINCIPAL
-    # ======================================================
     st.markdown("## 🗂️ Control agendas")
 
     # ======================================================
@@ -1487,7 +1131,115 @@ with tab4:
                 use_container_width=True
             )
             st.error(f"🚨 TOTAL ALERTAS: {len(df_alerta)}")
-with tab5:
+
+
+# ===================================================
+# ✅ TAB — SEGUIMIENTO ADICIONALES
+# ===================================================
+with tab_adicionales:
+    st.subheader("🏭 Seguimiento de Adicionales")
+
+    # --- CONFIGURACIÓN DE PERSISTENCIA EN GITHUB ---
+    token_ad = st.secrets["github"]["token"]
+    repo_ad = st.secrets["github"]["repo"]
+    branch_ad = st.secrets["github"].get("branch", "main")
+    nombre_archivo_git = "PROGRAMACION.xlsx"
+
+    # --- SECCIÓN PARA ACTUALIZAR EL ARCHIVO (Sincronizado con GitHub) ---
+    with st.expander("⬆️ Actualizar Base de Datos de Programación"):
+        archivo_nuevo = st.file_uploader(
+            "Sube el nuevo archivo PROGRAMACION.xlsx para actualizar el dashboard global",
+            type=["xlsx", "xls"],
+            key="uploader_adicionales_github"
+        )
+        if st.button("🚀 Guardar y compartir con el equipo", key="btn_subir_adicionales"):
+            if archivo_nuevo is not None:
+                contenido_bin = archivo_nuevo.read()
+                contenido_b64_ad = base64.b64encode(contenido_bin).decode("utf-8")
+                
+                url_ad = f"https://api.github.com/repos/{repo_ad}/contents/{nombre_archivo_git}"
+                headers_ad = {"Authorization": f"Bearer {token_ad}", "Accept": "application/vnd.github+json"}
+                
+                # Obtener el SHA actual para permitir el reemplazo (evita conflictos de versión)
+                resp_get = requests.get(url_ad, headers=headers_ad)
+                sha_ad = resp_get.json().get("sha") if resp_get.status_code == 200 else None
+                
+                payload_ad = {
+                    "message": "Actualización global de PROGRAMACION.xlsx desde Dashboard",
+                    "content": contenido_b64_ad,
+                    "branch": branch_ad
+                }
+                if sha_ad: payload_ad["sha"] = sha_ad
+                
+                resp_put = requests.put(url_ad, headers=headers_ad, json=payload_ad)
+                if resp_put.status_code in (200, 201):
+                    # --- ACTUALIZAR METADATA DE PROGRAMACIÓN ---
+                    info_p = {
+                        "ultima_actualizacion": datetime.datetime.now(TZ_UTC).strftime("%Y-%m-%d %H:%M:%S"),
+                        "usuario_actualizo": st.session_state.usuario
+                    }
+                    
+                    contenido_info_p_b64 = base64.b64encode(
+                        json.dumps(info_p, indent=2).encode("utf-8")
+                    ).decode("utf-8")
+                    
+                    url_info_p = f"https://api.github.com/repos/{repo_ad}/contents/PROGRAMACION_INFO.json"
+                    r_info_p = requests.get(url_info_p, headers=headers_ad)
+                    sha_info_p = r_info_p.json().get("sha") if r_info_p.status_code == 200 else None
+                    
+                    payload_info_p = {"message": "Actualización de PROGRAMACION_INFO.json", "content": contenido_info_p_b64, "branch": branch_ad}
+                    if sha_info_p: payload_info_p["sha"] = sha_info_p
+                    requests.put(url_info_p, headers=headers_ad, json=payload_info_p)
+                    
+                    st.success("✅ Archivo guardado correctamente en la nube. Ahora todos los usuarios verán esta versión.")
+                    st.cache_data.clear() # Limpiar caché para forzar la lectura del nuevo archivo
+                    st.rerun()
+                else:
+                    st.error(f"❌ Error al sincronizar con GitHub: {resp_put.text}")
+            else:
+                st.warning("⚠️ Por favor selecciona un archivo antes de intentar guardar.")
+
+    # --- CARGA DEL ARCHIVO DESDE GITHUB (Datos compartidos) ---
+    df_p, _ = fetch_github_excel(repo_ad, nombre_archivo_git, token_ad, branch_ad)
+    
+    # Procesamiento cacheado para mayor velocidad
+    df_p = process_adicionales_data(df_p)
+
+    if not df_p.empty:
+        # --- FILTRO DE SEDE (CARGUE) ---
+        if "cargue" in df_p.columns:
+            sedes_raw = sorted(df_p["cargue"].astype(str).unique().tolist())
+            sedes_opciones = ["TODAS"] + sedes_raw
+            sedes_sel = st.selectbox("📍 Seleccionar Sede (Cargue):", sedes_opciones, key="filtro_sede_adicionales")
+            
+            if sedes_sel != "TODAS":
+                df_p = df_p[df_p["cargue"].astype(str) == sedes_sel]
+
+        # Selección de columnas y visualización (Fuera del bloque 'if cargue' para mayor robustez)
+        cols_req = ["contrato", "nombre_inspector", "direccion barrio", "codigo_tipo_trabajo", "cargue", "dias de asignacion"]
+        cols_final = [c for c in cols_req if c in df_p.columns]
+        
+        def color_semaforo(row):
+            # Verificación segura de la existencia de la columna calculada
+            if "dias de asignacion" not in row:
+                return [""] * len(row)
+            dias = row["dias de asignacion"]
+            if dias < 3:
+                return ["background-color: #d4edda; color: #155724"] * len(row)  # Verde
+            elif dias == 3:
+                return ["background-color: #fff3cd; color: #856404"] * len(row)  # Amarillo
+            else:
+                return ["background-color: #f8d7da; color: #721c24"] * len(row)  # Rojo
+
+        st.dataframe(df_p[cols_final].style.apply(color_semaforo, axis=1), use_container_width=True, hide_index=True)
+    else:
+        st.info("ℹ️ No hay un archivo de programación activo. Utiliza el panel superior para subir 'PROGRAMACION.xlsx'.")
+
+
+# ===================================================
+# ✅ TAB — ÓRDENES ASIGNADAS
+# ===================================================
+with tab_asignadas:
     st.markdown("## 📌 Órdenes ASIGNADAS")
 
     # ===================================================
@@ -1623,27 +1375,10 @@ with tab5:
     st.plotly_chart(fig, use_container_width=True)
 
 
-    # ===================================================
-    df_sst = df_bitacora_base.copy()
-
-
-    # ---------------------------------------------------
-    # ✅ TAB 6 — SST (Placeholder logic)
-    # ---------------------------------------------------
-with tab6:
-    st.subheader("🦺 Seguridad y Salud en el Trabajo")
-    st.info("Visualización de registros SST operativos.")
-    # Filtro insensible a mayúsculas para asegurar que se encuentre la información
-    df_sst_view = df_bitacora_base[df_bitacora_base["grupo"].astype(str).str.upper().str.contains("SST", na=False)]
-    if not df_sst_view.empty:
-        st.dataframe(df_sst_view, use_container_width=True, hide_index=True)
-    else:
-        st.warning("⚠️ No se encontraron registros con el grupo 'SST' en la bitácora.")
-
 # ===================================================
-# ✅ TAB_INV — INVENTARIO V2
+# ✅ TAB — INVENTARIO V2
 # ===================================================
-with tab_inv:
+with tab_inv_v2:
     # --- ESTILOS INSPIRACIÓN GOOGLE DRIVE ---
     st.markdown("""
         <style>
@@ -2017,58 +1752,6 @@ with tab_inv:
                                         st.error(f"❌ Error al guardar el catálogo en GitHub: {resp_cat.text}")
             else:
                 st.info("No hay ítems configurados para manejar tallas en el catálogo.")
-
-# ===================================================
-# ✅ TAB 7 — SEGUIMIENTO ADICIONALESs
-# ===================================================
-with tab7:
-    st.subheader("🏭 Seguimiento de Adicionales")
-
-    # --- CONFIGURACIÓN DE PERSISTENCIA EN GITHUB ---
-    token_ad = st.secrets["github"]["token"]
-    repo_ad = st.secrets["github"]["repo"]
-    branch_ad = st.secrets["github"].get("branch", "main")
-    nombre_archivo_git = "PROGRAMACION.xlsx"
-
-    # --- SECCIÓN PARA ACTUALIZAR EL ARCHIVO (Sincronizado con GitHub) ---
-    with st.expander("⬆️ Actualizar Base de Datos de Programación"):
-        archivo_nuevo = st.file_uploader(
-            "Sube el nuevo archivo PROGRAMACION.xlsx para actualizar el dashboard global",
-            type=["xlsx", "xls"],
-            key="uploader_adicionales_github"
-        )
-        if st.button("🚀 Guardar y compartir con el equipo", key="btn_subir_adicionales"):
-            if archivo_nuevo is not None:
-                contenido_bin = archivo_nuevo.read()
-                contenido_b64_ad = base64.b64encode(contenido_bin).decode("utf-8")
-                
-                url_ad = f"https://api.github.com/repos/{repo_ad}/contents/{nombre_archivo_git}"
-                headers_ad = {"Authorization": f"Bearer {token_ad}", "Accept": "application/vnd.github+json"}
-                
-                # Obtener el SHA actual para permitir el reemplazo (evita conflictos de versión)
-                resp_get = requests.get(url_ad, headers=headers_ad)
-                sha_ad = resp_get.json().get("sha") if resp_get.status_code == 200 else None
-                
-                payload_ad = {
-                    "message": "Actualización global de PROGRAMACION.xlsx desde Dashboard",
-                    "content": contenido_b64_ad,
-                    "branch": branch_ad
-                }
-                if sha_ad: payload_ad["sha"] = sha_ad
-                
-                resp_put = requests.put(url_ad, headers=headers_ad, json=payload_ad)
-                if resp_put.status_code in (200, 201):
-                    # --- ACTUALIZAR METADATA DE PROGRAMACIÓN ---
-                    info_p = {
-                        "ultima_actualizacion": datetime.datetime.now(TZ_UTC).strftime("%Y-%m-%d %H:%M:%S"),
-                        "usuario_actualizo": st.session_state.usuario
-                    }
-                    
-                    contenido_info_p_b64 = base64.b64encode(
-                        json.dumps(info_p, indent=2).encode("utf-8")
-                    ).decode("utf-8")
-                    
-                    url_info_p = f"https://api.github.com/repos/{repo_ad}/contents/PROGRAMACION_INFO.json"
                     r_info_p = requests.get(url_info_p, headers=headers_ad)
                     sha_info_p = r_info_p.json().get("sha") if r_info_p.status_code == 200 else None
                     
