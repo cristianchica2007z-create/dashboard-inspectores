@@ -995,9 +995,16 @@ with tab_agendas:
             .agendas-sidebar {
                 background-color: #1e3a8a;
                 color: white;
-                padding: 25px 15px;
-                border-radius: 15px;
-                min-height: 50vh;
+                padding: 25px 15px 5px 15px;
+                border-radius: 15px 15px 0 0;
+                margin-bottom: 0;
+            }
+            /* Fusionar el menú con el cuadro azul superior */
+            div[data-testid="stRadio"]:has(input[id*="nav_agendas_radio"]) {
+                background-color: #1e3a8a;
+                padding: 0 15px 25px 15px;
+                border-radius: 0 0 15px 15px;
+                margin-top: -1rem;
             }
             .sidebar-header-age {
                 border-bottom: 1px solid rgba(255,255,255,0.2);
