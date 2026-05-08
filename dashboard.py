@@ -111,9 +111,9 @@ if st.session_state.usuario is None:
     # Estilos CSS para mejorar la interfaz de inicio de sesión y centrar los elementos
     st.markdown("""
         <style>
-        /* Fondo con gradiente moderno */
+        /* Fondo blanco puro para limpieza visual */
         .stApp {
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            background-color: #ffffff;
         }
         /* Centrado de los mensajes de error y botones */
         div[data-testid="stVerticalBlock"] > div:has(div.stButton) {
@@ -1803,9 +1803,12 @@ with tab7:
 
         # --- FILTRO DE SEDE (CARGUE) ---
         if "cargue" in df_p.columns:
-            sedes_disponibles = sorted(df_p["cargue"].astype(str).unique())
-            sedes_sel = st.multiselect("📍 Seleccionar Sede (Cargue):", sedes_disponibles, default=sedes_disponibles, key="filtro_sede_adicionales")
-            df_p = df_p[df_p["cargue"].astype(str).isin(sedes_sel)]
+            sedes_raw = sorted(df_p["cargue"].astype(str).unique().tolist())
+            sedes_opciones = ["TODAS"] + sedes_raw
+            sedes_sel = st.selectbox("📍 Seleccionar Sede (Cargue):", sedes_opciones, key="filtro_sede_adicionales")
+            
+            if sedes_sel != "TODAS":
+                df_p = df_p[df_p["cargue"].astype(str) == sedes_sel]
 
         # Filtrar por tipos de trabajo específicos solicitados
         codigos_validos = ["12163", "12164", "10793", "12170", "10842", "10772", "10445"]
