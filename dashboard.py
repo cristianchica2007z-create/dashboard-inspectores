@@ -990,6 +990,44 @@ with tab_diario:
 # ✅ TAB — SEGUIMIENTO AGENDAS
 # =================================================
 with tab_agendas:
+    st.markdown("""
+        <style>
+            .agendas-sidebar {
+                background-color: #1e3a8a;
+                color: white;
+                padding: 25px 15px;
+                border-radius: 15px;
+                min-height: 50vh;
+            }
+            .sidebar-header-age {
+                border-bottom: 1px solid rgba(255,255,255,0.2);
+                margin-bottom: 20px;
+                padding-bottom: 15px;
+            }
+            /* Estilizar el radio de navegación de agendas */
+            div[data-testid="stRadio"] > label {
+                display: none; 
+            }
+            div[data-testid="stRadio"] div[role="radiogroup"] > label {
+                background-color: rgba(255,255,255,0.05);
+                color: white !important;
+                padding: 10px 15px;
+                border-radius: 8px;
+                margin-bottom: 8px;
+                transition: all 0.3s;
+                border: 1px solid transparent;
+            }
+            div[data-testid="stRadio"] div[role="radiogroup"] > label:hover {
+                background-color: rgba(255,255,255,0.15);
+            }
+            div[data-testid="stRadio"] div[role="radiogroup"] > label[data-baseweb="radio"][aria-checked="true"] {
+                background-color: white !important;
+                color: #1e3a8a !important;
+                font-weight: bold;
+            }
+        </style>
+    """, unsafe_allow_html=True)
+
     # ======================================================
     # TÍTULO PRINCIPAL
     st.markdown("## 🗂️ Control agendas")
@@ -1041,9 +1079,27 @@ with tab_agendas:
 
             columnas_base = ["inspector", "contrato", "direccion", "estado", "fecha de visita", "localidad", "detalle de tarea", "estado_alerta"]
 
-            t_fin, t_prox, t_pen = st.tabs(["✅ Finalizadas", "⏳ Próximas", "🚨 Pendientes"])
+            # --- LAYOUT CON MENÚ LATERAL ---
+            col_nav_age, col_main_age = st.columns([1.2, 4])
 
-            with t_fin:
+            with col_nav_age:
+                st.markdown(f"""
+                    <div class="agendas-sidebar">
+                        <div class="sidebar-header-age">
+                            <h3 style='color: white; margin:0;'>ESTADO AGENDAS</h3>
+                            <p style='color: #cbd5e1; font-size: 0.8rem; margin:0;'>Filtros de seguimiento</p>
+                        </div>
+                    </div>
+                """, unsafe_allow_html=True)
+                
+                opcion_age = st.radio(
+                    "Navegación Agendas",
+                    ["✅ Finalizadas", "⏳ Próximas", "🚨 Pendientes"],
+                    key="nav_agendas_radio"
+                )
+
+            with col_main_age:
+              if opcion_age == "✅ Finalizadas":
                 st.markdown("### ✅ Agendas finalizadas")
                 zonas_sel = []
                 with st.expander("Seleccionar Zona"):
@@ -1076,7 +1132,7 @@ with tab_agendas:
                 else:
                     st.dataframe(df_final[columnas_base[:-1] + ["inicio_tarea"]].sort_values("fecha de visita"), use_container_width=True)
 
-            with t_prox:
+              elif opcion_age == "⏳ Próximas":
                 st.markdown("### ⏳ Agendas próximas (no iniciadas)")
                 df_prox = df[
                     (df["estado"].str.upper().str.contains("ASIGNAD", na=False)) & 
@@ -1088,7 +1144,7 @@ with tab_agendas:
                 else:
                     st.dataframe(df_prox[columnas_base].sort_values("fecha de visita"), use_container_width=True)
 
-            with t_pen:
+              elif opcion_age == "🚨 Pendientes":
                 st.markdown("### 🚨 Agendas en ALERTA")
                 df_alerta = df[(df["estado"].str.upper().str.contains("ASIGNAD", na=False)) & (df["prioridad"].str.upper().isin(["ALTA", "CRITICA"])) & (df["estado_alerta"] == "ALERTA")].copy()
                 if df_alerta.empty:
@@ -1098,67 +1154,6 @@ with tab_agendas:
                     st.error(f"🚨 TOTAL ALERTAS: {len(df_alerta)}")
     else:
         st.info("No se pudo cargar la bitácora desde GitHub para agendas.")
-
-    # ======================================================
-    # ⏳ PRÓXIMAS (NO INICIADAS)
-    # ======================================================
-    with t_prox:
-        st.markdown("### ⏳ Agendas próximas (no iniciadas)")
-
-        zonas_sel = []
-        with st.expander("Seleccionar Zona"):
-            for z in grupos_validos:
-                if st.checkbox(z, value=True, key=f"prox_zona_{z}"):
-                    zonas_sel.append(z)
-
-        df_prox = df[
-            (df["estado"].str.upper().str.contains("ASIGNAD", na=False)) &
-            (df["fecha de ejecucion"].isna()) &
-            (df["fecha de visita"] > ahora_colombia)
-        ].copy()
-
-        if zonas_sel:
-            df_prox = df_prox[df_prox["grupo"].isin(zonas_sel)]
-
-        if df_prox.empty:
-            st.info("✅ No hay agendas próximas.")
-        else:
-            st.dataframe(
-                df_prox[columnas_base].sort_values("fecha de visita"),
-                use_container_width=True
-            )
-
-    # ======================================================
-    # 🚨 PENDIENTES (ALERTAS REALES)
-    # ======================================================
-    with t_pen:
-        st.markdown("### 🚨 Agendas en ALERTA")
-
-        zonas_sel = []
-        with st.expander("Seleccionar Zona"):
-            for z in grupos_validos:
-                if st.checkbox(z, value=True, key=f"pen_zona_{z}"):
-                    zonas_sel.append(z)
-
-        df_alerta = df[
-            (df["estado"].str.upper().str.contains("ASIGNAD", na=False)) &
-            (df["prioridad"].str.upper().isin(["ALTA", "CRITICA"])) &
-            (df["estado_alerta"] == "ALERTA")
-        ].copy()
-
-        if zonas_sel:
-            df_alerta = df_alerta[df_alerta["grupo"].isin(zonas_sel)]
-
-        if df_alerta.empty:
-            st.info("✅ No hay agendas en ALERTA para la zona seleccionada.")
-        else:
-            st.dataframe(
-                df_alerta[columnas_base].sort_values("fecha de visita"),
-                use_container_width=True
-            )
-            st.error(f"🚨 TOTAL ALERTAS: {len(df_alerta)}")
-
-
 # ===================================================
 # ✅ TAB — SEGUIMIENTO ADICIONALES
 # ===================================================
