@@ -746,6 +746,9 @@ with tab2:
             ):
                 supervisores_sel.append(sup)
     
+    # Aplicar el filtro de supervisores a los datos
+    df2 = df2[df2["supervisor"].isin(supervisores_sel)]
+    
     # Reemplazado st.stop por condicional
     if not supervisores_sel:
         st.warning("⚠️ Selecciona al menos un supervisor para ver datos.")
@@ -764,7 +767,7 @@ with tab2:
         default=inspectores_disponibles
     )
 
-    if inspectores_sel and not df2.empty:
+    if not df2.empty:
         df2 = df2[df2["inspector"].isin(inspectores_sel)]
 
 # ===================================================
