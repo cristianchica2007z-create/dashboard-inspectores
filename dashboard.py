@@ -69,21 +69,21 @@ st.markdown("""
     /* Estilo de Tarjetas Profesionales para KPIs */
     .metric-card {
         background-color: #ffffff;
-        padding: 1.5rem;
-        border-radius: 12px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        border-left: 5px solid #1e3a8a;
-        margin-bottom: 1rem;
+        padding: 0.6rem 1rem;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        border-left: 4px solid #1e3a8a;
+        margin-bottom: 0.5rem;
     }
     .metric-label {
         color: #64748b;
-        font-size: 0.85rem;
+        font-size: 0.7rem;
         font-weight: 700;
         text-transform: uppercase;
     }
     .metric-value {
         color: #1e3a8a;
-        font-size: 1.75rem;
+        font-size: 1.3rem;
         font-weight: 800;
         margin-top: 5px;
     }
@@ -863,6 +863,7 @@ with tab_diario:
             df_styled,
             use_container_width=True,
             hide_index=True,
+            height=500,
             column_config={
                 "porcentaje_efectividad": st.column_config.NumberColumn(
                     "Efectividad %",
