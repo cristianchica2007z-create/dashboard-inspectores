@@ -1801,6 +1801,12 @@ with tab7:
         # Normalizar nombres de columnas para facilitar la búsqueda
         df_p.columns = df_p.columns.str.strip().str.lower()
 
+        # --- FILTRO DE SEDE (CARGUE) ---
+        if "cargue" in df_p.columns:
+            sedes_disponibles = sorted(df_p["cargue"].astype(str).unique())
+            sedes_sel = st.multiselect("📍 Seleccionar Sede (Cargue):", sedes_disponibles, default=sedes_disponibles, key="filtro_sede_adicionales")
+            df_p = df_p[df_p["cargue"].astype(str).isin(sedes_sel)]
+
         # Filtrar por tipos de trabajo específicos solicitados
         codigos_validos = ["12163", "12164", "10793", "12170", "10842", "10772", "10445"]
         if "codigo_tipo_trabajo" in df_p.columns:
@@ -1827,7 +1833,7 @@ with tab7:
             )
 
             # Selección de columnas solicitadass
-            cols_req = ["contrato", "nombre_inspector", "direccion barrio","codigo_tipo_trabajo", "dias de asignacion"]
+            cols_req = ["contrato", "nombre_inspector", "direccion barrio","codigo_tipo_trabajo", "cargue", "dias de asignacion"]
             cols_final = [c for c in cols_req if c in df_p.columns]
             
             def color_semaforo(row):
