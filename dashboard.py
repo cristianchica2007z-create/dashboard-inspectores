@@ -1381,29 +1381,54 @@ with tab_asignadas:
 with tab_inv_v2:
     st.markdown("""
         <style>
-            .inv-sidebar {
-                background-color: #f8f9fa;
-                padding: 1.5rem;
+            /* Contenedor principal del menú lateral */
+            .inv-menu-container {
+                background-color: #f8f9fa; /* Fondo claro */
                 border-radius: 10px;
-                border-left: 6px solid #1e3a8a;
                 box-shadow: 2px 2px 10px rgba(0,0,0,0.05);
-                height: 100%;
+                padding: 1rem;
+                height: 100%; /* Ocupa toda la altura disponible */
             }
-            .inv-nav-header {
-                color: #1e3a8a;
-                font-weight: 700;
-                font-size: 1.1rem;
-                margin-bottom: 15px;
-                text-transform: uppercase;
-                letter-spacing: 1px;
-                display: block;
+
+            /* Estilo para el expander que actúa como menú */
+            .stExpander {
+                border-left: 6px solid #1e3a8a; /* Barra de color distintiva */
+                background-color: #e9ecef; /* Fondo del encabezado del expander */
+                border-radius: 8px;
+                margin-bottom: 10px;
+                transition: all 0.3s ease-in-out; /* Transición suave */
             }
+            .stExpander:hover {
+                background-color: #dee2e6; /* Cambio de color al pasar el mouse */
+            }
+
+            /* Estilo del texto del encabezado del expander */
+            .stExpander > div:first-child > div:first-child > div:first-child {
+                color: #1e3a8a; /* Color del texto del encabezado */
+                font-weight: 600;
+                padding: 10px 15px;
+                font-size: 1rem;
+            }
+
+            /* Estilo del contenido del expander (los radio buttons) */
+            .stExpander > div:last-child {
+                padding-top: 10px;
+                padding-bottom: 10px;
+                padding-left: 15px;
+                padding-right: 15px;
+                background-color: white; /* Fondo del contenido */
+                border-bottom-left-radius: 8px;
+                border-bottom-right-radius: 8px;
+            }
+
+            /* Estilo para las etiquetas de sección dentro del contenido principal */
             .section-label {
-                font-weight: 500;
-                color: #495057;
+                font-weight: 600;
+                color: #343a40;
                 margin-bottom: 15px;
-                font-size: 1.2rem;
+                font-size: 1.3rem;
             }
+
         </style>
     """, unsafe_allow_html=True)
 
@@ -1447,16 +1472,15 @@ with tab_inv_v2:
     col_nav, col_main = st.columns([1, 4]) 
 
     with col_nav:
-        st.markdown('<div class="inv-sidebar">', unsafe_allow_html=True)
-        st.markdown('<span class="inv-nav-header">📦 Inventario</span>', unsafe_allow_html=True)
-        with st.expander("📂 NAVEGACIÓN", expanded=True):
+        st.markdown('<div class="inv-menu-container">', unsafe_allow_html=True)
+        with st.expander("📂 MENÚ DE INVENTARIO", expanded=True): # Changed header text
             opcion_inv = st.radio(
                 "Seleccione una acción:",
                 ["📊 Stock Actual", "➕ Registrar Entrada", "➖ Registrar Salida", "📜 Historial", "⚙️ Configuración Catálogo"],
                 key="inv_menu_radio",
                 label_visibility="collapsed"
             )
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True) # Close the inv-menu-container
 
     with col_main:
         # --- FUNCIÓN DE CÁLCULO DE STOCK ---
