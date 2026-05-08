@@ -1128,7 +1128,7 @@ with tab_agendas:
                 )
 
             with col_main_age:
-              if opcion_age == "✅ Finalizadas":
+              if opcion_age == "✅ Agendas Finalizadas":
                 st.markdown("### ✅ Agendas finalizadas")
                 zonas_sel = []
                 with st.expander("Seleccionar Zona"):
@@ -1161,7 +1161,7 @@ with tab_agendas:
                 else:
                     st.dataframe(df_final[columnas_base[:-1] + ["inicio_tarea"]].sort_values("fecha de visita"), use_container_width=True)
 
-              elif opcion_age == "⏳ Próximas":
+              elif opcion_age == "⏳ Próximas Agendas":
                 st.markdown("### ⏳ Agendas próximas (no iniciadas)")
                 df_prox_raw = df[
                     (df["estado"].str.upper().str.contains("ASIGNAD", na=False)) & 
