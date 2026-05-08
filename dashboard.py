@@ -812,127 +812,7 @@ with tab_diario:
         .reset_index()
     )
 
-    # ✅ KPI: PROMEDIO TIEMPO DE RECORRIDO (GENERAL)
-    prom_recorrido_global = (
-        td_to_str(df2["tiempo_recorrido_td"].mean())
-        if not df2["tiempo_recorrido_td"].dropna().empty else "—"
-    )
-
-    # ---------------------------------------------------
-    # PREPARACIÓN DE LA TABLA ESTILIZADA
-    # ---------------------------------------------------
     df_tabla = df_agrupado.merge(resumen, on="inspector", how="left")
-    df_tabla = df_tabla.fillna({
-        "hora_inicio": "—", "hora_final": "—", "localidad": "—",
-        "estado": "SIN ACTIVIDAD", "total_ordenes": 0, "ordenes_efectivas": 0,
-        "ordenes_sin_recorrido": 0, "porcentaje_efectividad": 0,
-        "promedio_tiempo_tarea": "—", "promedio_tiempo_recorrido": "—"
-    })
-
-    columnas_tabla = [
-        "inspector", "supervisor", "fecha", "hora_inicio", "hora_final",
-        "localidad", "estado", "total_ordenes", "ordenes_efectivas",
-        "ordenes_sin_recorrido", "porcentaje_efectividad",
-        "promedio_tiempo_tarea", "promedio_tiempo_recorrido"
-    ]
-    columnas_disponibles = [c for c in columnas_tabla if c in df_tabla.columns]
-
-    def color_estado(val):
-        if val == "Puntual":
-            return 'background-color: #d4edda; color: #155724;'
-        elif "tarde" in str(val).lower():
-            return 'background-color: #fff3cd; color: #856404;'
-        return ''
-
-    df_styled = (
-        df_tabla[columnas_disponibles]
-        .style.set_properties(**{'text-align': 'center'})
-        .set_properties(subset=['inspector'], **{'text-align': 'left'})
-        .map(color_estado, subset=['estado'])
-    )
-
-    # ---------------------------------------------------
-    # ✅ NUEVO LAYOUT: TABLA (IZQ) Y KPIs (DER)
-    # ---------------------------------------------------
-    st.write("")
-    col_tabla_izq, col_kpis_der = st.columns([3, 1])
-
-    with col_tabla_izq:
-        st.markdown("### 📋 Tabla de inspecciones del día")
-        st.dataframe(
-            df_styled,
-            use_container_width=True,
-            hide_index=True,
-            height=500,
-            column_config={
-                "porcentaje_efectividad": st.column_config.NumberColumn(
-                    "Efectividad %",
-                    format="%.1f%%"
-                )
-            }
-        )
-
-    with col_kpis_der:
-        st.markdown("### ⭐ KPIs del día")
-        render_kpi("Promedio inicio", hora_prom_ini, "⏰")
-        render_kpi("Promedio fin", hora_prom_fin, "🕒")
-        render_kpi("Prom. tiempo tarea", tiempo_prom_str, "🕓")
-        render_kpi("Prom. recorrido", prom_recorrido_global, "🚗")
-        render_kpi("Total tareas", total_ordenes, "📋")
-        render_kpi("Efectivas", total_efectivas, "✅")
-        render_kpi("% Efectividad", f"{porcentaje}%", "📈")
-
-    # ---------------------------------------------------
-    # SECCIONES INFERIORES
-    # ---------------------------------------------------
-
-    # ---------------------------------------------------
-    # 📝 INFORME DE DESEMPEÑO DEL DÍA
-    # ---------------------------------------------------
-    st.markdown("### 📝 Informe de Desempeño del Día")
-    with st.container(border=True):
-        h_col1, h_col2 = st.columns(2)
-        
-        if not resumen.empty:
-            # 1, 2 y 3: Basados en el conteo de órdenes
-            best_eff = resumen.loc[resumen["ordenes_efectivas"].idxmax()]
-            worst_eff = resumen.loc[resumen["ordenes_efectivas"].idxmin()]
-            most_no_rec = resumen.loc[resumen["ordenes_sin_recorrido"].idxmax()]
-            
-            with h_col1:
-                st.markdown(f"🏆 **Más órdenes efectivas:** {best_eff['inspector']} ({int(best_eff['ordenes_efectivas'])})")
-                st.markdown(f"📉 **Menos órdenes efectivas:** {worst_eff['inspector']} ({int(worst_eff['ordenes_efectivas'])})")
-                st.markdown(f"🚗 **Más órdenes sin recorrido:** {most_no_rec['inspector']} ({int(most_no_rec['ordenes_sin_recorrido'])})")
-
-            # 4. Inicio mas tarde (Comparación horaria real)
-            df_ini_check = df_agrupado[df_agrupado["hora_inicio"] != "SIN HORA"].copy()
-            late_insp, late_val = "—", "—"
-            if not df_ini_check.empty:
-                df_ini_check["dec"] = df_ini_check["hora_inicio"].apply(hora_to_decimal)
-                row_late = df_ini_check.loc[df_ini_check["dec"].idxmax()]
-                late_insp, late_val = row_late["inspector"], hora_to_string(row_late["hora_inicio"])
-
-            # 5. Promedio recorrido mas extenso
-            avg_rec_series = df2.groupby("inspector")["tiempo_recorrido_td"].mean()
-            max_rec_insp, max_rec_val = "—", "—"
-            if not avg_rec_series.dropna().empty:
-                max_rec_insp = avg_rec_series.idxmax()
-                max_rec_val = td_to_str(avg_rec_series.max())
-
-            # 6. Tiempo promedio tarea mas extenso
-            avg_task_series = df2.loc[df2["efectiva"]].groupby("inspector")["tiempo_tarea_td"].mean()
-            max_task_insp, max_task_val = "—", "—"
-            if not avg_task_series.dropna().empty:
-                max_task_insp = avg_task_series.idxmax()
-                max_task_val = td_to_str(avg_task_series.max())
-
-            with h_col2:
-                st.markdown(f"🕒 **Inicio más tarde:** {late_insp} ({late_val})")
-                st.markdown(f"🛣️ **Promedio de recorrido más extenso:** {max_rec_insp} ({max_rec_val})")
-                st.markdown(f"🕓 **Más tiempo promedio por tarea:** {max_task_insp} ({max_task_val})")
-
-    df_tabla = df_agrupado.merge(resumen, on="inspector", how="left")
-
     df_tabla = df_tabla.fillna({
         "hora_inicio": "—",
         "hora_final": "—",
@@ -945,25 +825,6 @@ with tab_diario:
         "promedio_tiempo_tarea": "—",
         "promedio_tiempo_recorrido": "—"
     })
-
-    columnas_tabla = [
-        "inspector",
-        "supervisor",
-        "fecha",
-        "hora_inicio",
-        "hora_final",
-        "localidad",
-        "estado",
-        "total_ordenes",
-        "ordenes_efectivas",
-        "ordenes_sin_recorrido",
-        "porcentaje_efectividad",
-        "promedio_tiempo_tarea",
-        "promedio_tiempo_recorrido"
-    ]
-
-    # Filtrar solo las que existen para evitar errores
-    columnas_disponibles = [c for c in columnas_tabla if c in df_tabla.columns]
 
     # ✅ KPI: PROMEDIO TIEMPO DE RECORRIDO (GENERAL)
     prom_recorrido_global = (
@@ -987,15 +848,23 @@ with tab_diario:
     with c5: render_kpi("Efectivas", total_efectivas, "✅")
     with c6: render_kpi("% Efectividad", f"{porcentaje}%", "📈")
 
-    st.markdown("### 📋 Tabla de inspecciones del día")
+    # ---------------------------------------------------
+    # PREPARACIÓN DE LA TABLA ESTILIZADA
+    # ---------------------------------------------------
+    columnas_tabla = [
+        "inspector", "supervisor", "fecha", "hora_inicio", "hora_final",
+        "localidad", "estado", "total_ordenes", "ordenes_efectivas",
+        "ordenes_sin_recorrido", "porcentaje_efectividad",
+        "promedio_tiempo_tarea", "promedio_tiempo_recorrido"
+    ]
+    columnas_disponibles = [c for c in columnas_tabla if c in df_tabla.columns]
 
-    # ✅ DEFINIR ESTILOS Y FORMATEO
     def color_estado(val):
-        if val == "Puntual":
-            return 'background-color: #d4edda; color: #155724;' # Verde
-        elif "tarde" in str(val).lower():
-            return 'background-color: #fff3cd; color: #856404;' # Amarillo
+        if val == "Puntual": return 'background-color: #d4edda; color: #155724;'
+        if "tarde" in str(val).lower(): return 'background-color: #fff3cd; color: #856404;'
         return ''
+
+    st.markdown("### 📋 Tabla de inspecciones del día")
 
     # Aplicar estilos: Centrar todo menos inspector y aplicar colores a estado
     df_styled = (
@@ -1016,6 +885,46 @@ with tab_diario:
             )
         }
     )
+
+    # ---------------------------------------------------
+    # 📝 INFORME DE DESEMPEÑO DEL DÍA
+    # ---------------------------------------------------
+    st.markdown("### 📝 Informe de Desempeño del Día")
+    with st.container(border=True):
+        h_col1, h_col2 = st.columns(2)
+        if not resumen.empty:
+            best_eff = resumen.loc[resumen["ordenes_efectivas"].idxmax()]
+            worst_eff = resumen.loc[resumen["ordenes_efectivas"].idxmin()]
+            most_no_rec = resumen.loc[resumen["ordenes_sin_recorrido"].idxmax()]
+            
+            with h_col1:
+                st.markdown(f"🏆 **Más órdenes efectivas:** {best_eff['inspector']} ({int(best_eff['ordenes_efectivas'])})")
+                st.markdown(f"📉 **Menos órdenes efectivas:** {worst_eff['inspector']} ({int(worst_eff['ordenes_efectivas'])})")
+                st.markdown(f"🚗 **Más órdenes sin recorrido:** {most_no_rec['inspector']} ({int(most_no_rec['ordenes_sin_recorrido'])})")
+
+            df_ini_check = df_agrupado[df_agrupado["hora_inicio"] != "SIN HORA"].copy()
+            late_insp, late_val = "—", "—"
+            if not df_ini_check.empty:
+                df_ini_check["dec"] = df_ini_check["hora_inicio"].apply(hora_to_decimal)
+                row_late = df_ini_check.loc[df_ini_check["dec"].idxmax()]
+                late_insp, late_val = row_late["inspector"], hora_to_string(row_late["hora_inicio"])
+
+            avg_rec_series = df2.groupby("inspector")["tiempo_recorrido_td"].mean()
+            max_rec_insp, max_rec_val = "—", "—"
+            if not avg_rec_series.dropna().empty:
+                max_rec_insp = avg_rec_series.idxmax()
+                max_rec_val = td_to_str(avg_rec_series.max())
+
+            avg_task_series = df2.loc[df2["efectiva"]].groupby("inspector")["tiempo_tarea_td"].mean()
+            max_task_insp, max_task_val = "—", "—"
+            if not avg_task_series.dropna().empty:
+                max_task_insp = avg_task_series.idxmax()
+                max_task_val = td_to_str(avg_task_series.max())
+
+            with h_col2:
+                st.markdown(f"🕒 **Inicio más tarde:** {late_insp} ({late_val})")
+                st.markdown(f"🛣️ **Promedio de recorrido más extenso:** {max_rec_insp} ({max_rec_val})")
+                st.markdown(f"🕓 **Más tiempo promedio por tarea:** {max_task_insp} ({max_task_val})")
 
      # ===================================================
  # 🚨 INSPECTORES SIN ACTIVIDAD EN LA FECHA
