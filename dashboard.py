@@ -1570,43 +1570,44 @@ with tab6:
 # ✅ TAB_INV — INVENTARIO V2
 # ===================================================
 with tab_inv:
-    # --- ESTILOS INSPIRACIÓN ADIDAS ---
+    # --- ESTILOS INSPIRACIÓN GOOGLE DRIVE ---
     st.markdown("""
         <style>
-            @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&display=swap');
+            @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
             
-            .adidas-title {
-                font-family: 'Montserrat', sans-serif;
-                font-weight: 900;
-                text-transform: uppercase;
-                font-size: 2.8rem;
-                color: #000;
-                letter-spacing: -2px;
-                margin-bottom: 0px;
-                line-height: 0.9;
+            .drive-title {
+                font-family: 'Roboto', sans-serif;
+                font-weight: 400;
+                font-size: 22px;
+                color: #5f6368;
+                margin-bottom: 20px;
+                display: flex;
+                align-items: center;
+                gap: 12px;
             }
-            .adidas-sub {
-                font-family: 'Montserrat', sans-serif;
-                font-weight: 700;
+            .drive-sub {
+                font-family: 'Roboto', sans-serif;
+                font-weight: 500;
+                font-size: 14px;
+                color: #5f6368;
+                margin-bottom: 15px;
                 text-transform: uppercase;
-                font-size: 1.1rem;
-                border-bottom: 5px solid #000;
-                padding-bottom: 2px;
-                margin-bottom: 25px;
-                display: inline-block;
-                letter-spacing: 1px;
+                letter-spacing: 0.5px;
             }
             .stButton>button {
-                border-radius: 0px !important;
-                border: 2px solid #000 !important;
-                text-transform: uppercase;
-                font-weight: 700;
-                letter-spacing: 1px;
-                transition: all 0.3s;
+                border-radius: 24px !important;
+                border: 1px solid #dadce0 !important;
+                background-color: #ffffff !important;
+                color: #3c4043 !important;
+                font-family: 'Roboto', sans-serif !important;
+                font-weight: 500 !important;
+                padding: 8px 24px !important;
+                box-shadow: 0 1px 2px 0 rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15) !important;
+                transition: background-color 0.2s, box-shadow 0.2s !important;
             }
             .stButton>button:hover {
-                background-color: #000 !important;
-                color: #fff !important;
+                background-color: #f8f9fa !important;
+                box-shadow: 0 1px 3px 0 rgba(60,64,67,0.3), 0 4px 8px 3px rgba(60,64,67,0.15) !important;
             }
         </style>
     """, unsafe_allow_html=True)
@@ -1647,22 +1648,24 @@ with tab_inv:
     if not isinstance(movimientos, list): movimientos = []
     if not isinstance(catalogo, dict) or not catalogo: catalogo = CATALOGO_DEFAULT.copy()
 
-    st.markdown('<h1 class="adidas-title">INVENTARIO V2 //</h1>', unsafe_allow_html=True)
-    st.markdown('<p style="font-weight:700; color:#666; margin-bottom:40px; letter-spacing:2px;">EQUIPAMIENTO TÉCNICO E&C</p>', unsafe_allow_html=True)
+    st.markdown("""
+        <div class="drive-title">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/1/12/Google_Drive_icon_%282020%29.svg" width="32">
+            <span>Mi unidad / Inventario V2</span>
+        </div>
+    """, unsafe_allow_html=True)
 
     # --- UI LAYOUT: SUB-PESTAÑAS A LA IZQUIERDA ---
     col_nav, col_main = st.columns([1, 4]) 
 
     with col_nav:
-        st.markdown('<p class="adidas-sub">ACCIONES</p>', unsafe_allow_html=True)
         opcion_inv = st.radio(
             "Seleccione una acción:",
             ["📊 Stock Actual", "➕ Registrar Entrada", "➖ Registrar Salida", "📜 Historial", "⚙️ Configuración Catálogo"],
-            label_visibility="collapsed",
             key="inv_menu_radio"
         )
         st.markdown("---")
-        st.image("https://www.adidas.co/glass/react/1239c80/assets/img/icon-adidas-logo.svg", width=40)
+        st.caption("Eje Cafetero - Gestión de Activos")
 
     with col_main:
         # --- FUNCIÓN DE CÁLCULO DE STOCK ---
@@ -1685,7 +1688,7 @@ with tab_inv:
             return pd.DataFrame(rows)
 
         if opcion_inv == "📊 Stock Actual":
-            st.markdown('<p class="adidas-sub">DISPONIBILIDAD DE ARTÍCULOS</p>', unsafe_allow_html=True)
+            st.markdown('<p class="drive-sub">Prioridad / Disponibilidad</p>', unsafe_allow_html=True)
             sede_consulta = st.selectbox("📍 SELECCIONAR UBICACIÓN", SEDES_INV, key="inv_sede_stock")
             st.write("")
 
@@ -1700,7 +1703,7 @@ with tab_inv:
                 st.info(f"No hay movimientos registrados para la sede {sede_consulta}.")
 
         elif opcion_inv == "➕ Registrar Entrada":
-            st.markdown('<p class="adidas-sub">REGISTRO DE NUEVO MATERIAL</p>', unsafe_allow_html=True)
+            st.markdown('<p class="drive-sub">Nuevo / Registro de entrada</p>', unsafe_allow_html=True)
             with st.container(border=True): # Contenedor para agrupar el formulario
                 c1, c2, c3 = st.columns(3)
                 m_sede = c1.selectbox("SEDE DESTINO", SEDES_INV, key="entrada_sede")
@@ -1750,7 +1753,7 @@ with tab_inv:
                         st.error(f"❌ Error al guardar en GitHub: {resp.text}")
 
         elif opcion_inv == "➖ Registrar Salida":
-            st.markdown('<p class="adidas-sub">ASIGNACIÓN Y SALIDA DE EQUIPO</p>', unsafe_allow_html=True)
+            st.markdown('<p class="drive-sub">Nuevo / Asignación de salida</p>', unsafe_allow_html=True)
             with st.container(border=True): # Contenedor para agrupar el formulario
                 c1, c2, c3 = st.columns(3)
                 m_sede = c1.selectbox("SEDE ORIGEN", SEDES_INV, key="salida_sede")
@@ -1818,7 +1821,7 @@ with tab_inv:
                             st.error(f"❌ Error al guardar en GitHub: {resp.text}")
 
         elif opcion_inv == "📜 Historial":
-            st.markdown('<p class="adidas-sub">BITÁCORA DE MOVIMIENTOS RECIENTES</p>', unsafe_allow_html=True)
+            st.markdown('<p class="drive-sub">Recientes / Bitácora</p>', unsafe_allow_html=True)
             if movimientos:
                 df_h = pd.DataFrame(movimientos)
                 # Añadir filtros al historial para que sea más útil
@@ -1840,12 +1843,12 @@ with tab_inv:
                 st.info("No hay movimientos registrados.")
 
         elif opcion_inv == "⚙️ Configuración Catálogo":
-            st.markdown('<p class="adidas-sub">CONFIGURACIÓN DE PRODUCTOS MAESTROS</p>', unsafe_allow_html=True)
+            st.markdown('<p class="drive-sub">Configuración / Maestro</p>', unsafe_allow_html=True)
             
             with st.expander("Ver Catálogo Actual"):
                 st.json(catalogo)
                 
-            st.markdown('<p class="adidas-sub">AÑADIR REFERENCIA AL CATÁLOGO</p>', unsafe_allow_html=True)
+            st.markdown('<p class="drive-sub">Añadir referencia al catálogo</p>', unsafe_allow_html=True)
             with st.container(border=True): # Contenedor para agrupar el formulario
                 with st.form("form_config_cat", clear_on_submit=True):
                     c1, c2 = st.columns(2)
