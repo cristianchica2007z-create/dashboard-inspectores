@@ -87,6 +87,19 @@ st.markdown("""
         font-weight: 800;
         margin-top: 5px;
     }
+    /* Forzar color azul en Pills y controles segmentados seleccionados */
+    div[data-testid="stPills"] button[aria-checked="true"],
+    div[data-testid="stSegmentedControl"] button[aria-checked="true"],
+    div[data-baseweb="tag"] {
+        background-color: #1e3a8a !important;
+        border-color: #1e3a8a !important;
+        color: white !important;
+    }
+    /* Texto blanco en elementos seleccionados */
+    div[data-testid="stPills"] button[aria-checked="true"] p,
+    div[data-testid="stSegmentedControl"] button[aria-checked="true"] p {
+        color: white !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -583,31 +596,26 @@ with tab_diario:
         with col_f1:
             fechas_validas = sorted(df_bitacora["fecha"].dropna().unique())
             fecha_sel = st.selectbox("📅 Fecha de consulta:", fechas_validas)
-            df2 = df_bitacora[df_bitacora["fecha"] == fecha_sel].copy()
+            # Datos base para la fecha seleccionada
+            df_base_fecha = df_bitacora[df_bitacora["fecha"] == fecha_sel].copy()
+
+        # Opciones estables para la fecha elegida
+        opc_sups = sorted(df_base_fecha["supervisor"].unique())
+        opc_insps = sorted(df_base_fecha["inspector"].unique())
 
         with col_f2:
-            supervisores_disponibles = sorted(df2["supervisor"].unique())
-            supervisores_sel = st.pills("👥 Supervisores:", supervisores_disponibles, selection_mode="multi", 
-                                        default=supervisores_disponibles, 
-                                        key=f"pills_sup_{fecha_sel}")
-            if not supervisores_sel:
-                st.warning("⚠️ Selecciona al menos un supervisor.")
-                st.stop()
-            df2 = df2[df2["supervisor"].isin(supervisores_sel)]
+            supervisores_sel = st.pills("👥 Supervisores:", opc_sups, selection_mode="multi", default=opc_sups, key=f"pills_sup_{fecha_sel}")
 
         with col_f3:
-            inspectores_disponibles = sorted(df2["inspector"].unique())
             with st.popover("🔍 Seleccionar Inspectores", use_container_width=True):
-                inspectores_sel = st.multiselect(
-                    "Filtro de inspectores:",
-                    inspectores_disponibles,
-                    default=inspectores_disponibles,
-                    key=f"ms_insp_{fecha_sel}"
-                )
-            if not inspectores_sel:
-                st.warning("⚠️ Selecciona al menos un inspector.")
-                st.stop()
-            df2 = df2[df2["inspector"].isin(inspectores_sel)]
+                inspectores_sel = st.multiselect("Filtro de inspectores:", opc_insps, default=opc_insps, key=f"ms_insp_{fecha_sel}")
+
+        # Aplicación del filtro final
+        if not supervisores_sel or not inspectores_sel:
+            st.warning("⚠️ Selecciona al menos un supervisor e inspector para ver los datos.")
+            st.stop()
+            
+        df2 = df_base_fecha[(df_base_fecha["supervisor"].isin(supervisores_sel)) & (df_base_fecha["inspector"].isin(inspectores_sel))].copy()
 
     # -------------------------------------------
     # ⏱️ TIEMPO DE RECORRIDO (Calculado sobre datos filtrados)
@@ -1362,37 +1370,30 @@ with tab_asignadas:
     # ===================================================
     st.markdown("### 🔎 Filtros")
 
-    # -------- PANEL DE FILTROS TIPO "BOX" --------
+    # -------- PANEL DE FILTROS TIPO "BOX" - LÓGICA ESTABLE --------
     with st.container(border=True):
         col_f1, col_f2, col_f3, col_f4 = st.columns([0.8, 1.2, 1.2, 1])
 
+        # Opciones estables basadas en el conjunto inicial de órdenes
+        opc_grupos = sorted(df_asignadas["grupo"].dropna().unique())
+        opc_estados = sorted(df_asignadas["estado"].dropna().unique())
+        opc_prioridades = sorted(df_asignadas["prioridad"].dropna().unique())
+
         with col_f1:
-            grupos_disponibles = sorted(df_asignadas["grupo"].dropna().unique())
-            grupos_sel = st.pills("📍 Grupo", grupos_disponibles, selection_mode="multi", default=grupos_disponibles, key="tab5_grupo_pills")
-
-        if grupos_sel:
-            df_asignadas = df_asignadas[df_asignadas["grupo"].isin(grupos_sel)]
-            df_finalizados_base = df[df["grupo"].isin(grupos_sel)]
-        else:
-            df_finalizados_base = df
-
+            grupos_sel = st.pills("📍 Grupo", opc_grupos, selection_mode="multi", default=opc_grupos, key="tab5_grupo_pills")
         with col_f2:
-            estados_disponibles = sorted(df_asignadas["estado"].dropna().unique())
-            estados_sel = st.pills("📊 Estado", estados_disponibles, selection_mode="multi", default=estados_disponibles, key="tab5_estado_pills")
-
-        if estados_sel:
-            df_asignadas = df_asignadas[df_asignadas["estado"].isin(estados_sel)]
-
+            estados_sel = st.pills("📊 Estado", opc_estados, selection_mode="multi", default=opc_estados, key="tab5_estado_pills")
         with col_f3:
-            prioridades_disponibles = sorted(df_asignadas["prioridad"].dropna().unique())
-            prioridades_sel = st.pills("⚡ Prioridad", prioridades_disponibles, selection_mode="multi", default=prioridades_disponibles, key="tab5_prio_pills")
-
-        if prioridades_sel:
-            df_asignadas = df_asignadas[df_asignadas["prioridad"].isin(prioridades_sel)]
-
+            prioridades_sel = st.pills("⚡ Prioridad", opc_prioridades, selection_mode="multi", default=opc_prioridades, key="tab5_prio_pills")
         with col_f4:
             ver_por = st.segmented_control("📈 Ver por:", ["Prioridad", "Estado"], default="Prioridad", key="tab5_ver_por_seg")
             col_agrupar = ver_por.lower()
+
+    # Aplicar todos los filtros al final para evitar reinicios de widgets
+    df_finalizados_base = df[df["grupo"].isin(grupos_sel)] if grupos_sel else df
+    if grupos_sel: df_asignadas = df_asignadas[df_asignadas["grupo"].isin(grupos_sel)]
+    if estados_sel: df_asignadas = df_asignadas[df_asignadas["estado"].isin(estados_sel)]
+    if prioridades_sel: df_asignadas = df_asignadas[df_asignadas["prioridad"].isin(prioridades_sel)]
 
     # Identificar inspectores que ya terminaron (Tienen 'Finalizada' y NO tienen carga activa)
     # en los grupos seleccionados para identificar disponibilidad
