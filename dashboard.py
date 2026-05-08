@@ -69,21 +69,21 @@ st.markdown("""
     /* Estilo de Tarjetas Profesionales para KPIs */
     .metric-card {
         background-color: #ffffff;
-        padding: 1.5rem;
+        padding: 0.8rem;
         border-radius: 12px;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         border-left: 5px solid #1e3a8a;
-        margin-bottom: 1rem;
+        margin-bottom: 0.5rem;
     }
     .metric-label {
         color: #64748b;
-        font-size: 0.85rem;
+        font-size: 0.75rem;
         font-weight: 700;
         text-transform: uppercase;
     }
     .metric-value {
         color: #1e3a8a;
-        font-size: 1.75rem;
+        font-size: 1.35rem;
         font-weight: 800;
         margin-top: 5px;
     }
@@ -822,23 +822,24 @@ with tab_diario:
         if not df2["tiempo_recorrido_td"].dropna().empty else "—"
     )
 
-    # ---------------------------------------------------
-    # KPIs EN PANTALLA (ORDEN ORIGINAL)
-    # ---------------------------------------------------
-    st.markdown("## ⭐ KPIs del día")
 
-    c1, c2, c3, c4_kpi = st.columns(4)
-    with c1: render_kpi("Promedio inicio", hora_prom_ini, "⏰")
-    with c2: render_kpi("Promedio fin", hora_prom_fin, "🕒")
-    with c3: render_kpi("Prom. tiempo tarea", tiempo_prom_str, "🕓")
-    with c4_kpi: render_kpi("Prom. recorrido", prom_recorrido_global, "🚗")
+    # ===================================================
+    # ✅ DISEÑO DE PESTAÑA: KPIs IZQUIERDA | TABLA DERECHA
+    # ===================================================
+    col_kpis, col_main_view = st.columns([1, 4])
 
-    c4, c5, c6 = st.columns(3)
-    with c4: render_kpi("Total tareas", total_ordenes, "📋")
-    with c5: render_kpi("Efectivas", total_efectivas, "✅")
-    with c6: render_kpi("% Efectividad", f"{porcentaje}%", "📈")
+    with col_kpis:
+        st.markdown("### ⭐ KPIs")
+        render_kpi("Inicio Prom.", hora_prom_ini, "⏰")
+        render_kpi("Fin Prom.", hora_prom_fin, "🕒")
+        render_kpi("T. Tarea Prom.", tiempo_prom_str, "🕓")
+        render_kpi("Recorrido Prom.", prom_recorrido_global, "🚗")
+        render_kpi("Total Tareas", total_ordenes, "📋")
+        render_kpi("Efectivas", total_efectivas, "✅")
+        render_kpi("% Efectividad", f"{porcentaje}%", "📈")
 
-    # ---------------------------------------------------
+    with col_main_view:
+        # ---------------------------------------------------
     # PREPARACIÓN DE LA TABLA ESTILIZADA
     # ---------------------------------------------------
     columnas_tabla = [
@@ -854,68 +855,68 @@ with tab_diario:
         if "tarde" in str(val).lower(): return 'background-color: #fff3cd; color: #856404;'
         return ''
 
-    st.markdown("### 📋 Tabla de inspecciones del día")
+        st.markdown("### 📋 Tabla de inspecciones del día")
 
-    # Aplicar estilos: Centrar todo menos inspector y aplicar colores a estado
-    df_styled = (
-        df_tabla[columnas_disponibles]
-        .style.set_properties(**{'text-align': 'center'})
-        .set_properties(subset=['inspector'], **{'text-align': 'left'})
-        .map(color_estado, subset=['estado'])
-    )
+        # Aplicar estilos: Centrar todo menos inspector y aplicar colores a estado
+        df_styled = (
+            df_tabla[columnas_disponibles]
+            .style.set_properties(**{'text-align': 'center'})
+            .set_properties(subset=['inspector'], **{'text-align': 'left'})
+            .map(color_estado, subset=['estado'])
+        )
 
-    st.dataframe(
-        df_styled,
-        use_container_width=True,
-        height=800,
-        hide_index=True,
-        column_config={
-            "porcentaje_efectividad": st.column_config.NumberColumn(
-                "Efectividad %",
-                format="%.1f%%"
-            )
-        }
-    )
+        st.dataframe(
+            df_styled,
+            use_container_width=True,
+            height=800,
+            hide_index=True,
+            column_config={
+                "porcentaje_efectividad": st.column_config.NumberColumn(
+                    "Efectividad %",
+                    format="%.1f%%"
+                )
+            }
+        )
 
-    # ---------------------------------------------------
-    # 📝 INFORME DE DESEMPEÑO DEL DÍA
-    # ---------------------------------------------------
-    st.markdown("### 📝 Informe de Desempeño del Día")
-    with st.container(border=True):
-        h_col1, h_col2 = st.columns(2)
-        if not resumen.empty:
-            best_eff = resumen.loc[resumen["ordenes_efectivas"].idxmax()]
-            worst_eff = resumen.loc[resumen["ordenes_efectivas"].idxmin()]
-            most_no_rec = resumen.loc[resumen["ordenes_sin_recorrido"].idxmax()]
-            
-            with h_col1:
-                st.markdown(f"🏆 **Más órdenes efectivas:** {best_eff['inspector']} ({int(best_eff['ordenes_efectivas'])})")
-                st.markdown(f"📉 **Menos órdenes efectivas:** {worst_eff['inspector']} ({int(worst_eff['ordenes_efectivas'])})")
-                st.markdown(f"🚗 **Más órdenes sin recorrido:** {most_no_rec['inspector']} ({int(most_no_rec['ordenes_sin_recorrido'])})")
+        # ---------------------------------------------------
+        # 📝 INFORME DE DESEMPEÑO DEL DÍA
+        # ---------------------------------------------------
+        st.markdown("### 📝 Informe de Desempeño del Día")
+        with st.container(border=True):
+            h_col1, h_col2 = st.columns(2)
+            if not resumen.empty:
+                best_eff = resumen.loc[resumen["ordenes_efectivas"].idxmax()]
+                worst_eff = resumen.loc[resumen["ordenes_efectivas"].idxmin()]
+                most_no_rec = resumen.loc[resumen["ordenes_sin_recorrido"].idxmax()]
+                
+                with h_col1:
+                    st.markdown(f"🏆 **Más órdenes efectivas:** {best_eff['inspector']} ({int(best_eff['ordenes_efectivas'])})")
+                    st.markdown(f"📉 **Menos órdenes efectivas:** {worst_eff['inspector']} ({int(worst_eff['ordenes_efectivas'])})")
+                    st.markdown(f"🚗 **Más órdenes sin recorrido:** {most_no_rec['inspector']} ({int(most_no_rec['ordenes_sin_recorrido'])})")
 
-            df_ini_check = df_agrupado[df_agrupado["hora_inicio"] != "SIN HORA"].copy()
-            late_insp, late_val = "—", "—"
-            if not df_ini_check.empty:
-                df_ini_check["dec"] = df_ini_check["hora_inicio"].apply(hora_to_decimal)
-                row_late = df_ini_check.loc[df_ini_check["dec"].idxmax()]
-                late_insp, late_val = row_late["inspector"], hora_to_string(row_late["hora_inicio"])
+                df_ini_check = df_agrupado[df_agrupado["hora_inicio"] != "SIN HORA"].copy()
+                late_insp, late_val = "—", "—"
+                if not df_ini_check.empty:
+                    df_ini_check["dec"] = df_ini_check["hora_inicio"].apply(hora_to_decimal)
+                    row_late = df_ini_check.loc[df_ini_check["dec"].idxmax()]
+                    late_insp, late_val = row_late["inspector"], hora_to_string(row_late["hora_inicio"])
 
-            avg_rec_series = df2.groupby("inspector")["tiempo_recorrido_td"].mean()
-            max_rec_insp, max_rec_val = "—", "—"
-            if not avg_rec_series.dropna().empty:
-                max_rec_insp = avg_rec_series.idxmax()
-                max_rec_val = td_to_str(avg_rec_series.max())
+                avg_rec_series = df2.groupby("inspector")["tiempo_recorrido_td"].mean()
+                max_rec_insp, max_rec_val = "—", "—"
+                if not avg_rec_series.dropna().empty:
+                    max_rec_insp = avg_rec_series.idxmax()
+                    max_rec_val = td_to_str(avg_rec_series.max())
 
-            avg_task_series = df2.loc[df2["efectiva"]].groupby("inspector")["tiempo_tarea_td"].mean()
-            max_task_insp, max_task_val = "—", "—"
-            if not avg_task_series.dropna().empty:
-                max_task_insp = avg_task_series.idxmax()
-                max_task_val = td_to_str(avg_task_series.max())
+                avg_task_series = df2.loc[df2["efectiva"]].groupby("inspector")["tiempo_tarea_td"].mean()
+                max_task_insp, max_task_val = "—", "—"
+                if not avg_task_series.dropna().empty:
+                    max_task_insp = avg_task_series.idxmax()
+                    max_task_val = td_to_str(avg_task_series.max())
 
-            with h_col2:
-                st.markdown(f"🕒 **Inicio más tarde:** {late_insp} ({late_val})")
-                st.markdown(f"🛣️ **Promedio de recorrido más extenso:** {max_rec_insp} ({max_rec_val})")
-                st.markdown(f"🕓 **Más tiempo promedio por tarea:** {max_task_insp} ({max_task_val})")
+                with h_col2:
+                    st.markdown(f"🕒 **Inicio más tarde:** {late_insp} ({late_val})")
+                    st.markdown(f"🛣️ **Promedio de recorrido más extenso:** {max_rec_insp} ({max_rec_val})")
+                    st.markdown(f"🕓 **Más tiempo promedio por tarea:** {max_task_insp} ({max_task_val})")
 
      # ===================================================
  # 🚨 INSPECTORES SIN ACTIVIDAD EN LA FECHA
