@@ -87,23 +87,29 @@ st.markdown("""
         font-weight: 800;
         margin-top: 5px;
     }
-    /* Personalización de colores para Pills y Segmented Control (Azul E&C)
-       Aseguramos que las píldoras seleccionadas tengan el color azul.
-       Se añade un selector más específico para asegurar la aplicación en todos los contextos. */
-    div[data-testid="stPills"] button[aria-checked="true"] {
-        background-color: #1e3a8a !important;
-        color: white !important;
-        border-color: #1e3a8a !important;
-    }
-    div[data-testid="stContainer"] div[data-testid="stPills"] button[aria-checked="true"] {
-        background-color: #1e3a8a !important;
-        color: white !important;
-        border-color: #1e3a8a !important;
-    }
+    /* Personalización agresiva para Pills y Segmented Control (Azul E&C) */
+    /* 1. Fondo y bordes cuando están seleccionados */
+    div[data-testid="stPills"] button[aria-checked="true"],
     div[data-testid="stSegmentedControl"] button[aria-checked="true"] {
         background-color: #1e3a8a !important;
-        color: white !important;
         border-color: #1e3a8a !important;
+        color: white !important;
+    }
+    /* 2. Forzar color de texto blanco en el párrafo interno de la píldora */
+    div[data-testid="stPills"] button[aria-checked="true"] p,
+    div[data-testid="stSegmentedControl"] button[aria-checked="true"] p {
+        color: white !important;
+    }
+    /* 3. Eliminar el resplandor o borde rojo al hacer clic o tener el foco */
+    div[data-testid="stPills"] button:focus,
+    div[data-testid="stSegmentedControl"] button:focus,
+    div[data-testid="stPills"] button:active {
+        border-color: #1e3a8a !important;
+        box-shadow: 0 0 0 0.2rem rgba(30, 58, 138, 0.25) !important;
+    }
+    /* 4. Tags de multiselect (por si acaso se usan) */
+    span[data-baseweb="tag"] {
+        background-color: #1e3a8a !important;
     }
     </style>
 """, unsafe_allow_html=True)
