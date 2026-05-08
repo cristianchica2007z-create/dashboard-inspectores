@@ -629,7 +629,13 @@ with tab2:
             .str.strip()
         )
 
-        grupos_no_operativos = ["SST-NAL", "SUPERVISIONES", "SUSP-ANT"]
+        # ✅ Restaurada exclusión de grupos no operativos y administrativos
+        grupos_no_operativos = ["SST-NAL", "SUPERVISIONES", "SUSP-ANT", "ADMINISTRATIVO", "SUSPENSIONES", "ADMIN"]
+
+        # Filtrar por grupo y también excluir cierres administrativos de los KPIs
+        if "cierre" in df_bitacora.columns:
+            df_bitacora = df_bitacora[~df_bitacora["cierre"].astype(str).str.upper().str.contains("ADMINISTRATIVO", na=False)]
+
 
         df_bitacora = df_bitacora[
             ~df_bitacora["grupo"].isin(grupos_no_operativos)
@@ -1345,14 +1351,14 @@ with tab4:
                         if st.checkbox(i, value=True, key=f"fin_inicio_{i}"):
                             inicios_sel.append(i)
 
-                df_final = df[df["estado"].str.upper() == "FINALIZADA"].copy()
+                df_final = df[df["estado"].str.upper().str.contains("FINALIZAD", na=False)].copy()
                 if zonas_sel:
                     df_final = df_final[df_final["grupo"].isin(zonas_sel)]
 
                 def evaluar_inicio_tarde(row):
                     if pd.isna(row["fecha de ejecucion"]) or pd.isna(row["fecha de visita"]):
                         return "SIN DATO"
-                    limite = row["fecha de visita"] + pd.Timedelta(minutes=15)
+                    limite = row["fecha de visita"] + pd.Timedelta(minutes=20) # Margen de 20 min
                     return "INICIO TARDE" if row["fecha de ejecucion"] > limite else "INICIO A TIEMPO"
 
                 df_final["inicio_tarea"] = df_final.apply(evaluar_inicio_tarde, axis=1)
@@ -1366,7 +1372,11 @@ with tab4:
 
             with t_prox:
                 st.markdown("### ⏳ Agendas próximas (no iniciadas)")
-                df_prox = df[(df["estado"].str.upper() == "ASIGNADA") & (df["fecha de ejecucion"].isna()) & (df["fecha de visita"] > ahora_colombia)].copy()
+                df_prox = df[
+                    (df["estado"].str.upper().str.contains("ASIGNAD", na=False)) & 
+                    (df["fecha de ejecucion"].isna()) & 
+                    (df["fecha de visita"] > ahora_colombia)
+                ].copy()
                 if df_prox.empty:
                     st.info("✅ No hay agendas próximas.")
                 else:
@@ -1374,7 +1384,7 @@ with tab4:
 
             with t_pen:
                 st.markdown("### 🚨 Agendas en ALERTA")
-                df_alerta = df[(df["estado"].str.upper() == "ASIGNADA") & (df["prioridad"].str.upper() == "ALTA") & (df["estado_alerta"] == "ALERTA")].copy()
+                df_alerta = df[(df["estado"].str.upper().str.contains("ASIGNAD", na=False)) & (df["prioridad"].str.upper().isin(["ALTA", "CRITICA"])) & (df["estado_alerta"] == "ALERTA")].copy()
                 if df_alerta.empty:
                     st.info("✅ No hay agendas en ALERTA.")
                 else:
@@ -1396,7 +1406,7 @@ with tab4:
                     zonas_sel.append(z)
 
         df_prox = df[
-            (df["estado"].str.upper() == "ASIGNADA") &
+            (df["estado"].str.upper().str.contains("ASIGNAD", na=False)) &
             (df["fecha de ejecucion"].isna()) &
             (df["fecha de visita"] > ahora_colombia)
         ].copy()
@@ -1425,8 +1435,8 @@ with tab4:
                     zonas_sel.append(z)
 
         df_alerta = df[
-            (df["estado"].str.upper() == "ASIGNADA") &
-            (df["prioridad"].str.upper() == "ALTA") &
+            (df["estado"].str.upper().str.contains("ASIGNAD", na=False)) &
+            (df["prioridad"].str.upper().isin(["ALTA", "CRITICA"])) &
             (df["estado_alerta"] == "ALERTA")
         ].copy()
 
@@ -1457,8 +1467,8 @@ with tab5:
     if "grupo" in df.columns:
         df["grupo"] = df["grupo"].astype(str).str.upper().str.strip()
 
-        grupos_permitidos = GRUPOS_OPERATIVOS
-        df = df[df["grupo"].isin(grupos_permitidos)]
+        # Filtro más flexible para grupos operativos
+        df = df[df["grupo"].str.contains("INSP-CALDAS|INSP-RIS", na=False)]
 
         # ===================================================
         # VALIDAR COLUMNAS NECESARIAS
