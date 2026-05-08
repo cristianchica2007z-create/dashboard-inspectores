@@ -1363,12 +1363,13 @@ with tab_asignadas:
             st.error(f"❌ Falta la columna requerida: {col}")
 
     # ===================================================
-    # FILTRAR SOLO ÓRDENES ASIGNADAS
+    # FILTRAR ÓRDENES EN PROCESO (Asignadas, En Camino, Iniciadas)
     # ===================================================
+    estados_carga_regex = "Asignad|En Camino|Iniciada"
     df_asignadas = df[
         df["estado"]
         .astype(str)
-        .str.contains("Asignad", case=False, na=False)
+        .str.contains(estados_carga_regex, case=False, na=False)
     ].copy()
 
     if df_asignadas.empty:
@@ -1394,9 +1395,21 @@ with tab_asignadas:
     else:
         df_finalizados_base = df
 
-    # Identificar inspectores que ya terminaron (Tienen 'Finalizada' y NO tienen 'Asignada')
+    # -------- FILTRO POR ESTADO --------
+    estados_disponibles = sorted(df_asignadas["estado"].dropna().unique())
+    estados_sel = []
+
+    with st.expander("Seleccionar Estado", expanded=True):
+        for e in estados_disponibles:
+            if st.checkbox(e, value=True, key=f"tab5_estado_{e}"):
+                estados_sel.append(e)
+
+    if estados_sel:
+        df_asignadas = df_asignadas[df_asignadas["estado"].isin(estados_sel)]
+
+    # Identificar inspectores que ya terminaron (Tienen 'Finalizada' y NO tienen carga activa)
     # en los grupos seleccionados para identificar disponibilidad
-    insp_con_asig = set(df_finalizados_base[df_finalizados_base["estado"].astype(str).str.contains("Asignad", case=False, na=False)]["inspector"].unique())
+    insp_con_asig = set(df_finalizados_base[df_finalizados_base["estado"].astype(str).str.contains(estados_carga_regex, case=False, na=False)]["inspector"].unique())
     insp_con_fin = set(df_finalizados_base[df_finalizados_base["estado"].astype(str).str.contains("Finalizad", case=False, na=False)]["inspector"].unique())
     inspectores_finalizados = insp_con_fin - insp_con_asig
 
@@ -1416,12 +1429,16 @@ with tab_asignadas:
     if df_asignadas.empty:
         st.warning("⚠️ No hay datos con los filtros seleccionados.")
 
+    # Selección de dimensión para la gráfica
+    ver_por = st.radio("Visualizar carga por:", ["Prioridad", "Estado"], horizontal=True, key="tab5_ver_por")
+    col_agrupar = ver_por.lower()
+
     # ===================================================
-    # AGRUPAR POR INSPECTOR Y PRIORIDAD (DATOS REALES)
+    # AGRUPAR POR INSPECTOR Y DIMENSIÓN SELECCIONADA
     # ===================================================
     df_prio = (
         df_asignadas
-        .groupby(["inspector", "prioridad"])
+        .groupby(["inspector", col_agrupar])
         .size()
         .reset_index(name="cantidad")
     )
@@ -1430,24 +1447,22 @@ with tab_asignadas:
     if inspectores_finalizados:
         df_terminados = pd.DataFrame({
             "inspector": list(inspectores_finalizados),
-            "prioridad": "TERMINÓ OBRA",
+            col_agrupar: "TERMINÓ OBRA",
             "cantidad": 0
         })
         df_prio = pd.concat([df_prio, df_terminados], ignore_index=True)
 
     # Ordenar inspectores por carga total
     orden_inspectores = (
-        df_prio.groupby("inspector")["cantidad"]
-        .sum()
-        .sort_values(ascending=False)
-        .index
-        .tolist()
+        df_prio.groupby("inspector")["cantidad"].sum()
+        .sort_values(ascending=False).index.tolist()
     )
 
     # ===================================================
-    # MAPA DE COLORES POR PRIORIDAD
+    # MAPA DE COLORES (Prioridades y Estados)
     # ===================================================
-    color_prioridad = {
+    color_map = {
+        # Prioridades
         "Alta": "#dc3545",        # 🔴 rojo
         "Media": "#ffc107",       # 🟡 amarillo
         "Baja": "#7cd992",        # 🟢 verde claro
@@ -1456,6 +1471,11 @@ with tab_asignadas:
         
         "60 Meses": "#6f42c1",        # 🟣 morado
         "Segunda visita": "#ff8c00",   # 🟠 naranja
+
+        # Estados
+        "Asignada": "#3498db", "En Camino": "#e67e22", "Iniciada": "#9b59b6",
+
+        # Disponibilidad
         "TERMINÓ OBRA": "#28a745"      # 🟢 verde (disponible)
     }
 
@@ -1466,10 +1486,10 @@ with tab_asignadas:
         df_prio,
         y="inspector",
         x="cantidad",
-        color="prioridad",
+        color=col_agrupar,
         orientation="h",
         category_orders={"inspector": orden_inspectores},
-        color_discrete_map=color_prioridad,
+        color_discrete_map=color_map,
         text="cantidad",
         title="Órdenes ASIGNADAS por inspector (según filtros)"
     )
@@ -1483,7 +1503,7 @@ with tab_asignadas:
         barmode="stack",
         xaxis_title="Cantidad de órdenes ASIGNADAS",
         yaxis_title="Inspector",
-        legend_title="Prioridad",
+        legend_title=ver_por,
         height=700
     )
 
