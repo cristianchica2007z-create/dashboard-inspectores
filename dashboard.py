@@ -205,7 +205,7 @@ def process_adicionales_data(df):
     if "codigo_tipo_trabajo" in df.columns:
         df = df[df["codigo_tipo_trabajo"].astype(str).isin(CODIGOS_ADICIONALES)]
         
-    # Cálculo de fechas (heurística)
+    # Cálculo de fechas (heurística).
     posibles_fechas = [
         "fecha de asignacion", "fecha asignacion", "asignacion", "fecha", 
         "fecha cargue", "fecha programacion", "f_asignacion", "fecha_asignacion"
