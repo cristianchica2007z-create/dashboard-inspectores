@@ -1430,8 +1430,8 @@ with tab_asignadas:
     if inspectores_finalizados:
         df_terminados = pd.DataFrame({
             "inspector": list(inspectores_finalizados),
-            "prioridad": ["TERMINÓ OBRA"],
-            "cantidad": [0]
+            "prioridad": "TERMINÓ OBRA",
+            "cantidad": 0
         })
         df_prio = pd.concat([df_prio, df_terminados], ignore_index=True)
 
