@@ -1570,12 +1570,7 @@ with tab6:
 # ✅ TAB_INV — INVENTARIO V2
 # ===================================================
 with tab_inv:
-    st.markdown("# 🏭 Sistema de Gestión de Inventario V2")
-
-    # --- 1. CONSTANTES Y CONFIGURACIÓN ---
-    SEDES_INV = ["CALDAS", "RISARALDA"]
-    RESPONSABLES_INV = ["CRISTIAN CHICA", "JANIER", "JENNY", "CAMILA", "ANDRES", "DANNY"]
-    
+    # --- CONFIGURACIÓN Y CARGA DE DATOS ---
     CATALOGO_DEFAULT = {
         "EPPs": {
             "Monogafas":  {"tallas": False},
@@ -1599,52 +1594,119 @@ with tab_inv:
         },
     }
 
+    SEDES_INV = ["CALDAS", "RISARALDA"]
+    RESPONSABLES_INV = ["CRISTIAN CHICA", "JANIER", "JENNY", "CAMILA", "ANDRES", "DANNY"]
     inv_token = st.secrets["github"]["token"]
     inv_repo  = st.secrets["github"]["repo"]
     inv_branch = st.secrets["github"].get("branch", "main")
 
-    # --- 2. CARGA DE DATOS ---
     movimientos, _ = fetch_github_json(inv_repo, "INVENTARIO_V2.json", inv_token)
     catalogo, _    = fetch_github_json(inv_repo, "CATALOGO_V2.json", inv_token)
+
     if not isinstance(movimientos, list): movimientos = []
     if not isinstance(catalogo, dict) or not catalogo: catalogo = CATALOGO_DEFAULT.copy()
 
-    # --- 3. CÁLCULO DE STOCK DINÁMICO ---
-    def obtener_stock_df(movs_list, sede_filtro):
-        data_stock = {}
-        relevant_movs = [m for m in movs_list if m.get("sede") == sede_filtro]
-        
-        for m in relevant_movs:
-            key = (m["categoria"], m["item"], m.get("talla") or "N/A")
-            if key not in data_stock:
-                data_stock[key] = {"Entradas": 0, "Salidas": 0}
+    # --- UI LAYOUT: SUB-PESTAÑAS A LA IZQUIERDA ---
+    col_nav, col_main = st.columns([1, 4])
+
+    with col_nav:
+        st.markdown("### 🛠️ Menú")
+        opcion_inv = st.radio(
+            "Seleccione una acción:",
+            ["📊 Stock Actual", "🔄 Registrar Movimiento", "📜 Historial", "⚙️ Configuración Catálogo"],
+            label_visibility="collapsed"
+        )
+
+    with col_main:
+        # --- FUNCIÓN DE CÁLCULO DE STOCK ---
+        def obtener_stock_df(movs_list, sede_filtro):
+            data_stock = {}
+            relevant_movs = [m for m in movs_list if m.get("sede") == sede_filtro]
+            for m in relevant_movs:
+                key = (m["categoria"], m["item"], m.get("talla") or "N/A")
+                if key not in data_stock:
+                    data_stock[key] = {"Entradas": 0, "Salidas": 0}
+                if m["tipo"] == "ENTRADA": data_stock[key]["Entradas"] += m["cantidad"]
+                else: data_stock[key]["Salidas"] += m["cantidad"]
+            rows = []
+            for (cat, item, talla), vals in data_stock.items():
+                rows.append({
+                    "Categoría": cat, "Ítem": item, "Talla": talla,
+                    "Entradas": vals["Entradas"], "Salidas": vals["Salidas"],
+                    "Stock": vals["Entradas"] - vals["Salidas"]
+                })
+            return pd.DataFrame(rows)
+
+        if opcion_inv == "📊 Stock Actual":
+            st.subheader("📊 Resumen de Existencias")
+            c1, c2 = st.columns([2, 1])
+            sede_consulta = c1.selectbox("Filtrar por Sede", SEDES_INV, key="inv_sede_stock")
             
-            if m["tipo"] == "ENTRADA":
-                data_stock[key]["Entradas"] += m["cantidad"]
+            df_stock = obtener_stock_df(movimientos, sede_consulta)
+            if not df_stock.empty:
+                st.dataframe(df_stock.sort_values(["Categoría", "Ítem"]), use_container_width=True, hide_index=True)
+                # Alertas de Stock Bajo
+                bajo_stock = df_stock[df_stock["Stock"] <= 3]
+                if not bajo_stock.empty:
+                    st.warning(f"⚠️ Hay {len(bajo_stock)} ítems con stock crítico (≤ 3 unidades)")
             else:
-                data_stock[key]["Salidas"] += m["cantidad"]
-        
-        rows = []
-        for (cat, item, talla), vals in data_stock.items():
-            rows.append({
-                "Categoría": cat,
-                "Ítem": item,
-                "Talla": talla,
-                "Entradas": vals["Entradas"],
-                "Salidas": vals["Salidas"],
-                "Stock": vals["Entradas"] - vals["Salidas"]
-            })
-        return pd.DataFrame(rows)
+                st.info(f"No hay movimientos registrados para la sede {sede_consulta}.")
 
-    # --- 4. INTERFAZ DE USUARIO ---
-    sub_tab1, sub_tab2, sub_tab3, sub_tab4 = st.tabs([
-        "📊 Stock Actual", 
-        "🔄 Registrar Movimiento", 
-        "📜 Historial", 
-        "⚙️ Configuración"
-    ])
-
-    with sub_tab1:
+        elif opcion_inv == "🔄 Registrar Movimiento":
+            st.subheader("🔄 Entrada / Salida de Inventario")
+            
+            # ELIMINAMOS st.form para permitir selectboxes dinámicos que funcionen
+            c1, c2, c3 = st.columns(3)
+            m_tipo = c1.selectbox("Tipo de Movimiento", ["ENTRADA", "SALIDA"])
+            m_sede = c2.selectbox("Sede", SEDES_INV)
+            m_fecha = c3.date_input("Fecha Movimiento")
+            
+            c4, c5 = st.columns(2)
+            m_resp = c4.selectbox("Responsable", RESPONSABLES_INV)
+            m_insp = c5.selectbox("Inspector (Opcional)", ["N/A"] + inspectores_lista)
+            
+            st.divider()
+            
+            # DROPDOWNS DINÁMICOS (Fuera de un form para que refresquen al cambiar)
+            c6, c7, c8, c9 = st.columns([2,2,1,1])
+            cat_sel = c6.selectbox("Categoría", list(catalogo.keys()))
+            
+            # El ítem depende de la categoría seleccionada
+            opciones_items = list(catalogo[cat_sel].keys())
+            item_sel = c7.selectbox("Ítem", opciones_items)
+            
+            talla_sel = "N/A"
+            if catalogo[cat_sel][item_sel]["tallas"]:
+                talla_sel = c8.selectbox("Talla", catalogo[cat_sel][item_sel]["opciones_talla"])
+            else:
+                c8.text_input("Talla", "N/A", disabled=True)
+                
+            m_cant = c9.number_input("Cantidad", min_value=1, step=1)
+            m_obs = st.text_input("Observaciones")
+            
+            if st.button("💾 Registrar Movimiento", type="primary", use_container_width=True):
+                error = False
+                if m_tipo == "SALIDA":
+                    df_current = obtener_stock_df(movimientos, m_sede)
+                    stock_actual = 0
+                    if not df_current.empty:
+                        match = df_current[(df_current["Categoría"] == cat_sel) & 
+                                          (df_current["Ítem"] == item_sel) & 
+                                          (df_current["Talla"] == talla_sel)]
+                        if not match.empty:
+                            stock_actual = match.iloc[0]["Stock"]
+                    
+                    if m_cant > stock_actual:
+                        st.error(f"❌ Stock insuficiente. Disponible: {stock_actual}")
+                        error = True
+                
+                if not error:
+                    nuevo_mov = {
+                        "tipo": m_tipo,
+                        "fecha": str(m_fecha),
+                        "timestamp": datetime.datetime.now(TZ_CO).strftime("%Y-%m-%d %H:%M:%S"),
+                        "sede": m_sede,
+                        "responsable": m
         sede_consulta = st.selectbox("Filtrar por Sede", SEDES_INV, key="inv_sede_stock")
         df_stock = obtener_stock_df(movimientos, sede_consulta)
         
