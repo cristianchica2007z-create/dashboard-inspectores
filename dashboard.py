@@ -1123,7 +1123,7 @@ with tab_agendas:
                 
                 opcion_age = st.radio(
                     "Navegación Agendas",
-                    ["✅ Finalizadas", "⏳ Próximas", "🚨 Pendientes"],
+                    ["✅ Agendas Finalizadas", "⏳ Próximas Agendas", "🚨 Agendas en Alerta"],
                     key="nav_agendas_radio"
                 )
 
@@ -1182,7 +1182,7 @@ with tab_agendas:
                 else:
                     st.dataframe(df_prox[columnas_base].sort_values("fecha de visita"), use_container_width=True)
 
-              elif opcion_age == "🚨 Pendientes":
+              elif opcion_age == "🚨 Agendas en Alerta":
                 st.markdown("### 🚨 Agendas en ALERTA")
                 df_alerta_raw = df[(df["estado"].str.upper().str.contains("ASIGNAD", na=False)) & (df["prioridad"].str.upper().isin(["ALTA", "CRITICA"])) & (df["estado_alerta"] == "ALERTA")].copy()
                 
