@@ -159,7 +159,7 @@ def load_local_bitacora(path):
         except Exception:
             return None
             
-        df.columns = df.columns.str.strip().str.lower()
+        df.columns = [str(c).strip().lower() for c in df.columns]
         
         # Pre-procesamiento de nombres e inspectores
         if "inspector" in df.columns:
@@ -187,7 +187,7 @@ def load_local_bitacora(path):
 def process_adicionales_data(df):
     """Procesa los datos de programación de forma cacheada para evitar lentitud en filtros."""
     if df.empty: return df
-    df.columns = df.columns.str.strip().str.lower()
+    df.columns = [str(c).strip().lower() for c in df.columns]
     
     # Inicializamos la columna para evitar KeyError si no se encuentra una fecha válida
     df["dias de asignacion"] = 0
@@ -1051,7 +1051,7 @@ with tab_agendas:
         # ======================================================
         # NORMALIZAR Y VALIDAR COLUMNAS
         # ======================================================
-        df.columns = df.columns.str.strip().str.lower()
+        df.columns = [str(c).strip().lower() for c in df.columns]
 
         columnas_req = [
             "grupo", "prioridad", "estado",
@@ -1083,7 +1083,7 @@ with tab_agendas:
             # --- CRUCE CON PROGRAMACIÓN (VLOOKUP) PARA HORA AGENDA ---
             df_prog_aux, _ = fetch_github_excel(repo, "PROGRAMACION.xlsx", token)
             if not df_prog_aux.empty:
-                df_prog_aux.columns = df_prog_aux.columns.str.strip().lower()
+                df_prog_aux.columns = [str(c).strip().lower() for c in df_prog_aux.columns]
                 if "contrato" in df_prog_aux.columns and "hora agenda" in df_prog_aux.columns:
                     # Normalizar llaves para el cruce
                     df["contrato"] = df["contrato"].astype(str).str.strip()
