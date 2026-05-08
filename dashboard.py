@@ -574,75 +574,55 @@ with tab_diario:
     # -------------------------------------------
     # FILTRO DE FECHA
     # -------------------------------------------
-    fechas_validas = sorted(df_bitacora["fecha"].dropna().unique())
-    fecha_sel = st.selectbox("Selecciona fecha:", fechas_validas)
+    # -------------------------------------------
+    # ✅ PANEL DE FILTROS COMPACTO (TIPO BOX)
+    # -------------------------------------------
+    with st.container(border=True):
+        col_f1, col_f2, col_f3 = st.columns([1, 1.2, 1.2])
+        
+        with col_f1:
+            fechas_validas = sorted(df_bitacora["fecha"].dropna().unique())
+            fecha_sel = st.selectbox("📅 Fecha de consulta:", fechas_validas)
+            df2 = df_bitacora[df_bitacora["fecha"] == fecha_sel].copy()
 
-    df2 = df_bitacora[df_bitacora["fecha"] == fecha_sel]
+        with col_f2:
+            supervisores_disponibles = sorted(df2["supervisor"].unique())
+            supervisores_sel = st.pills("👥 Supervisores:", supervisores_disponibles, selection_mode="multi", default=supervisores_disponibles, key=f"pills_sup_{fecha_sel}")
+            if not supervisores_sel:
+                st.warning("⚠️ Selecciona al menos un supervisor.")
+                st.stop()
+            df2 = df2[df2["supervisor"].isin(supervisores_sel)]
 
+        with col_f3:
+            inspectores_disponibles = sorted(df2["inspector"].unique())
+            with st.popover("🔍 Seleccionar Inspectores", use_container_width=True):
+                inspectores_sel = st.multiselect(
+                    "Filtro de inspectores:",
+                    inspectores_disponibles,
+                    default=inspectores_disponibles,
+                    key=f"ms_insp_{fecha_sel}"
+                )
+            if not inspectores_sel:
+                st.warning("⚠️ Selecciona al menos un inspector.")
+                st.stop()
+            df2 = df2[df2["inspector"].isin(inspectores_sel)]
 
     # -------------------------------------------
-    # ⏱️ TIEMPO DE RECORRIDO
-    # Diferencia: hora_inicio - hora_inicio_recorrido (por orden)
+    # ⏱️ TIEMPO DE RECORRIDO (Calculado sobre datos filtrados)
     # -------------------------------------------
-
     def calcular_tiempo_recorrido(row):
         hi = row.get("hora inicio_parsed")
         hr = row.get("hora inicio de recorrido_parsed")
-
-        # Si falta cualquiera de las 2 horas, no se puede calcular
         if not isinstance(hi, datetime.time) or not isinstance(hr, datetime.time):
             return pd.NaT
-
         dt_hi = datetime.datetime.combine(datetime.date.today(), hi)
         dt_hr = datetime.datetime.combine(datetime.date.today(), hr)
-
-        # Evitar negativos por datos inconsistentes
         return dt_hi - dt_hr if dt_hi >= dt_hr else pd.NaT
 
-    # Cálculo por orden (si no existe recorrido queda NaT)
     try:
         df2["tiempo_recorrido_td"] = df2.apply(calcular_tiempo_recorrido, axis=1)
     except Exception:
         df2["tiempo_recorrido_td"] = pd.NaT
-
-    # -------------------------------------------
-    # FILTRO DE SUPERVISORES (CHECKLIST TIPO EXCEL ✅)
-    # -------------------------------------------
-    supervisores_disponibles = sorted(df2["supervisor"].unique())
-
-    with st.expander("Seleccionar supervisores", expanded=True):
-        supervisores_sel = []
-        for sup in supervisores_disponibles:
-            if st.checkbox(
-                sup,
-                value=True,
-                key=f"sup_{fecha_sel}_{sup}"
-            ):
-                supervisores_sel.append(sup)
-    
-    # Aplicar el filtro de supervisores a los datos
-    df2 = df2[df2["supervisor"].isin(supervisores_sel)]
-    
-    # Reemplazado st.stop por condicional
-    if not supervisores_sel:
-        st.warning("⚠️ Selecciona al menos un supervisor para ver datos.")
-
-    elif df2.empty:
-        st.warning("⚠️ No hay datos para los supervisores seleccionados.")
-
-    # -------------------------------------------
-    # FILTRO DE INSPECTORES (DEPENDIENTE)
-    # -------------------------------------------
-    inspectores_disponibles = sorted(df2["inspector"].unique())
-
-    inspectores_sel = st.multiselect(
-        "Selecciona inspectores:",
-        inspectores_disponibles,
-        default=inspectores_disponibles
-    )
-
-    if not df2.empty:
-        df2 = df2[df2["inspector"].isin(inspectores_sel)]
 
 # ===================================================
   # ===================================================
