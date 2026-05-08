@@ -87,24 +87,42 @@ st.markdown("""
         font-weight: 800;
         margin-top: 5px;
     }
-    /* Personalización agresiva para Pills y Segmented Control (Azul E&C) */
-    /* 1. Selector universal para botones seleccionados en Pills y Segmented Control */
-    div[data-testid="stPills"] button[aria-checked="true"], 
+    /* PERSONALIZACIÓN EXTREMA PARA ELIMINAR EL ROJO Y USAR AZUL E&C (#1e3a8a) */
+    
+    /* 1. Forzar variables de color global de Streamlit */
+    :root {
+        --st-primary-color: #1e3a8a;
+    }
+
+    /* 2. Pills, Segmented Control y Multiselect seleccionado */
+    div[data-testid="stPills"] button[aria-checked="true"],
     div[data-testid="stSegmentedControl"] button[aria-checked="true"],
-    button[data-baseweb="button"][aria-checked="true"] {
+    div[data-baseweb="tag"],
+    .st-be, .st-bf, .st-bg { 
         background-color: #1e3a8a !important;
         border-color: #1e3a8a !important;
         color: white !important;
     }
-    /* 2. Forzar color de texto blanco en el párrafo interno y hover */
+
+    /* 3. Forzar color de texto blanco en elementos internos */
     div[data-testid="stPills"] button[aria-checked="true"] p,
     div[data-testid="stSegmentedControl"] button[aria-checked="true"] p,
-    button[data-baseweb="button"][aria-checked="true"] p {
+    div[data-baseweb="tag"] span,
+    div[data-baseweb="tag"] p {
         color: white !important;
     }
-    /* 3. Eliminar el resplandor o borde rojo al hacer clic o tener el foco */
-    button[data-baseweb="button"]:focus,
-    button[data-baseweb="button"]:active,
+
+    /* 4. Cambiar el color de los bordes de los contenedores (st.container) a Azul */
+    div[data-testid="stVerticalBlockBorderWrapper"] {
+        border: 1px solid #1e3a8a !important;
+        border-radius: 12px;
+    }
+
+    /* 5. Eliminar resplandor rojo en foco y estados activos */
+    button:focus, 
+    button:active, 
+    [data-baseweb="button"]:focus,
+    [data-baseweb="button"]:active,
     div[aria-checked="true"] > button {
         border-color: #1e3a8a !important;
         box-shadow: 0 0 0 0.2rem rgba(30, 58, 138, 0.25) !important;
@@ -613,7 +631,11 @@ with tab_diario:
 
         with col_f2:
             supervisores_disponibles = sorted(df2["supervisor"].unique())
-            supervisores_sel = st.pills("👥 Supervisores:", supervisores_disponibles, selection_mode="multi", default=supervisores_disponibles, key=f"pills_sup_{fecha_sel}")
+            # Evitamos que el filtro se "pegue" usando un default dinámico solo la primera vez
+            key_sup = f"pills_sup_{fecha_sel}"
+            supervisores_sel = st.pills("👥 Supervisores:", supervisores_disponibles, selection_mode="multi", 
+                                        default=supervisores_disponibles if key_sup not in st.session_state else None, 
+                                        key=key_sup)
             if not supervisores_sel:
                 st.warning("⚠️ Selecciona al menos un supervisor.")
                 st.stop()
@@ -621,12 +643,13 @@ with tab_diario:
 
         with col_f3:
             inspectores_disponibles = sorted(df2["inspector"].unique())
+            key_insp = f"ms_insp_{fecha_sel}"
             with st.popover("🔍 Seleccionar Inspectores", use_container_width=True):
                 inspectores_sel = st.multiselect(
                     "Filtro de inspectores:",
                     inspectores_disponibles,
-                    default=inspectores_disponibles,
-                    key=f"ms_insp_{fecha_sel}"
+                    default=inspectores_disponibles if key_insp not in st.session_state else None,
+                    key=key_insp
                 )
             if not inspectores_sel:
                 st.warning("⚠️ Selecciona al menos un inspector.")
@@ -1392,7 +1415,7 @@ with tab_asignadas:
 
         with col_f1:
             grupos_disponibles = sorted(df_asignadas["grupo"].dropna().unique())
-            grupos_sel = st.pills("📍 Grupo", grupos_disponibles, selection_mode="multi", default=grupos_disponibles, key="tab5_grupo_pills")
+            grupos_sel = st.pills("📍 Grupo", grupos_disponibles, selection_mode="multi", default=grupos_disponibles if "tab5_grupo_pills" not in st.session_state else None, key="tab5_grupo_pills")
 
         if grupos_sel:
             df_asignadas = df_asignadas[df_asignadas["grupo"].isin(grupos_sel)]
@@ -1402,14 +1425,14 @@ with tab_asignadas:
 
         with col_f2:
             estados_disponibles = sorted(df_asignadas["estado"].dropna().unique())
-            estados_sel = st.pills("📊 Estado", estados_disponibles, selection_mode="multi", default=estados_disponibles, key="tab5_estado_pills")
+            estados_sel = st.pills("📊 Estado", estados_disponibles, selection_mode="multi", default=estados_disponibles if "tab5_estado_pills" not in st.session_state else None, key="tab5_estado_pills")
 
         if estados_sel:
             df_asignadas = df_asignadas[df_asignadas["estado"].isin(estados_sel)]
 
         with col_f3:
             prioridades_disponibles = sorted(df_asignadas["prioridad"].dropna().unique())
-            prioridades_sel = st.pills("⚡ Prioridad", prioridades_disponibles, selection_mode="multi", default=prioridades_disponibles, key="tab5_prio_pills")
+            prioridades_sel = st.pills("⚡ Prioridad", prioridades_disponibles, selection_mode="multi", default=prioridades_disponibles if "tab5_prio_pills" not in st.session_state else None, key="tab5_prio_pills")
 
         if prioridades_sel:
             df_asignadas = df_asignadas[df_asignadas["prioridad"].isin(prioridades_sel)]
