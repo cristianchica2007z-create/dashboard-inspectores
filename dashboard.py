@@ -878,45 +878,45 @@ with tab_diario:
             }
         )
 
-        # ---------------------------------------------------
-        # 📝 INFORME DE DESEMPEÑO DEL DÍA
-        # ---------------------------------------------------
-        st.markdown("### 📝 Informe de Desempeño del Día")
-        with st.container(border=True):
-            h_col1, h_col2 = st.columns(2)
-            if not resumen.empty:
-                best_eff = resumen.loc[resumen["ordenes_efectivas"].idxmax()]
-                worst_eff = resumen.loc[resumen["ordenes_efectivas"].idxmin()]
-                most_no_rec = resumen.loc[resumen["ordenes_sin_recorrido"].idxmax()]
-                
-                with h_col1:
-                    st.markdown(f"🏆 **Más órdenes efectivas:** {best_eff['inspector']} ({int(best_eff['ordenes_efectivas'])})")
-                    st.markdown(f"📉 **Menos órdenes efectivas:** {worst_eff['inspector']} ({int(worst_eff['ordenes_efectivas'])})")
-                    st.markdown(f"🚗 **Más órdenes sin recorrido:** {most_no_rec['inspector']} ({int(most_no_rec['ordenes_sin_recorrido'])})")
+    # ---------------------------------------------------
+    # 📝 INFORME DE DESEMPEÑO DEL DÍA
+    # ---------------------------------------------------
+    st.markdown("### 📝 Informe de Desempeño del Día")
+    with st.container(border=True):
+        h_col1, h_col2 = st.columns(2)
+        if not resumen.empty:
+            best_eff = resumen.loc[resumen["ordenes_efectivas"].idxmax()]
+            worst_eff = resumen.loc[resumen["ordenes_efectivas"].idxmin()]
+            most_no_rec = resumen.loc[resumen["ordenes_sin_recorrido"].idxmax()]
+            
+            with h_col1:
+                st.markdown(f"🏆 **Más órdenes efectivas:** {best_eff['inspector']} ({int(best_eff['ordenes_efectivas'])})")
+                st.markdown(f"📉 **Menos órdenes efectivas:** {worst_eff['inspector']} ({int(worst_eff['ordenes_efectivas'])})")
+                st.markdown(f"🚗 **Más órdenes sin recorrido:** {most_no_rec['inspector']} ({int(most_no_rec['ordenes_sin_recorrido'])})")
 
-                df_ini_check = df_agrupado[df_agrupado["hora_inicio"] != "SIN HORA"].copy()
-                late_insp, late_val = "—", "—"
-                if not df_ini_check.empty:
-                    df_ini_check["dec"] = df_ini_check["hora_inicio"].apply(hora_to_decimal)
-                    row_late = df_ini_check.loc[df_ini_check["dec"].idxmax()]
-                    late_insp, late_val = row_late["inspector"], hora_to_string(row_late["hora_inicio"])
+            df_ini_check = df_agrupado[df_agrupado["hora_inicio"] != "SIN HORA"].copy()
+            late_insp, late_val = "—", "—"
+            if not df_ini_check.empty:
+                df_ini_check["dec"] = df_ini_check["hora_inicio"].apply(hora_to_decimal)
+                row_late = df_ini_check.loc[df_ini_check["dec"].idxmax()]
+                late_insp, late_val = row_late["inspector"], hora_to_string(row_late["hora_inicio"])
 
-                avg_rec_series = df2.groupby("inspector")["tiempo_recorrido_td"].mean()
-                max_rec_insp, max_rec_val = "—", "—"
-                if not avg_rec_series.dropna().empty:
-                    max_rec_insp = avg_rec_series.idxmax()
-                    max_rec_val = td_to_str(avg_rec_series.max())
+            avg_rec_series = df2.groupby("inspector")["tiempo_recorrido_td"].mean()
+            max_rec_insp, max_rec_val = "—", "—"
+            if not avg_rec_series.dropna().empty:
+                max_rec_insp = avg_rec_series.idxmax()
+                max_rec_val = td_to_str(avg_rec_series.max())
 
-                avg_task_series = df2.loc[df2["efectiva"]].groupby("inspector")["tiempo_tarea_td"].mean()
-                max_task_insp, max_task_val = "—", "—"
-                if not avg_task_series.dropna().empty:
-                    max_task_insp = avg_task_series.idxmax()
-                    max_task_val = td_to_str(avg_task_series.max())
+            avg_task_series = df2.loc[df2["efectiva"]].groupby("inspector")["tiempo_tarea_td"].mean()
+            max_task_insp, max_task_val = "—", "—"
+            if not avg_task_series.dropna().empty:
+                max_task_insp = avg_task_series.idxmax()
+                max_task_val = td_to_str(avg_task_series.max())
 
-                with h_col2:
-                    st.markdown(f"🕒 **Inicio más tarde:** {late_insp} ({late_val})")
-                    st.markdown(f"🛣️ **Promedio de recorrido más extenso:** {max_rec_insp} ({max_rec_val})")
-                    st.markdown(f"🕓 **Más tiempo promedio por tarea:** {max_task_insp} ({max_task_val})")
+            with h_col2:
+                st.markdown(f"🕒 **Inicio más tarde:** {late_insp} ({late_val})")
+                st.markdown(f"🛣️ **Promedio de recorrido más extenso:** {max_rec_insp} ({max_rec_val})")
+                st.markdown(f"🕓 **Más tiempo promedio por tarea:** {max_task_insp} ({max_task_val})")
 
     # ===================================================
     # 🚨 INSPECTORES SIN ACTIVIDAD EN LA FECHA
