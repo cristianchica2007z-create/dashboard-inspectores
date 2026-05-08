@@ -1080,9 +1080,31 @@ with tab_agendas:
 
             ahora_colombia = datetime.datetime.now(ZoneInfo("America/Bogota")).replace(tzinfo=None)
 
-            df["estado_alerta"] = df["fecha de visita"].apply(
-                lambda x: "ALERTA" if pd.notna(x) and x <= ahora_colombia else "OK"
-            )
+            # --- CRUCE CON PROGRAMACIÓN (VLOOKUP) PARA HORA AGENDA ---
+            df_prog_aux, _ = fetch_github_excel(repo, "PROGRAMACION.xlsx", token)
+            if not df_prog_aux.empty:
+                df_prog_aux.columns = df_prog_aux.columns.str.strip().lower()
+                if "contrato" in df_prog_aux.columns and "hora agenda" in df_prog_aux.columns:
+                    # Normalizar llaves para el cruce
+                    df["contrato"] = df["contrato"].astype(str).str.strip()
+                    df_prog_aux["contrato"] = df_prog_aux["contrato"].astype(str).str.strip()
+                    # Traer HORA AGENDA (tomamos el primer registro si hay duplicados en prog)
+                    df_prog_aux = df_prog_aux.drop_duplicates(subset=["contrato"])
+                    df = df.merge(df_prog_aux[["contrato", "hora agenda"]], on="contrato", how="left")
+
+            # --- LÓGICA DE ALERTA INTELIGENTE ---
+            def calcular_alerta_smart(row):
+                visita = row["fecha de visita"]
+                if pd.isna(visita) or visita > ahora_colombia:
+                    return "OK"
+                
+                # Si es transcurso, no es alerta inmediata (es durante el bloque)
+                ha = str(row.get("hora agenda", "")).upper()
+                if any(txt in ha for txt in ["TRANSCURSO DE LA TARDE", "TRANSCURSO DE LA MAÑANA", "TRANSCURSO DEL DÍA"]):
+                    return "OK"
+                return "ALERTA"
+
+            df["estado_alerta"] = df.apply(calcular_alerta_smart, axis=1)
 
             columnas_base = ["inspector", "contrato", "direccion", "estado", "fecha de visita", "localidad", "detalle de tarea", "estado_alerta"]
 
@@ -1141,11 +1163,20 @@ with tab_agendas:
 
               elif opcion_age == "⏳ Próximas":
                 st.markdown("### ⏳ Agendas próximas (no iniciadas)")
-                df_prox = df[
+                df_prox_raw = df[
                     (df["estado"].str.upper().str.contains("ASIGNAD", na=False)) & 
                     (df["fecha de ejecucion"].isna()) & 
                     (df["fecha de visita"] > ahora_colombia)
                 ].copy()
+                
+                zonas_sel = []
+                with st.expander("Seleccionar Zona"):
+                    for z in grupos_validos:
+                        if st.checkbox(z, value=True, key=f"prox_zona_{z}"):
+                            zonas_sel.append(z)
+                
+                df_prox = df_prox_raw[df_prox_raw["grupo"].isin(zonas_sel)] if zonas_sel else df_prox_raw
+
                 if df_prox.empty:
                     st.info("✅ No hay agendas próximas.")
                 else:
@@ -1153,7 +1184,16 @@ with tab_agendas:
 
               elif opcion_age == "🚨 Pendientes":
                 st.markdown("### 🚨 Agendas en ALERTA")
-                df_alerta = df[(df["estado"].str.upper().str.contains("ASIGNAD", na=False)) & (df["prioridad"].str.upper().isin(["ALTA", "CRITICA"])) & (df["estado_alerta"] == "ALERTA")].copy()
+                df_alerta_raw = df[(df["estado"].str.upper().str.contains("ASIGNAD", na=False)) & (df["prioridad"].str.upper().isin(["ALTA", "CRITICA"])) & (df["estado_alerta"] == "ALERTA")].copy()
+                
+                zonas_sel = []
+                with st.expander("Seleccionar Zona"):
+                    for z in grupos_validos:
+                        if st.checkbox(z, value=True, key=f"pen_zona_{z}"):
+                            zonas_sel.append(z)
+                
+                df_alerta = df_alerta_raw[df_alerta_raw["grupo"].isin(zonas_sel)] if zonas_sel else df_alerta_raw
+
                 if df_alerta.empty:
                     st.info("✅ No hay agendas en ALERTA.")
                 else:
