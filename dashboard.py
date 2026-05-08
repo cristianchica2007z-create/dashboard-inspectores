@@ -69,21 +69,21 @@ st.markdown("""
     /* Estilo de Tarjetas Profesionales para KPIs */
     .metric-card {
         background-color: #ffffff;
-        padding: 0.6rem 1rem;
-        border-radius: 10px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        border-left: 4px solid #1e3a8a;
-        margin-bottom: 0.5rem;
+        padding: 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        border-left: 5px solid #1e3a8a;
+        margin-bottom: 1rem;
     }
     .metric-label {
         color: #64748b;
-        font-size: 0.7rem;
+        font-size: 0.85rem;
         font-weight: 700;
         text-transform: uppercase;
     }
     .metric-value {
         color: #1e3a8a;
-        font-size: 1.3rem;
+        font-size: 1.75rem;
         font-weight: 800;
         margin-top: 5px;
     }
@@ -930,6 +930,92 @@ with tab_diario:
                 st.markdown(f"🕒 **Inicio más tarde:** {late_insp} ({late_val})")
                 st.markdown(f"🛣️ **Promedio de recorrido más extenso:** {max_rec_insp} ({max_rec_val})")
                 st.markdown(f"🕓 **Más tiempo promedio por tarea:** {max_task_insp} ({max_task_val})")
+
+    df_tabla = df_agrupado.merge(resumen, on="inspector", how="left")
+
+    df_tabla = df_tabla.fillna({
+        "hora_inicio": "—",
+        "hora_final": "—",
+        "localidad": "—",
+        "estado": "SIN ACTIVIDAD",
+        "total_ordenes": 0,
+        "ordenes_efectivas": 0,
+        "ordenes_sin_recorrido": 0,
+        "porcentaje_efectividad": 0,
+        "promedio_tiempo_tarea": "—",
+        "promedio_tiempo_recorrido": "—"
+    })
+
+    columnas_tabla = [
+        "inspector",
+        "supervisor",
+        "fecha",
+        "hora_inicio",
+        "hora_final",
+        "localidad",
+        "estado",
+        "total_ordenes",
+        "ordenes_efectivas",
+        "ordenes_sin_recorrido",
+        "porcentaje_efectividad",
+        "promedio_tiempo_tarea",
+        "promedio_tiempo_recorrido"
+    ]
+
+    # Filtrar solo las que existen para evitar errores
+    columnas_disponibles = [c for c in columnas_tabla if c in df_tabla.columns]
+
+    # ✅ KPI: PROMEDIO TIEMPO DE RECORRIDO (GENERAL)
+    prom_recorrido_global = (
+        td_to_str(df2["tiempo_recorrido_td"].mean())
+        if not df2["tiempo_recorrido_td"].dropna().empty else "—"
+    )
+
+    # ---------------------------------------------------
+    # KPIs EN PANTALLA (ORDEN ORIGINAL)
+    # ---------------------------------------------------
+    st.markdown("## ⭐ KPIs del día")
+
+    c1, c2, c3, c4_kpi = st.columns(4)
+    with c1: render_kpi("Promedio inicio", hora_prom_ini, "⏰")
+    with c2: render_kpi("Promedio fin", hora_prom_fin, "🕒")
+    with c3: render_kpi("Prom. tiempo tarea", tiempo_prom_str, "🕓")
+    with c4_kpi: render_kpi("Prom. recorrido", prom_recorrido_global, "🚗")
+
+    c4, c5, c6 = st.columns(3)
+    with c4: render_kpi("Total tareas", total_ordenes, "📋")
+    with c5: render_kpi("Efectivas", total_efectivas, "✅")
+    with c6: render_kpi("% Efectividad", f"{porcentaje}%", "📈")
+
+    st.markdown("### 📋 Tabla de inspecciones del día")
+
+    # ✅ DEFINIR ESTILOS Y FORMATEO
+    def color_estado(val):
+        if val == "Puntual":
+            return 'background-color: #d4edda; color: #155724;' # Verde
+        elif "tarde" in str(val).lower():
+            return 'background-color: #fff3cd; color: #856404;' # Amarillo
+        return ''
+
+    # Aplicar estilos: Centrar todo menos inspector y aplicar colores a estado
+    df_styled = (
+        df_tabla[columnas_disponibles]
+        .style.set_properties(**{'text-align': 'center'})
+        .set_properties(subset=['inspector'], **{'text-align': 'left'})
+        .map(color_estado, subset=['estado'])
+    )
+
+    st.dataframe(
+        df_styled,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "porcentaje_efectividad": st.column_config.NumberColumn(
+                "Efectividad %",
+                format="%.1f%%"
+            )
+        }
+    )
 
      # ===================================================
  # 🚨 INSPECTORES SIN ACTIVIDAD EN LA FECHA
