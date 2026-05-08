@@ -840,20 +840,20 @@ with tab_diario:
 
     with col_main_view:
         # ---------------------------------------------------
-    # PREPARACIÓN DE LA TABLA ESTILIZADA
-    # ---------------------------------------------------
-    columnas_tabla = [
-        "inspector", "supervisor", "fecha", "hora_inicio", "hora_final",
-        "localidad", "estado", "total_ordenes", "ordenes_efectivas",
-        "ordenes_sin_recorrido", "porcentaje_efectividad",
-        "promedio_tiempo_tarea", "promedio_tiempo_recorrido"
-    ]
-    columnas_disponibles = [c for c in columnas_tabla if c in df_tabla.columns]
+        # PREPARACIÓN DE LA TABLA ESTILIZADA
+        # ---------------------------------------------------
+        columnas_tabla = [
+            "inspector", "supervisor", "fecha", "hora_inicio", "hora_final",
+            "localidad", "estado", "total_ordenes", "ordenes_efectivas",
+            "ordenes_sin_recorrido", "porcentaje_efectividad",
+            "promedio_tiempo_tarea", "promedio_tiempo_recorrido"
+        ]
+        columnas_disponibles = [c for c in columnas_tabla if c in df_tabla.columns]
 
-    def color_estado(val):
-        if val == "Puntual": return 'background-color: #d4edda; color: #155724;'
-        if "tarde" in str(val).lower(): return 'background-color: #fff3cd; color: #856404;'
-        return ''
+        def color_estado(val):
+            if val == "Puntual": return 'background-color: #d4edda; color: #155724;'
+            if "tarde" in str(val).lower(): return 'background-color: #fff3cd; color: #856404;'
+            return ''
 
         st.markdown("### 📋 Tabla de inspecciones del día")
 
@@ -918,8 +918,8 @@ with tab_diario:
                     st.markdown(f"🛣️ **Promedio de recorrido más extenso:** {max_rec_insp} ({max_rec_val})")
                     st.markdown(f"🕓 **Más tiempo promedio por tarea:** {max_task_insp} ({max_task_val})")
 
-     # ===================================================
- # 🚨 INSPECTORES SIN ACTIVIDAD EN LA FECHA
+    # ===================================================
+    # 🚨 INSPECTORES SIN ACTIVIDAD EN LA FECHA
     # ===================================================
     st.markdown("### 🚨 Inspectores sin actividad registrada")
 
