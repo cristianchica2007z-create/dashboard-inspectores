@@ -1028,7 +1028,7 @@ with tab2:
         df_tabla[columnas_disponibles]
         .style.set_properties(**{'text-align': 'center'})
         .set_properties(subset=['inspector'], **{'text-align': 'left'})
-        .applymap(color_estado, subset=['estado'])
+        .map(color_estado, subset=['estado'])
     )
 
     st.dataframe(
