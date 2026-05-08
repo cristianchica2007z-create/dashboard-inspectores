@@ -1380,14 +1380,12 @@ with tab_asignadas:
     # ===================================================
     st.markdown("### 🔎 Filtros")
 
-    # -------- FILTRO POR GRUPO --------
-    grupos_disponibles = sorted(df_asignadas["grupo"].dropna().unique())
-    grupos_sel = []
+    # -------- FILTROS COMPACTOS EN UNA SOLA FILA --------
+    col_f1, col_f2, col_f3, col_f4 = st.columns([1, 1, 1, 1.2])
 
-    with st.expander("Seleccionar Grupo", expanded=True):
-        for g in grupos_disponibles:
-            if st.checkbox(g, value=True, key=f"tab5_grupo_{g}"):
-                grupos_sel.append(g)
+    with col_f1:
+        grupos_disponibles = sorted(df_asignadas["grupo"].dropna().unique())
+        grupos_sel = st.multiselect("📍 Grupo", grupos_disponibles, default=grupos_disponibles, key="tab5_grupo_ms")
 
     if grupos_sel:
         df_asignadas = df_asignadas[df_asignadas["grupo"].isin(grupos_sel)]
@@ -1395,14 +1393,9 @@ with tab_asignadas:
     else:
         df_finalizados_base = df
 
-    # -------- FILTRO POR ESTADO --------
-    estados_disponibles = sorted(df_asignadas["estado"].dropna().unique())
-    estados_sel = []
-
-    with st.expander("Seleccionar Estado", expanded=True):
-        for e in estados_disponibles:
-            if st.checkbox(e, value=True, key=f"tab5_estado_{e}"):
-                estados_sel.append(e)
+    with col_f2:
+        estados_disponibles = sorted(df_asignadas["estado"].dropna().unique())
+        estados_sel = st.multiselect("📊 Estado", estados_disponibles, default=estados_disponibles, key="tab5_estado_ms")
 
     if estados_sel:
         df_asignadas = df_asignadas[df_asignadas["estado"].isin(estados_sel)]
@@ -1413,15 +1406,9 @@ with tab_asignadas:
     insp_con_fin = set(df_finalizados_base[df_finalizados_base["estado"].astype(str).str.contains("Finalizad", case=False, na=False)]["inspector"].unique())
     inspectores_finalizados = insp_con_fin - insp_con_asig
 
-
-    # -------- FILTRO POR PRIORIDAD --------
-    prioridades_disponibles = sorted(df_asignadas["prioridad"].dropna().unique())
-    prioridades_sel = []
-
-    with st.expander("Seleccionar Prioridad", expanded=True):
-        for p in prioridades_disponibles:
-            if st.checkbox(p, value=True, key=f"tab5_prio_{p}"):
-                prioridades_sel.append(p)
+    with col_f3:
+        prioridades_disponibles = sorted(df_asignadas["prioridad"].dropna().unique())
+        prioridades_sel = st.multiselect("⚡ Prioridad", prioridades_disponibles, default=prioridades_disponibles, key="tab5_prio_ms")
 
     if prioridades_sel:
         df_asignadas = df_asignadas[df_asignadas["prioridad"].isin(prioridades_sel)]
@@ -1429,8 +1416,8 @@ with tab_asignadas:
     if df_asignadas.empty:
         st.warning("⚠️ No hay datos con los filtros seleccionados.")
 
-    # Selección de dimensión para la gráfica
-    ver_por = st.radio("Visualizar carga por:", ["Prioridad", "Estado"], horizontal=True, key="tab5_ver_por")
+    with col_f4:
+        ver_por = st.radio("📈 Ver carga por:", ["Prioridad", "Estado"], horizontal=True, key="tab5_ver_por")
     col_agrupar = ver_por.lower()
 
     # ===================================================
