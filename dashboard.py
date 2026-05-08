@@ -1390,6 +1390,16 @@ with tab_asignadas:
 
     if grupos_sel:
         df_asignadas = df_asignadas[df_asignadas["grupo"].isin(grupos_sel)]
+        df_finalizados_base = df[df["grupo"].isin(grupos_sel)]
+    else:
+        df_finalizados_base = df
+
+    # Identificar inspectores que ya terminaron (Tienen 'Finalizada' y NO tienen 'Asignada')
+    # en los grupos seleccionados para identificar disponibilidad
+    insp_con_asig = set(df_finalizados_base[df_finalizados_base["estado"].astype(str).str.contains("Asignad", case=False, na=False)]["inspector"].unique())
+    insp_con_fin = set(df_finalizados_base[df_finalizados_base["estado"].astype(str).str.contains("Finalizad", case=False, na=False)]["inspector"].unique())
+    inspectores_finalizados = insp_con_fin - insp_con_asig
+
 
     # -------- FILTRO POR PRIORIDAD --------
     prioridades_disponibles = sorted(df_asignadas["prioridad"].dropna().unique())
@@ -1416,6 +1426,15 @@ with tab_asignadas:
         .reset_index(name="cantidad")
     )
 
+    # Agregar inspectores que ya terminaron su obra (con cantidad 0 para que aparezcan en el eje Y)
+    if inspectores_finalizados:
+        df_terminados = pd.DataFrame({
+            "inspector": list(inspectores_finalizados),
+            "prioridad": ["TERMINÓ OBRA"],
+            "cantidad": [0]
+        })
+        df_prio = pd.concat([df_prio, df_terminados], ignore_index=True)
+
     # Ordenar inspectores por carga total
     orden_inspectores = (
         df_prio.groupby("inspector")["cantidad"]
@@ -1436,8 +1455,8 @@ with tab_asignadas:
         "Prioridad": "#6f4e37",    # 🟤 café
         
         "60 Meses": "#6f42c1",        # 🟣 morado
-        "Segunda visita": "#ff8c00"   # 🟠 naranja
-
+        "Segunda visita": "#ff8c00",   # 🟠 naranja
+        "TERMINÓ OBRA": "#28a745"      # 🟢 verde (disponible)
     }
 
     # ===================================================
