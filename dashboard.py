@@ -101,6 +101,23 @@ def fetch_github_json(repo, path, token):
             return {}, None
     return {}, None
 
+def save_github_json(repo, path, token, data, message, branch="main"):
+    """Guarda un diccionario o lista como JSON en GitHub."""
+    headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
+    url = f"https://api.github.com/repos/{repo}/contents/{path}"
+    
+    # Obtener el SHA actual para permitir el reemplazo
+    r = requests.get(url, headers=headers)
+    sha = r.json().get("sha") if r.status_code == 200 else None
+    
+    content_b64 = base64.b64encode(json.dumps(data, indent=2, ensure_ascii=False).encode("utf-8")).decode("utf-8")
+    payload = {"message": message, "content": content_b64, "branch": branch}
+    
+    if sha:
+        payload["sha"] = sha
+        
+    return requests.put(url, headers=headers, json=payload)
+
 @st.cache_data(ttl=600)
 def load_local_bitacora(path):
     if os.path.exists(path):
@@ -1586,6 +1603,12 @@ with tab_inv:
     inv_repo  = st.secrets["github"]["repo"]
     inv_branch = st.secrets["github"].get("branch", "main")
 
+    # --- 2. CARGA DE DATOS ---
+    movimientos, _ = fetch_github_json(inv_repo, "INVENTARIO_V2.json", inv_token)
+    catalogo, _    = fetch_github_json(inv_repo, "CATALOGO_V2.json", inv_token)
+    if not isinstance(movimientos, list): movimientos = []
+    if not isinstance(catalogo, dict) or not catalogo: catalogo = CATALOGO_DEFAULT.copy()
+
     # --- 3. CÁLCULO DE STOCK DINÁMICO ---
     def obtener_stock_df(movs_list, sede_filtro):
         data_stock = {}
@@ -1694,7 +1717,7 @@ with tab_inv:
                     }
                     
                     movimientos.append(nuevo_mov)
-                    resp = save_github_json(inv_repo, "MOVIMIENTOS.json", inv_token, movimientos, f"Nuevo movimiento: {m_tipo} {item_sel}", inv_branch)
+                    resp = save_github_json(inv_repo, "INVENTARIO_V2.json", inv_token, movimientos, f"Nuevo movimiento: {m_tipo} {item_sel}", inv_branch)
                     
                     if resp.status_code in (200, 201):
                         st.success("✅ Movimiento registrado correctamente.")
@@ -1731,7 +1754,7 @@ with tab_inv:
                         "tallas": n_tallas,
                         "opciones_talla": [x.strip() for x in n_opciones.split(",")] if n_tallas else []
                     }
-                    save_github_json(inv_repo, "CATALOGO.json", inv_token, catalogo, f"Añadido {n_item} al catálogo", inv_branch)
+                    save_github_json(inv_repo, "CATALOGO_V2.json", inv_token, catalogo, f"Añadido {n_item} al catálogo", inv_branch)
                     st.success(f"Ítem {n_item} añadido correctamente.")
                     st.rerun()
                 else:
