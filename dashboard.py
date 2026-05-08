@@ -57,10 +57,15 @@ st.set_page_config(
     layout="wide"
 )
 
-# ✅ ESTILOS GLOBALES (Evita el parpadeo visual al cambiar de login a dashboard)
+# ✅ ESTILOS GLOBALES
 st.markdown("""
     <style>
-    .stApp {
+    /* Fondo con degradado sutil para un aspecto moderno */
+    .stApp { 
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    }
+    /* Contenedor principal del dashboard en blanco puro al entrar */
+    .stMainBlockContainer {
         background-color: #ffffff;
     }
     </style>
@@ -239,34 +244,60 @@ def cargar_usuarios():
             return json.load(f)
     return {}
 
+# ===================================================
+# ✅ INTERFAZ DE INICIO DE SESIÓN (DISEÑO MEJORADO)
+# ===================================================
 if st.session_state.usuario is None:
-    # Layout de columnas para centrar horizontalmente el login
+    # CSS específico para la tarjeta de Login
+    st.markdown("""
+        <style>
+        .login-card {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            margin-top: 10vh;
+        }
+        .stButton>button {
+            border-radius: 8px;
+            height: 3em;
+            font-weight: bold;
+        }
+        [data-testid="stImage"] {
+            margin-bottom: 20px;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
     _, col_login, _ = st.columns([1, 1.5, 1])
 
     with col_login:
-        st.write("") # Espaciado vertical superior
-        st.write("")
+        st.markdown('<div class="login-card">', unsafe_allow_html=True)
         
-        # El logo ahora se ajusta al contenedor central, garantizando su centrado respecto al formulario
+        # Logo centrado
         st.image("logo.png", use_container_width=True)
         
-        # Uso de container con borde para crear un efecto de tarjeta (Card)
-        with st.container(border=True):
-            st.markdown("<h2 style='text-align: center; color: #0d3b66; margin-bottom: 20px;'>INICIAR SESIÓN</h2>", unsafe_allow_html=True)
+        st.markdown("<h2 style='text-align: center; color: #1e3a8a; font-family: sans-serif;'>Bienvenido</h2>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; color: #64748b;'>Ingresa tus credenciales para continuar</p>", unsafe_allow_html=True)
+        
+        usuarios = cargar_usuarios()
+        usuario_input = st.text_input("Usuario", placeholder="Ej: Juan Perez")
+        pin_input = st.text_input("PIN de seguridad", type="password", max_chars=4, placeholder="****")
+
+        st.write("")
+        if st.button("🚀 INGRESAR AL SISTEMA", use_container_width=True, type="primary"):
+            if usuario_input in usuarios and pin_input == usuarios[usuario_input]["pin"]:
+                st.session_state.usuario = usuario_input
+                st.session_state.rol = usuarios[usuario_input]["rol"]
+                # Forzamos una limpieza visual antes del rerun
+                st.empty()
+                st.rerun()
+            else:
+                st.error("❌ Usuario o PIN incorrectos. Intenta de nuevo.")
             
-            usuarios = cargar_usuarios()
-            usuario = st.text_input("Usuario", placeholder="Tu nombre de usuario")
-            pin = st.text_input("PIN", type="password", max_chars=4, placeholder="****")
+        st.markdown('</div>', unsafe_allow_html=True)
 
-            st.write("")
-            if st.button("🔐 ACCEDER", use_container_width=True, type="primary"):
-                if usuario in usuarios and pin == usuarios[usuario]["pin"]:
-                    st.session_state.usuario = usuario
-                    st.session_state.rol = usuarios[usuario]["rol"]
-                    st.rerun()
-                else:
-                    st.error("❌ Usuario o PIN incorrectos")
-
+    # Detenemos la ejecución aquí para que NO intente cargar nada del dashboard si no hay sesión
     st.stop()
 
 # -------------------------------------------------
@@ -278,6 +309,7 @@ with col_logout:
     if st.button("🚪 Cerrar sesión"):
         st.session_state.usuario = None
         st.session_state.rol = None
+        st.cache_data.clear()
         st.rerun()
 
     
@@ -364,7 +396,7 @@ with col_logo:
 # ===================================================
 # CARGA ÚNICA DE BITÁCORA (BASE GLOBAL)
 # ===================================================
-with st.spinner("🚀 Cargando datos operativos, por favor espere..."):
+with st.spinner("🔄 Sincronizando datos con el servidor... Un momento por favor"):
     archivo_bitacora = "BITACORA.xlsx"
     
     # Carga base de datos
