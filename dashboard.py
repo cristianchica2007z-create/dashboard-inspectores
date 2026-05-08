@@ -8,7 +8,6 @@ from zoneinfo import ZoneInfo
 import base64
 import requests
 import io
-import io
 
 # ---------------------------------------------------
 # ✅ CONSTANTES GLOBALES
@@ -1771,4 +1770,50 @@ with tab_sst:
 # ===================================================
 with tab_subir:
     st.subheader("📈 Administración de Archivos")
-    st.info("Utilice esta sección para cargar la bitácora operativa y otros archivos maestros.")
+
+    with st.expander("📂 Cargar Bitácora Operativa (BITACORA.xlsx)", expanded=True):
+        st.info("Este proceso reemplaza la base de datos principal utilizada en el Seguimiento Diario y Agendas.")
+        
+        archivo_bit = st.file_uploader("Selecciona BITACORA.xlsx", type=["xlsx", "xls"], key="uploader_bit_global")
+        
+        if st.button("🚀 Actualizar Bitácora Global", use_container_width=True, key="btn_bit_global"):
+            if archivo_bit:
+                with st.spinner("Sincronizando con GitHub..."):
+                    token = st.secrets["github"]["token"]
+                    repo = st.secrets["github"]["repo"]
+                    branch = st.secrets["github"].get("branch", "main")
+                    
+                    # 1. Subir el archivo Excel a GitHub
+                    content_bin = archivo_bit.read()
+                    content_b64 = base64.b64encode(content_bin).decode("utf-8")
+                    
+                    url_git = f"https://api.github.com/repos/{repo}/contents/BITACORA.xlsx"
+                    headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
+                    
+                    r_get = requests.get(url_git, headers=headers)
+                    sha = r_get.json().get("sha") if r_get.status_code == 200 else None
+                    
+                    payload = {
+                        "message": f"Actualización de BITACORA.xlsx por {st.session_state.usuario}",
+                        "content": content_b64,
+                        "branch": branch
+                    }
+                    if sha: payload["sha"] = sha
+                    
+                    r_put = requests.put(url_git, headers=headers, json=payload)
+                    
+                    if r_put.status_code in (200, 201):
+                        # 2. Actualizar metadata de la bitácora (BITACORA_INFO.json)
+                        info_data = {
+                            "ultima_actualizacion": datetime.datetime.now(TZ_UTC).strftime("%Y-%m-%d %H:%M:%S"),
+                            "usuario_actualizo": st.session_state.usuario
+                        }
+                        save_github_json(repo, "BITACORA_INFO.json", token, info_data, "Update BITACORA_INFO.json", branch)
+                        
+                        st.success("✅ Bitácora actualizada y sincronizada para todos los usuarios.")
+                        st.cache_data.clear()
+                        st.rerun()
+                    else:
+                        st.error(f"❌ Error al subir: {r_put.text}")
+            else:
+                st.warning("⚠️ Selecciona un archivo Excel antes de subir.")
