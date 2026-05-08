@@ -1896,34 +1896,6 @@ with tab_inv:
                 st.info("No hay ítems configurados para manejar tallas en el catálogo.")
 
 # ===================================================
-# ✅ TAB 7 — SEGUIMIENTO ADICIONALES
-# ===================================================
-with tab7:
-    st.subheader("🏭 Seguimiento de Adicionales")
-
-    token_ad = st.secrets["github"]["token"]
-    repo_ad = st.secrets["github"]["repo"]
-    branch_ad = st.secrets["github"].get("branch", "main")
-    nombre_archivo_git = "PROGRAMACION.xlsx"
-
-    # Carga compartida desde GitHub
-    df_p, _ = fetch_github_excel(repo_ad, nombre_archivo_git, token_ad, branch_ad)
-    df_p = process_adicionales_data(df_p)
-
-    if not df_p.empty:
-        if "cargue" in df_p.columns:
-            sedes_raw = sorted(df_p["cargue"].astype(str).unique().tolist())
-            sedes_sel = st.selectbox("📍 Seleccionar Sede (Cargue):", ["TODAS"] + sedes_raw, key="filtro_sede_ad_tab7")
-            if sedes_sel != "TODAS":
-                df_p = df_p[df_p["cargue"].astype(str) == sedes_sel]
-
-        cols_req = ["contrato", "nombre_inspector", "direccion barrio", "codigo_tipo_trabajo", "cargue", "dias de asignacion"]
-        cols_final = [c for c in cols_req if c in df_p.columns]
-        st.dataframe(df_p[cols_final], use_container_width=True, hide_index=True)
-    else:
-        st.info("ℹ️ No hay un archivo de programación activo.")
-
-# ===================================================
 # ✅ TAB 7 — SEGUIMIENTO ADICIONALESs
 # ===================================================
 with tab7:
