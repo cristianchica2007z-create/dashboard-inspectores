@@ -1498,15 +1498,18 @@ with tab_inv_v2:
     col_nav, col_main = st.columns([1, 4]) 
 
     with col_nav:
-        st.markdown('<div class="left-nav-bar-content">', unsafe_allow_html=True)
-        st.markdown('<h3 class="left-nav-title">Inventario V2</h3>', unsafe_allow_html=True)
+        st.markdown('<div class="left-nav-bar-content">', unsafe_allow_html=True) # Contenedor de la barra lateral
+        st.markdown('<h3 class="left-nav-title">Inventario V2</h3>', unsafe_allow_html=True) # Título del menú
+        st.markdown('<p class="left-nav-user-name">**CRISTIAN ALBERTO CHICA RAMÍREZ**</p>', unsafe_allow_html=True) # Información del usuario
+        st.markdown('<p class="left-nav-company">E&C INGENIERÍA</p>', unsafe_allow_html=True) # Información de la empresa
+        st.markdown('<hr style="border-top: 1px solid rgba(255,255,255,0.2); margin: 1rem 0;">', unsafe_allow_html=True) # Separador
         opcion_inv = st.radio(
-            "Seleccione una acción:",
+            "Secciones", # Este label se ocultará con label_visibility="collapsed"
             ["📊 Stock Actual", "➕ Registrar Entrada", "➖ Registrar Salida", "📜 Historial", "⚙️ Configuración Catálogo"],
             key="inv_menu_radio",
             label_visibility="collapsed" # Oculta la etiqueta del grupo de radio
         )
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True) # Cierra el contenedor de la barra lateral
 
     with col_main:
         # --- FUNCIÓN DE CÁLCULO DE STOCK ---
