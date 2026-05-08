@@ -1380,25 +1380,37 @@ with tab_asignadas:
     # ===================================================
     st.markdown("### 🔎 Filtros")
 
-    # -------- FILTROS COMPACTOS EN UNA SOLA FILA --------
-    col_f1, col_f2, col_f3, col_f4 = st.columns([1, 1, 1, 1.2])
+    # -------- PANEL DE FILTROS TIPO "BOX" --------
+    with st.container(border=True):
+        col_f1, col_f2, col_f3, col_f4 = st.columns([0.8, 1.2, 1.2, 1])
 
-    with col_f1:
-        grupos_disponibles = sorted(df_asignadas["grupo"].dropna().unique())
-        grupos_sel = st.multiselect("📍 Grupo", grupos_disponibles, default=grupos_disponibles, key="tab5_grupo_ms")
+        with col_f1:
+            grupos_disponibles = sorted(df_asignadas["grupo"].dropna().unique())
+            grupos_sel = st.pills("📍 Grupo", grupos_disponibles, selection_mode="multi", default=grupos_disponibles, key="tab5_grupo_pills")
 
-    if grupos_sel:
-        df_asignadas = df_asignadas[df_asignadas["grupo"].isin(grupos_sel)]
-        df_finalizados_base = df[df["grupo"].isin(grupos_sel)]
-    else:
-        df_finalizados_base = df
+        if grupos_sel:
+            df_asignadas = df_asignadas[df_asignadas["grupo"].isin(grupos_sel)]
+            df_finalizados_base = df[df["grupo"].isin(grupos_sel)]
+        else:
+            df_finalizados_base = df
 
-    with col_f2:
-        estados_disponibles = sorted(df_asignadas["estado"].dropna().unique())
-        estados_sel = st.multiselect("📊 Estado", estados_disponibles, default=estados_disponibles, key="tab5_estado_ms")
+        with col_f2:
+            estados_disponibles = sorted(df_asignadas["estado"].dropna().unique())
+            estados_sel = st.pills("📊 Estado", estados_disponibles, selection_mode="multi", default=estados_disponibles, key="tab5_estado_pills")
 
-    if estados_sel:
-        df_asignadas = df_asignadas[df_asignadas["estado"].isin(estados_sel)]
+        if estados_sel:
+            df_asignadas = df_asignadas[df_asignadas["estado"].isin(estados_sel)]
+
+        with col_f3:
+            prioridades_disponibles = sorted(df_asignadas["prioridad"].dropna().unique())
+            prioridades_sel = st.pills("⚡ Prioridad", prioridades_disponibles, selection_mode="multi", default=prioridades_disponibles, key="tab5_prio_pills")
+
+        if prioridades_sel:
+            df_asignadas = df_asignadas[df_asignadas["prioridad"].isin(prioridades_sel)]
+
+        with col_f4:
+            ver_por = st.segmented_control("📈 Ver por:", ["Prioridad", "Estado"], default="Prioridad", key="tab5_ver_por_seg")
+            col_agrupar = ver_por.lower()
 
     # Identificar inspectores que ya terminaron (Tienen 'Finalizada' y NO tienen carga activa)
     # en los grupos seleccionados para identificar disponibilidad
@@ -1406,19 +1418,8 @@ with tab_asignadas:
     insp_con_fin = set(df_finalizados_base[df_finalizados_base["estado"].astype(str).str.contains("Finalizad", case=False, na=False)]["inspector"].unique())
     inspectores_finalizados = insp_con_fin - insp_con_asig
 
-    with col_f3:
-        prioridades_disponibles = sorted(df_asignadas["prioridad"].dropna().unique())
-        prioridades_sel = st.multiselect("⚡ Prioridad", prioridades_disponibles, default=prioridades_disponibles, key="tab5_prio_ms")
-
-    if prioridades_sel:
-        df_asignadas = df_asignadas[df_asignadas["prioridad"].isin(prioridades_sel)]
-
     if df_asignadas.empty:
         st.warning("⚠️ No hay datos con los filtros seleccionados.")
-
-    with col_f4:
-        ver_por = st.radio("📈 Ver carga por:", ["Prioridad", "Estado"], horizontal=True, key="tab5_ver_por")
-    col_agrupar = ver_por.lower()
 
     # ===================================================
     # AGRUPAR POR INSPECTOR Y DIMENSIÓN SELECCIONADA
