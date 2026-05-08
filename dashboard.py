@@ -1706,7 +1706,87 @@ with tab_inv:
                         "fecha": str(m_fecha),
                         "timestamp": datetime.datetime.now(TZ_CO).strftime("%Y-%m-%d %H:%M:%S"),
                         "sede": m_sede,
-                        "responsable": m
+                        "responsable": m_resp,
+                        "categoria": cat_sel,
+                        "item": item_sel,
+                        "talla": talla_sel if talla_sel != "N/A" else None,
+                        "cantidad": m_cant,
+                        "observacion": m_obs,
+                        "inspector": m_insp if m_insp != "N/A" else None
+                    }
+                    
+                    movimientos.append(nuevo_mov)
+                    resp = save_github_json(inv_repo, "INVENTARIO_V2.json", inv_token, movimientos, f"Nuevo movimiento: {m_tipo} {item_sel}", inv_branch)
+                    
+                    if resp.status_code in (200, 201):
+                        st.success("✅ Movimiento registrado correctamente.")
+                        st.cache_data.clear()
+                        st.rerun()
+                    else:
+                        st.error(f"❌ Error al guardar en GitHub: {resp.text}")
+
+        elif opcion_inv == "📜 Historial":
+            st.subheader("📜 Historial de Movimientos")
+            if movimientos:
+                df_h = pd.DataFrame(movimientos)
+                st.dataframe(df_h.sort_values("timestamp", ascending=False), use_container_width=True, hide_index=True)
+            else:
+                st.info("No hay movimientos registrados.")
+
+        elif opcion_inv == "⚙️ Configuración Catálogo":
+            st.subheader("⚙️ Configuración de Catálogo")
+            
+            with st.expander("Ver Catálogo Actual"):
+                st.json(catalogo)
+                
+            st.markdown("### ➕ Agregar Nuevo Ítem")
+            with st.form("form_config_cat", clear_on_submit=True):
+                c1, c2 = st.columns(2)
+                n_cat = c1.selectbox("Categoría Destino", list(catalogo.keys()))
+                n_item = c2.text_input("Nombre del Ítem")
+                n_tallas = st.checkbox("¿Maneja tallas?")
+                n_opciones = st.text_input("Opciones de Talla (separadas por coma, ej: S,M,L)")
+                
+                if st.form_submit_button("Añadir al Catálogo"):
+                    if n_item:
+                        catalogo[n_cat][n_item] = {
+                            "tallas": n_tallas,
+                            "opciones_talla": [x.strip() for x in n_opciones.split(",")] if n_tallas else []
+                        }
+                        save_github_json(inv_repo, "CATALOGO_V2.json", inv_token, catalogo, f"Añadido {n_item} al catálogo", inv_branch)
+                        st.success(f"Ítem {n_item} añadido correctamente.")
+                        st.cache_data.clear()
+                        st.rerun()
+                    else:
+                        st.error("El nombre del ítem es obligatorio.")
+
+# ===================================================
+# ✅ TAB 7 — SEGUIMIENTO ADICIONALES
+# ===================================================
+with tab7:
+    st.subheader("🏭 Seguimiento de Adicionales")
+
+    token_ad = st.secrets["github"]["token"]
+    repo_ad = st.secrets["github"]["repo"]
+    branch_ad = st.secrets["github"].get("branch", "main")
+    nombre_archivo_git = "PROGRAMACION.xlsx"
+
+    # Carga compartida desde GitHub
+    df_p, _ = fetch_github_excel(repo_ad, nombre_archivo_git, token_ad, branch_ad)
+    df_p = process_adicionales_data(df_p)
+
+    if not df_p.empty:
+        if "cargue" in df_p.columns:
+            sedes_raw = sorted(df_p["cargue"].astype(str).unique().tolist())
+            sedes_sel = st.selectbox("📍 Seleccionar Sede (Cargue):", ["TODAS"] + sedes_raw, key="filtro_sede_ad_tab7")
+            if sedes_sel != "TODAS":
+                df_p = df_p[df_p["cargue"].astype(str) == sedes_sel]
+
+        cols_req = ["contrato", "nombre_inspector", "direccion barrio", "codigo_tipo_trabajo", "cargue", "dias de asignacion"]
+        cols_final = [c for c in cols_req if c in df_p.columns]
+        st.dataframe(df_p[cols_final], use_container_width=True, hide_index=True)
+    else:
+        st.info("ℹ️ No hay un archivo de programación activo.")
         sede_consulta = st.selectbox("Filtrar por Sede", SEDES_INV, key="inv_sede_stock")
         df_stock = obtener_stock_df(movimientos, sede_consulta)
         
