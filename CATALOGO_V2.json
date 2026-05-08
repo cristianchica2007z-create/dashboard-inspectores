@@ -1,0 +1,84 @@
+{
+  "EPPs": {
+    "Monogafas": {
+      "tallas": false
+    },
+    "Guantes": {
+      "tallas": false
+    },
+    "Piernera": {
+      "tallas": false
+    }
+  },
+  "Dotación": {
+    "Botas": {
+      "tallas": true,
+      "opciones_talla": [
+        "36",
+        "37",
+        "38",
+        "39",
+        "40",
+        "41",
+        "42",
+        "43",
+        "44",
+        "45",
+        "46"
+      ]
+    },
+    "Camisa": {
+      "tallas": true,
+      "opciones_talla": [
+        "XS",
+        "S",
+        "M",
+        "L",
+        "XL",
+        "XXL"
+      ]
+    },
+    "Pantalón": {
+      "tallas": true,
+      "opciones_talla": [
+        "28",
+        "30",
+        "32",
+        "34",
+        "36",
+        "38",
+        "40"
+      ]
+    },
+    "Chaleco": {
+      "tallas": true,
+      "opciones_talla": [
+        "XS",
+        "S",
+        "M",
+        "L",
+        "XL",
+        "XXL"
+      ]
+    }
+  },
+  "Papelería": {
+    "Isométricos (paquete x200)": {
+      "tallas": false
+    },
+    "Stickers": {
+      "tallas": false
+    },
+    "Papelería general": {
+      "tallas": false
+    }
+  },
+  "Herramientas": {
+    "Cepo": {
+      "tallas": false
+    },
+    "Llaves de cepo": {
+      "tallas": false
+    }
+  }
+}

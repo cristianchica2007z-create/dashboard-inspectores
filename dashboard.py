@@ -1586,13 +1586,6 @@ with tab_inv:
     inv_repo  = st.secrets["github"]["repo"]
     inv_branch = st.secrets["github"].get("branch", "main")
 
-    # --- 2. CARGA DE DATOS ---
-    movimientos, _ = fetch_github_json(inv_repo, "MOVIMIENTOS.json", inv_token)
-    catalogo, _    = fetch_github_json(inv_repo, "CATALOGO.json", inv_token)
-
-    if not movimientos: movimientos = []
-    if not catalogo: catalogo = CATALOGO_DEFAULT
-
     # --- 3. CÁLCULO DE STOCK DINÁMICO ---
     def obtener_stock_df(movs_list, sede_filtro):
         data_stock = {}
