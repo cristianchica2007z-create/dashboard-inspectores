@@ -101,6 +101,21 @@ if "usuario" not in st.session_state:
     st.session_state.usuario = None
     st.session_state.rol = None
 
+# --- LÓGICA DE CIERRE DE SESIÓN POR INACTIVIDAD (5 MINUTOS) ---
+if "last_activity" not in st.session_state:
+    st.session_state.last_activity = datetime.datetime.now()
+
+if st.session_state.usuario is not None:
+    ahora = datetime.datetime.now()
+    segundos_inactivo = (ahora - st.session_state.last_activity).total_seconds()
+    
+    if segundos_inactivo > 300:  # 300 segundos = 5 minutos
+        st.session_state.usuario = None
+        st.session_state.rol = None
+        st.warning("⚠️ Sesión cerrada por inactividad (5 minutos).")
+        st.rerun()
+    st.session_state.last_activity = ahora
+
 def cargar_usuarios():
     if os.path.exists("USUARIOS.json"):
         with open("USUARIOS.json", "r", encoding="utf-8") as f:
@@ -1435,13 +1450,9 @@ with tab5:
             .str.strip()
         )
 
-        grupos_no_operativos = [
-            "SST-NAL",
-            "SUPERVISIONES",
-            "SUSP-ANT"
-        ]
-
-        df = df[~df["grupo"].isin(grupos_no_operativos)]
+        # Filtro solicitado: solo INSP-CALDAS e INSP-RIS
+        grupos_permitidos = ["INSP-CALDAS", "INSP-RIS"]
+        df = df[df["grupo"].isin(grupos_permitidos)]
 
         # ===================================================
         # VALIDAR COLUMNAS NECESARIAS
