@@ -147,7 +147,11 @@ def process_adicionales_data(df):
         df = df[df["codigo_tipo_trabajo"].astype(str).isin(CODIGOS_ADICIONALES)]
         
     # Cálculo de fechas (heurística)
-    col_fecha = next((c for c in df.columns if c in ["fecha de asignacion", "fecha asignacion", "asignacion", "fecha"]), None)
+    posibles_fechas = [
+        "fecha de asignacion", "fecha asignacion", "asignacion", "fecha", 
+        "fecha cargue", "fecha programacion", "f_asignacion", "fecha_asignacion"
+    ]
+    col_fecha = next((c for c in df.columns if c in posibles_fechas), None)
     
     if col_fecha:
         df[col_fecha] = pd.to_datetime(df[col_fecha], errors="coerce")
@@ -1778,22 +1782,22 @@ with tab7:
             if sedes_sel != "TODAS":
                 df_p = df_p[df_p["cargue"].astype(str) == sedes_sel]
 
-            # Selección de columnas solicitadass
-            cols_req = ["contrato", "nombre_inspector", "direccion barrio","codigo_tipo_trabajo", "cargue", "dias de asignacion"]
-            cols_final = [c for c in cols_req if c in df_p.columns]
-            
-            def color_semaforo(row):
-                # Verificación segura de la existencia de la columna para evitar KeyError
-                if "dias de asignacion" not in row:
-                    return [""] * len(row)
-                dias = row["dias de asignacion"]
-                if dias < 3:
-                    return ["background-color: #d4edda; color: #155724"] * len(row)  # Verde
-                elif dias == 3:
-                    return ["background-color: #fff3cd; color: #856404"] * len(row)  # Amarillo
-                else:
-                    return ["background-color: #f8d7da; color: #721c24"] * len(row)  # Rojo
+        # Selección de columnas y visualización (Fuera del bloque 'if cargue' para mayor robustez)
+        cols_req = ["contrato", "nombre_inspector", "direccion barrio", "codigo_tipo_trabajo", "cargue", "dias de asignacion"]
+        cols_final = [c for c in cols_req if c in df_p.columns]
+        
+        def color_semaforo(row):
+            # Verificación segura de la existencia de la columna calculada
+            if "dias de asignacion" not in row:
+                return [""] * len(row)
+            dias = row["dias de asignacion"]
+            if dias < 3:
+                return ["background-color: #d4edda; color: #155724"] * len(row)  # Verde
+            elif dias == 3:
+                return ["background-color: #fff3cd; color: #856404"] * len(row)  # Amarillo
+            else:
+                return ["background-color: #f8d7da; color: #721c24"] * len(row)  # Rojo
 
-            st.dataframe(df_p[cols_final].style.apply(color_semaforo, axis=1), use_container_width=True, hide_index=True)
+        st.dataframe(df_p[cols_final].style.apply(color_semaforo, axis=1), use_container_width=True, hide_index=True)
     else:
         st.info("ℹ️ No hay un archivo de programación activo. Utiliza el panel superior para subir 'PROGRAMACION.xlsx'.")
