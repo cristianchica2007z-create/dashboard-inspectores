@@ -10,6 +10,13 @@ import requests
 import io
 
 # ---------------------------------------------------
+# ✅ CONSTANTES GLOBALES
+# ---------------------------------------------------
+TZ_CO = ZoneInfo("America/Bogota")
+GRUPOS_OPERATIVOS = ["INSP-CALDAS", "INSP-RIS"]
+CODIGOS_ADICIONALES = ["12163", "12164", "10793", "12170", "10842", "10772", "10445"]
+
+# ---------------------------------------------------
 # ✅ CONFIGURACIÓN GENERAL DEL DASHBOARD
 # ---------------------------------------------------
 st.set_page_config(
@@ -61,15 +68,90 @@ def fetch_github_json(repo, path, token):
             return {}, None
     return {}, None
 
-@st.cache_data
+@st.cache_data(ttl=600)
 def load_local_bitacora(path):
     if os.path.exists(path):
-        df = pd.read_excel(path)
+        try:
+            df = pd.read_excel(path)
+        except Exception:
+            return None
+            
         df.columns = df.columns.str.strip().str.lower()
+        
+        # Pre-procesamiento de nombres e inspectores
+        if "inspector" in df.columns:
+            df["inspector"] = df["inspector"].astype(str).str.upper().str.strip().str.replace(r"\s+", " ", regex=True)
+            
+        # Mapeo de supervisores (Cacheado dentro del proceso de carga)
+        supervisores_dict = {k.upper(): v for k, v in {
+            "ARIZA MARIN SERGIO": "ANDRES ARROYAVE", "ANDRES ARROYAVE": "ANDRES ARROYAVE",
+            "BEDOYA DIEGO ALEJANDRO": "DANNY DE LA CRUZ", "DANNY DE LA CRUZ": "DANNY DE LA CRUZ",
+            "CARVAJAL RESTREPO JUAN DAVID": "JANIER MARIN", "JANIER MARIN": "JANIER MARIN",
+            "CHAVARRIAGA JUAN MANUEL": "CRISTIAN CHICA", "CRISTIAN CHICA": "CRISTIAN CHICA",
+            "ECHEVERRY CARDONA JHON STIVEN": "JANIER MARIN", "GALLEGO CADAVID NORBEY": "DANNY DE LA CRUZ",
+            "GIRALDO GARCIA SIGIFREDO": "ANDRES ARROYAVE", "LOPEZ PINEDA CESAR AUGUSTO": "JANIER MARIN",
+            "NOREÑA GIRALDO GEOVANNY": "ANDRES ARROYAVE", "OSPINA CASTELLANOS ANDERSON": "CRISTIAN CHICA",
+            "OSPINA RODRIGUEZ DANIEL ALBERTO": "ANDRES ARROYAVE", "RUIZ DILON MARLON ANDREY": "ANDRES ARROYAVE",
+            "LARGO OSORIO JOSE OMAR": "ANDRES ARROYAVE", "PULGARIN QUINTERO JULIAN ANDRES": "DANNY DE LA CRUZ",
+            "TAYACK TRUJILLO DEIVER EVELIO": "ANDRES ARROYAVE", "RUIZ ARENAS JUAN CAMILO": "CRISTIAN CHICA",
+            "PATIÑO CIFUENTES RICARDO": "JANIER MARIN", "VARGAS FRANCO JHON EDISON": "CRISTIAN CHICA",
+            "CARDONA CANO NELSON": "CRISTIAN CHICA", "CARDONA OROZCO JULIAN ANDRES": "ANDRES ARROYAVE",
+            "GRISALES CUERVO JUAN DAVID": "JANIER MARIN", "LEON MARIN LEONARDO FABIO": "JANIER MARIN",
+            "VELASQUEZ TAPASCO JHON DIEGO": "ANDRES ARROYAVE", "CARDONA CASTANO DIDIER ORLANDO": "CRISTIAN CHICA",
+            "TORRES HERNANDEZ JOHN JAMES": "ANDRES ARROYAVE", "COBO HOYOS JUAN MANUEL": "CRISTIAN CHICA",
+            "OSPINA NARANJO BERNARDO": "CRISTIAN CHICA", "COGOLLO FIGUEROA RANDY": "DANNY DE LA CRUZ",
+            "ARIAS TORO YEISON": "DANNY DE LA CRUZ", "MIRANDA FRANCO EFRAIN": "DANNY DE LA CRUZ",
+            "ARDILA MORA GUSTAVO ADOLFO": "DANNY DE LA CRUZ", "LOPEZ VELEZ ESTEBAN": "JANIER MARIN",
+            "GALEANO GRISALEZ RICARDO": "DANNY DE LA CRUZ", "CAICEDO ESCOBAR JUNIOR SANTIAGO": "JANIER MARIN",
+            "OTERO CAICEDO ANYEMBER": "DANNY DE LA CRUZ", "BUITRAGO RAMIREZ LEONARD": "CRISTIAN CHICA",
+            "BORJAS WILLY ALEXANDER": "ANDRES ARROYAVE", "MARIN LEON JAISSON JOAQUIN": "CRISTIAN CHICA",
+            "AMAYA HINCAPIE JUAN CARLOS": "CRISTIAN CHICA", "BEDOYA SANCHEZ CRISTIAN DAVID": "ANDRES ARROYAVE",
+            "RAMIREZ WILSON ENRIQUE": "CRISTIAN CHICA", "CANO MORALES JIMY ALFREDO": "ANDRES ARROYAVE",
+            "CASTRO CASTAÑO JUAN DAVID": "CRISTIAN CHICA", "LOAIZA GAMBA JHON ALEXANDER": "ANDRES ARROYAVE",
+            "VILLA LOAIZA JHEISON ESTIBEN": "CRISTIAN CHICA", "CÁRDENAS GALIANO HAROLD MAURICIO": "JANIER MARIN",
+            "VARGAS CORREA VICTOR ALFONSO": "DANNY DE LA CRUZ", "VILLA MERA CHRISTIAN DAVID": "JANIER MARIN",
+            "AVENDAÑO GARCIA JUAN NEPOMUCENO": "ANDRES ARROYAVE", "PELAEZ TATIS GABRIEL ESTEBAN": "CRISTIAN CHICA",
+            "CHICA RAMIREZ CRISTIAN ALBERTO": "CRISTIAN CHICA"
+        }.items()}
+        
+        df["supervisor"] = df["inspector"].map(supervisores_dict).fillna("SIN SUPERVISOR")
+        
+        # Conversión de Fechas y Horas una sola vez
+        if "fecha de ejecucion" in df.columns:
+            df["fecha"] = pd.to_datetime(df["fecha de ejecucion"], errors="coerce").dt.date
+            
+        # Parseo de horas (simplificado)
+        for col in ["hora inicio", "hora inicio de recorrido", "hora final"]:
+            if col in df.columns:
+                df[col + "_parsed"] = pd.to_datetime(df[col].astype(str), errors='coerce').dt.time
+
+        if "tiempo de tarea" in df.columns:
+            df["tiempo_tarea_td"] = pd.to_timedelta(df["tiempo de tarea"].astype(str), errors="coerce")
+
         return df
     return None
 
-@st.cache_data
+@st.cache_data(ttl=600)
+def process_adicionales_data(df):
+    """Procesa los datos de programación de forma cacheada para evitar lentitud en filtros."""
+    if df.empty: return df
+    df.columns = df.columns.str.strip().str.lower()
+    
+    # Filtro de códigos
+    if "codigo_tipo_trabajo" in df.columns:
+        df = df[df["codigo_tipo_trabajo"].astype(str).isin(CODIGOS_ADICIONALES)]
+        
+    # Cálculo de fechas (heurística)
+    col_fecha = next((c for c in df.columns if c in ["fecha de asignacion", "fecha asignacion", "asignacion", "fecha"]), None)
+    
+    if col_fecha:
+        df[col_fecha] = pd.to_datetime(df[col_fecha], errors="coerce")
+        hoy = datetime.datetime.now(TZ_CO).date()
+        df["dias de asignacion"] = df[col_fecha].apply(lambda x: (hoy - x.date()).days if pd.notna(x) else 0)
+    
+    return df
+
+@st.cache_data(ttl=600)
 def extract_excel_links(path):
     from openpyxl import load_workbook
     if not os.path.exists(path): return pd.DataFrame()
@@ -263,19 +345,11 @@ with col_logo:
 # ===================================================
 archivo_bitacora = "BITACORA.xlsx"
 
-if not os.path.exists(archivo_bitacora):
-    st.error(
-        "❌ No se encontró el archivo BITACORA.xlsx.\n"
-        "Debe cargarse antes de usar el dashboard."
-    )
+df_bitacora_base = load_local_bitacora(archivo_bitacora)
+
+if df_bitacora_base is None:
+    st.error("❌ No se encontró el archivo BITACORA.xlsx.")
     st.stop()
-
-df_bitacora = pd.read_excel(archivo_bitacora)
-df_bitacora.columns = df_bitacora.columns.str.strip().str.lower()
-
-# ✅ COPIA BASE INMUTABLE (NO SE FILTRA)
-df_bitacora_base = df_bitacora.copy()
-
 
 # ✅ CREAR PESTAÑAS
 # ---------------------------------------------------
@@ -509,11 +583,10 @@ with tab2:
     st.subheader("🕒 Control Operativo e&c")
     st.subheader("Eje Cafetero")
 
-    # ===================================================
-    # USAR COPIA PARA TAB 2 (NO TOCAR LA BASE)
-    # ===================================================
-    df_bitacora = load_local_bitacora(archivo_bitacora)
-    df_links = extract_excel_links(archivo_bitacora)
+    # Usar la base ya cargada y procesada
+    df_bitacora = df_bitacora_base.copy()
+    # Los links si se extraen aparte por ser un proceso distinto (openpyxl)
+    df_links = extract_excel_links(archivo_bitacora) 
 
     if df_bitacora is None or df_links.empty:
         st.error(
@@ -582,14 +655,6 @@ with tab2:
     # -------------------------------------------------
     # FUNCIONES UTILITARIAS DE TIEMPO
     # -------------------------------------------------
-    def parse_hora(valor):
-        try:
-            return pd.to_datetime(valor, format="%H:%M").time()
-        except Exception:
-            try:
-                return pd.to_datetime(str(valor)).time()
-            except Exception:
-                return None
 
     def parse_tiempo_tarea(valor):
         try:
@@ -620,119 +685,13 @@ with tab2:
         m = (s % 3600) // 60
         s2 = s % 60
         return f"{h}h {m}m {s2}s" if h > 0 else f"{m}m {s2}s"
-    columnas_necesarias = [
-        "fecha de ejecucion", "hora inicio", "hora final",
-        "hora inicio de recorrido",  # ✅ NUEVA
-        "inspector", "localidad", "cierre", "tiempo de tarea"
-    ]
 
-    for col in columnas_necesarias:
-        if col not in df_bitacora.columns:
-            st.error(f"❌ Falta la columna requerida: {col}")
-            st.stop()
-
-    df_bitacora["inspector"] = (
-        df_bitacora["inspector"]
-        .astype(str)
-        .str.upper()
-        .str.strip()
-        .str.replace(r"\s+", " ", regex=True)
-    )
-
-    df_bitacora["localidad"] = (
-        df_bitacora["localidad"]
-        .astype(str)
-        .str.upper()
-        .str.strip()
-    )
-
-    df_bitacora["fecha"] = pd.to_datetime(
-        df_bitacora["fecha de ejecucion"], errors="coerce"
-    ).dt.date
-
-    df_bitacora["hora_inicio"] = df_bitacora["hora inicio"].apply(parse_hora)
-    df_bitacora["hora_inicio_recorrido"] = df_bitacora["hora inicio de recorrido"].apply(parse_hora)
-    df_bitacora["hora_final"] = df_bitacora["hora final"].apply(parse_hora)
-
-    df_bitacora["tiempo_tarea_td"] = (
-        df_bitacora["tiempo de tarea"].apply(parse_tiempo_tarea)
-    )
-
-    df_bitacora["hora_inicio"] = df_bitacora["hora_inicio"].apply(
-        lambda x: x if pd.notna(x) else "SIN HORA"
-    )
-# ===================================================
-    # ✅ TAB 2 — PARTE 3 / 5
-    # Supervisores y filtros
-    # ===================================================
+    # Renombrar columnas parseadas para lógica existente
+    df_bitacora["hora_inicio"] = df_bitacora["hora inicio_parsed"].fillna("SIN HORA")
+    df_bitacora["hora_inicio_recorrido"] = df_bitacora["hora inicio de recorrido_parsed"]
+    df_bitacora["hora_final"] = df_bitacora["hora final_parsed"]
 
     # -------------------------------------------
-    # ASIGNAR SUPERVISOR A CADA INSPECTOR
-    # -------------------------------------------
-    supervisores_dict = {k.upper(): v for k, v in {
-        "ARIZA MARIN SERGIO": "ANDRES ARROYAVE",
-        "ANDRES ARROYAVE": "ANDRES ARROYAVE",
-        "BEDOYA DIEGO ALEJANDRO": "DANNY DE LA CRUZ",
-        "DANNY DE LA CRUZ": "DANNY DE LA CRUZ",
-        "CARVAJAL RESTREPO JUAN DAVID": "JANIER MARIN",
-        "JANIER MARIN": "JANIER MARIN",
-        "CHAVARRIAGA JUAN MANUEL": "CRISTIAN CHICA",
-        "CRISTIAN CHICA": "CRISTIAN CHICA",
-        "ECHEVERRY CARDONA JHON STIVEN": "JANIER MARIN",
-        "GALLEGO CADAVID NORBEY": "DANNY DE LA CRUZ",
-        "GIRALDO GARCIA SIGIFREDO": "ANDRES ARROYAVE",
-        "LOPEZ PINEDA CESAR AUGUSTO": "JANIER MARIN",
-        "NOREÑA GIRALDO GEOVANNY": "ANDRES ARROYAVE",
-        "OSPINA CASTELLANOS ANDERSON": "CRISTIAN CHICA",
-        "OSPINA RODRIGUEZ DANIEL ALBERTO": "ANDRES ARROYAVE",
-        "RUIZ DILON MARLON ANDREY": "ANDRES ARROYAVE",
-        "LARGO OSORIO JOSE OMAR": "ANDRES ARROYAVE",
-        "PULGARIN QUINTERO JULIAN ANDRES": "DANNY DE LA CRUZ",
-        "TAYACK TRUJILLO DEIVER EVELIO": "ANDRES ARROYAVE",
-        "RUIZ ARENAS JUAN CAMILO": "CRISTIAN CHICA",
-        "PATIÑO CIFUENTES RICARDO": "JANIER MARIN",
-        "VARGAS FRANCO JHON EDISON": "CRISTIAN CHICA",
-        "CARDONA CANO NELSON": "CRISTIAN CHICA",
-        "CARDONA OROZCO JULIAN ANDRES": "ANDRES ARROYAVE",
-        "GRISALES CUERVO JUAN DAVID": "JANIER MARIN",
-        "LEON MARIN LEONARDO FABIO": "JANIER MARIN",
-        "VELASQUEZ TAPASCO JHON DIEGO": "ANDRES ARROYAVE",
-        "CARDONA CASTANO DIDIER ORLANDO": "CRISTIAN CHICA",
-        "TORRES HERNANDEZ JOHN JAMES": "ANDRES ARROYAVE",
-        "COBO HOYOS JUAN MANUEL": "CRISTIAN CHICA",
-        "OSPINA NARANJO BERNARDO": "CRISTIAN CHICA",
-        "COGOLLO FIGUEROA RANDY": "DANNY DE LA CRUZ",
-        "ARIAS TORO YEISON": "DANNY DE LA CRUZ",
-        "MIRANDA FRANCO EFRAIN": "DANNY DE LA CRUZ",
-        "ARDILA MORA GUSTAVO ADOLFO": "DANNY DE LA CRUZ",
-        "LOPEZ VELEZ ESTEBAN": "JANIER MARIN",
-        "GALEANO GRISALEZ RICARDO": "DANNY DE LA CRUZ",
-        "CAICEDO ESCOBAR JUNIOR SANTIAGO": "JANIER MARIN",
-        "OTERO CAICEDO ANYEMBER": "DANNY DE LA CRUZ",
-        "BUITRAGO RAMIREZ LEONARD": "CRISTIAN CHICA",
-        "BORJAS WILLY ALEXANDER": "ANDRES ARROYAVE",
-        "MARIN LEON JAISSON JOAQUIN": "CRISTIAN CHICA",
-        "AMAYA HINCAPIE JUAN CARLOS": "CRISTIAN CHICA",
-        "BEDOYA SANCHEZ CRISTIAN DAVID": "ANDRES ARROYAVE",
-        "RAMIREZ WILSON ENRIQUE": "CRISTIAN CHICA",
-        "CANO MORALES JIMY ALFREDO": "ANDRES ARROYAVE",
-        "CASTRO CASTAÑO JUAN DAVID": "CRISTIAN CHICA",
-        "LOAIZA GAMBA JHON ALEXANDER": "ANDRES ARROYAVE",
-        "VILLA LOAIZA JHEISON ESTIBEN": "CRISTIAN CHICA",
-        "CÁRDENAS GALIANO HAROLD MAURICIO": "JANIER MARIN",
-        "VARGAS CORREA VICTOR ALFONSO": "DANNY DE LA CRUZ",
-        "VILLA MERA CHRISTIAN DAVID": "JANIER MARIN",
-        "AVENDAÑO GARCIA JUAN NEPOMUCENO": "ANDRES ARROYAVE",
-        "PELAEZ TATIS GABRIEL ESTEBAN": "CRISTIAN CHICA",
-        
-    }.items()}
-
-    df_bitacora["supervisor"] = (
-        df_bitacora["inspector"]
-        .map(supervisores_dict)
-        .fillna("SIN SUPERVISOR")
-    )
-
     # -------------------------------------------
     # FILTRO DE FECHA
     # -------------------------------------------
@@ -748,8 +707,8 @@ with tab2:
     # -------------------------------------------
 
     def calcular_tiempo_recorrido(row):
-        hi = row.get("hora_inicio")
-        hr = row.get("hora_inicio_recorrido")
+        hi = row.get("hora inicio_parsed")
+        hr = row.get("hora inicio de recorrido_parsed")
 
         # Si falta cualquiera de las 2 horas, no se puede calcular
         if not isinstance(hi, datetime.time) or not isinstance(hr, datetime.time):
@@ -1433,25 +1392,15 @@ with tab5:
     # ===================================================
     archivo_bitacora = "BITACORA.xlsx"
 
-    if not os.path.exists(archivo_bitacora):
-        st.warning("⚠️ No hay una bitácora cargada.")
-    else:
-        df = pd.read_excel(archivo_bitacora)
-    df.columns = df.columns.str.strip().str.lower()
-
+    df = df_bitacora_base.copy()
+    
     # ===================================================
-    # ✅ EXCLUIR GRUPOS NO OPERATIVOS (MISMA REGLA QUE TAB 2)
+    # ✅ FILTRAR SOLO GRUPOS PERMITIDOS
     # ===================================================
     if "grupo" in df.columns:
-        df["grupo"] = (
-            df["grupo"]
-            .astype(str)
-            .str.upper()
-            .str.strip()
-        )
+        df["grupo"] = df["grupo"].astype(str).str.upper().str.strip()
 
-        # Filtro solicitado: solo INSP-CALDAS e INSP-RIS
-        grupos_permitidos = ["INSP-CALDAS", "INSP-RIS"]
+        grupos_permitidos = GRUPOS_OPERATIVOS
         df = df[df["grupo"].isin(grupos_permitidos)]
 
         # ===================================================
@@ -1807,11 +1756,11 @@ with tab7:
 
     # --- CARGA DEL ARCHIVO DESDE GITHUB (Datos compartidos) ---
     df_p, _ = fetch_github_excel(repo_ad, nombre_archivo_git, token_ad, branch_ad)
+    
+    # Procesamiento cacheado para mayor velocidad
+    df_p = process_adicionales_data(df_p)
 
     if not df_p.empty:
-        # Normalizar nombres de columnas para facilitar la búsqueda
-        df_p.columns = df_p.columns.str.strip().str.lower()
-
         # --- FILTRO DE SEDE (CARGUE) ---
         if "cargue" in df_p.columns:
             sedes_raw = sorted(df_p["cargue"].astype(str).unique().tolist())
@@ -1820,31 +1769,6 @@ with tab7:
             
             if sedes_sel != "TODAS":
                 df_p = df_p[df_p["cargue"].astype(str) == sedes_sel]
-
-        # Filtrar por tipos de trabajo específicos solicitados
-        codigos_validos = ["12163", "12164", "10793", "12170", "10842", "10772", "10445"]
-        if "codigo_tipo_trabajo" in df_p.columns:
-            df_p = df_p[df_p["codigo_tipo_trabajo"].astype(str).isin(codigos_validos)]
-
-        # Buscar la columna de fecha de asignación (heurística de nombres comunes)
-        col_fecha = None
-        posibles_nombres = ["fecha de asignacion", "fecha asignacion", "asignacion", "fecha_asignacion", "fecha"]
-        for c in df_p.columns:
-            if c in posibles_nombres:
-                col_fecha = c
-                break
-
-        if not col_fecha:
-            st.error("❌ No se encontró una columna de fecha (ej: 'fecha de asignacion') en el archivo.")
-            st.write("Columnas detectadas:", list(df_p.columns))
-        else:
-            # Conversión a fecha y cálculo de días transcurridos
-            df_p[col_fecha] = pd.to_datetime(df_p[col_fecha], errors="coerce")
-            hoy = datetime.datetime.now(TZ_CO).date()
-            
-            df_p["dias de asignacion"] = df_p[col_fecha].apply(
-                lambda x: (hoy - x.date()).days if pd.notna(x) else 0
-            )
 
             # Selección de columnas solicitadass
             cols_req = ["contrato", "nombre_inspector", "direccion barrio","codigo_tipo_trabajo", "cargue", "dias de asignacion"]
