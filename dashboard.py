@@ -87,6 +87,15 @@ st.markdown("""
         font-weight: 800;
         margin-top: 5px;
     }
+    /* Personalización de colores para Pills y Segmented Control (Azul E&C) */
+    div[data-testid="stPills"] button[aria-checked="true"] {
+        background-color: #1e3a8a !important;
+        color: white !important;
+    }
+    div[data-testid="stSegmentedControl"] button[aria-checked="true"] {
+        background-color: #1e3a8a !important;
+        color: white !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
