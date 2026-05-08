@@ -1379,44 +1379,30 @@ with tab_asignadas:
 # ✅ TAB — INVENTARIO V2
 # ===================================================
 with tab_inv_v2:
-    # --- ESTILOS INSPIRACIÓN GOOGLE DRIVE ---
     st.markdown("""
         <style>
-            @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
-            
-            .drive-title {
-                font-family: 'Roboto', sans-serif;
-                font-weight: 400;
-                font-size: 22px;
-                color: #5f6368;
-                margin-bottom: 20px;
-                display: flex;
-                align-items: center;
-                gap: 12px;
+            .inv-sidebar {
+                background-color: #f8f9fa;
+                padding: 1.5rem;
+                border-radius: 10px;
+                border-left: 6px solid #1e3a8a;
+                box-shadow: 2px 2px 10px rgba(0,0,0,0.05);
+                height: 100%;
             }
-            .drive-sub {
-                font-family: 'Roboto', sans-serif;
-                font-weight: 500;
-                font-size: 14px;
-                color: #5f6368;
+            .inv-nav-header {
+                color: #1e3a8a;
+                font-weight: 700;
+                font-size: 1.1rem;
                 margin-bottom: 15px;
                 text-transform: uppercase;
-                letter-spacing: 0.5px;
+                letter-spacing: 1px;
+                display: block;
             }
-            .stButton>button {
-                border-radius: 24px !important;
-                border: 1px solid #dadce0 !important;
-                background-color: #ffffff !important;
-                color: #3c4043 !important;
-                font-family: 'Roboto', sans-serif !important;
-                font-weight: 500 !important;
-                padding: 8px 24px !important;
-                box-shadow: 0 1px 2px 0 rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15) !important;
-                transition: background-color 0.2s, box-shadow 0.2s !important;
-            }
-            .stButton>button:hover {
-                background-color: #f8f9fa !important;
-                box-shadow: 0 1px 3px 0 rgba(60,64,67,0.3), 0 4px 8px 3px rgba(60,64,67,0.15) !important;
+            .section-label {
+                font-weight: 500;
+                color: #495057;
+                margin-bottom: 15px;
+                font-size: 1.2rem;
             }
         </style>
     """, unsafe_allow_html=True)
@@ -1457,24 +1443,20 @@ with tab_inv_v2:
     if not isinstance(movimientos, list): movimientos = []
     if not isinstance(catalogo, dict) or not catalogo: catalogo = CATALOGO_DEFAULT.copy()
 
-    st.markdown("""
-        <div class="drive-title">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/1/12/Google_Drive_icon_%282020%29.svg" width="32">
-            <span>Mi unidad / Inventario V2</span>
-        </div>
-    """, unsafe_allow_html=True)
-
-    # --- UI LAYOUT: SUB-PESTAÑAS A LA IZQUIERDA ---
+    # --- UI LAYOUT: MENÚ LATERAL INTERNO ---
     col_nav, col_main = st.columns([1, 4]) 
 
     with col_nav:
-        opcion_inv = st.radio(
-            "Seleccione una acción:",
-            ["📊 Stock Actual", "➕ Registrar Entrada", "➖ Registrar Salida", "📜 Historial", "⚙️ Configuración Catálogo"],
-            key="inv_menu_radio"
-        )
-        st.markdown("---")
-        st.caption("Eje Cafetero - Gestión de Activos")
+        st.markdown('<div class="inv-sidebar">', unsafe_allow_html=True)
+        st.markdown('<span class="inv-nav-header">📦 Inventario</span>', unsafe_allow_html=True)
+        with st.expander("📂 NAVEGACIÓN", expanded=True):
+            opcion_inv = st.radio(
+                "Seleccione una acción:",
+                ["📊 Stock Actual", "➕ Registrar Entrada", "➖ Registrar Salida", "📜 Historial", "⚙️ Configuración Catálogo"],
+                key="inv_menu_radio",
+                label_visibility="collapsed"
+            )
+        st.markdown('</div>', unsafe_allow_html=True)
 
     with col_main:
         # --- FUNCIÓN DE CÁLCULO DE STOCK ---
@@ -1497,7 +1479,7 @@ with tab_inv_v2:
             return pd.DataFrame(rows)
 
         if opcion_inv == "📊 Stock Actual":
-            st.markdown('<p class="drive-sub">Prioridad / Disponibilidad</p>', unsafe_allow_html=True)
+            st.markdown('<p class="section-label">📊 Disponibilidad de Stock</p>', unsafe_allow_html=True)
             sede_consulta = st.selectbox("📍 SELECCIONAR UBICACIÓN", SEDES_INV, key="inv_sede_stock")
             st.write("")
 
@@ -1512,7 +1494,7 @@ with tab_inv_v2:
                 st.info(f"No hay movimientos registrados para la sede {sede_consulta}.")
 
         elif opcion_inv == "➕ Registrar Entrada":
-            st.markdown('<p class="drive-sub">Nuevo / Registro de entrada</p>', unsafe_allow_html=True)
+            st.markdown('<p class="section-label">➕ Registro de Entradas</p>', unsafe_allow_html=True)
             with st.container(border=True): # Contenedor para agrupar el formulario
                 c1, c2, c3 = st.columns(3)
                 m_sede = c1.selectbox("SEDE DESTINO", SEDES_INV, key="entrada_sede")
@@ -1562,7 +1544,7 @@ with tab_inv_v2:
                         st.error(f"❌ Error al guardar en GitHub: {resp.text}")
 
         elif opcion_inv == "➖ Registrar Salida":
-            st.markdown('<p class="drive-sub">Nuevo / Asignación de salida</p>', unsafe_allow_html=True)
+            st.markdown('<p class="section-label">➖ Registro de Salidas / Asignaciones</p>', unsafe_allow_html=True)
             with st.container(border=True): # Contenedor para agrupar el formulario
                 c1, c2, c3 = st.columns(3)
                 m_sede = c1.selectbox("SEDE ORIGEN", SEDES_INV, key="salida_sede")
@@ -1630,7 +1612,7 @@ with tab_inv_v2:
                             st.error(f"❌ Error al guardar en GitHub: {resp.text}")
 
         elif opcion_inv == "📜 Historial":
-            st.markdown('<p class="drive-sub">Recientes / Bitácora</p>', unsafe_allow_html=True)
+            st.markdown('<p class="section-label">📜 Bitácora de Movimientos</p>', unsafe_allow_html=True)
             if movimientos:
                 df_h = pd.DataFrame(movimientos)
                 # Añadir filtros al historial para que sea más útil
@@ -1652,12 +1634,12 @@ with tab_inv_v2:
                 st.info("No hay movimientos registrados.")
 
         elif opcion_inv == "⚙️ Configuración Catálogo":
-            st.markdown('<p class="drive-sub">Configuración / Maestro</p>', unsafe_allow_html=True)
+            st.markdown('<p class="section-label">⚙️ Configuración del Maestro</p>', unsafe_allow_html=True)
             
             with st.expander("Ver Catálogo Actual"):
                 st.json(catalogo)
                 
-            st.markdown('<p class="drive-sub">Añadir referencia al catálogo</p>', unsafe_allow_html=True)
+            st.markdown('<p class="section-label">✨ Nueva Referencia</p>', unsafe_allow_html=True)
             with st.container(border=True): # Contenedor para agrupar el formulario
                 with st.form("form_config_cat", clear_on_submit=True):
                     c1, c2 = st.columns(2)
