@@ -88,22 +88,24 @@ st.markdown("""
         margin-top: 5px;
     }
     /* Personalización agresiva para Pills y Segmented Control (Azul E&C) */
-    /* 1. Fondo y bordes cuando están seleccionados */
-    div[data-testid="stPills"] button[aria-checked="true"],
-    div[data-testid="stSegmentedControl"] button[aria-checked="true"] {
+    /* 1. Selector universal para botones seleccionados en Pills y Segmented Control */
+    div[data-testid="stPills"] button[aria-checked="true"], 
+    div[data-testid="stSegmentedControl"] button[aria-checked="true"],
+    button[data-baseweb="button"][aria-checked="true"] {
         background-color: #1e3a8a !important;
         border-color: #1e3a8a !important;
         color: white !important;
     }
-    /* 2. Forzar color de texto blanco en el párrafo interno de la píldora */
+    /* 2. Forzar color de texto blanco en el párrafo interno y hover */
     div[data-testid="stPills"] button[aria-checked="true"] p,
-    div[data-testid="stSegmentedControl"] button[aria-checked="true"] p {
+    div[data-testid="stSegmentedControl"] button[aria-checked="true"] p,
+    button[data-baseweb="button"][aria-checked="true"] p {
         color: white !important;
     }
     /* 3. Eliminar el resplandor o borde rojo al hacer clic o tener el foco */
-    div[data-testid="stPills"] button:focus,
-    div[data-testid="stSegmentedControl"] button:focus,
-    div[data-testid="stPills"] button:active {
+    button[data-baseweb="button"]:focus,
+    button[data-baseweb="button"]:active,
+    div[aria-checked="true"] > button {
         border-color: #1e3a8a !important;
         box-shadow: 0 0 0 0.2rem rgba(30, 58, 138, 0.25) !important;
     }
