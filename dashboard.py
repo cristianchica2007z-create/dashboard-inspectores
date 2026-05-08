@@ -933,15 +933,22 @@ with tab2:
         if not df_eff.empty else "—"
     )
 
+    # ✅ KPI: PROMEDIO TIEMPO DE RECORRIDO (GENERAL)
+    prom_recorrido_global = (
+        td_to_str(df2["tiempo_recorrido_td"].mean())
+        if not df2["tiempo_recorrido_td"].dropna().empty else "—"
+    )
+
     # ---------------------------------------------------
     # KPIs EN PANTALLA (ORDEN ORIGINAL)
     # ---------------------------------------------------
     st.markdown("## ⭐ KPIs del día")
 
-    c1, c2, c3 = st.columns(3)
+    c1, c2, c3, c4_kpi = st.columns(4)
     c1.metric("⏰ Promedio inicio", hora_prom_ini)
     c2.metric("🕒 Promedio fin", hora_prom_fin)
     c3.metric("🕓 Prom. tiempo por tarea", tiempo_prom_str)
+    c4_kpi.metric("🚗 Prom. recorrido", prom_recorrido_global)
 
     c4, c5, c6 = st.columns(3)
     c4.metric("📋 Total tareas", total_ordenes)
@@ -1007,10 +1014,33 @@ with tab2:
     columnas_disponibles = [c for c in columnas_tabla if c in df_tabla.columns]
 
     st.markdown("### 📋 Tabla de inspecciones del día")
+
+    # ✅ DEFINIR ESTILOS Y FORMATEO
+    def color_estado(val):
+        if val == "Puntual":
+            return 'background-color: #d4edda; color: #155724;' # Verde
+        elif "tarde" in str(val).lower():
+            return 'background-color: #fff3cd; color: #856404;' # Amarillo
+        return ''
+
+    # Aplicar estilos: Centrar todo menos inspector y aplicar colores a estado
+    df_styled = (
+        df_tabla[columnas_disponibles]
+        .style.set_properties(**{'text-align': 'center'})
+        .set_properties(subset=['inspector'], **{'text-align': 'left'})
+        .applymap(color_estado, subset=['estado'])
+    )
+
     st.dataframe(
-        df_tabla[columnas_disponibles],
+        df_styled,
         use_container_width=True,
-        hide_index=True
+        hide_index=True,
+        column_config={
+            "porcentaje_efectividad": st.column_config.NumberColumn(
+                "Efectividad %",
+                format="%.1f%%"
+            )
+        }
     )
 
      # ===================================================
