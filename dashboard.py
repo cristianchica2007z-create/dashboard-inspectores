@@ -14,6 +14,7 @@ import io
 # ✅ CONSTANTES GLOBALES
 # ---------------------------------------------------
 TZ_CO = ZoneInfo("America/Bogota")
+TZ_UTC = ZoneInfo("UTC")
 GRUPOS_OPERATIVOS = ["INSP-CALDAS", "INSP-RIS"]
 CODIGOS_ADICIONALES = ["12163", "12164", "10793", "12170", "10842", "10772", "10445"]
 
@@ -312,7 +313,48 @@ with col_logout:
         st.cache_data.clear()
         st.rerun()
 
-    
+# ===================================================
+# ✅ MOSTRAR METADATA DE ACTUALIZACIÓN (GLOBAL)
+# ===================================================
+def obtener_texto_meta(info_dict):
+    if not info_dict or "ultima_actualizacion" not in info_dict:
+        return "—", "—"
+    try:
+        fecha_utc = datetime.datetime.strptime(
+            info_dict.get("ultima_actualizacion"), "%Y-%m-%d %H:%M:%S"
+        ).replace(tzinfo=TZ_UTC)
+        fecha_col = fecha_utc.astimezone(TZ_CO)
+        return fecha_col.strftime("%Y-%m-%d %H:%M:%S"), info_dict.get("usuario_actualizo", "—")
+    except:
+        return "—", "—"
+
+token_meta = st.secrets["github"]["token"]
+repo_meta = st.secrets["github"]["repo"]
+
+# Leer info de ambos archivos desde GitHub para consistencia global
+info_bitacora_meta, _ = fetch_github_json(repo_meta, "BITACORA_INFO.json", token_meta)
+info_programacion_meta, _ = fetch_github_json(repo_meta, "PROGRAMACION_INFO.json", token_meta)
+
+f_bit, u_bit = obtener_texto_meta(info_bitacora_meta)
+f_prog, u_prog = obtener_texto_meta(info_programacion_meta)
+
+st.markdown(
+    f"""
+    <div style='display: flex; justify-content: space-between; padding: 0px 15px; margin-bottom: -15px;'>
+        <div style='color: #64748b; font-size: 0.8rem; font-family: sans-serif;'>
+            🕓 <b>Bitácora:</b> {f_bit} | 👤 {u_bit}
+        </div>
+        <div style='color: #64748b; font-size: 0.8rem; font-family: sans-serif; text-align: right;'>
+            📅 <b>Programación:</b> {f_prog} | 👤 {u_prog}
+        </div>
+    </div>
+    <hr style='margin: 10px 0px; border-top: 1px solid #e2e8f0;'>
+    """, 
+    unsafe_allow_html=True
+)
+
+# ---------------------------------------------------
+
 # ---------------------------------------------------
 # ✅ LISTA MAESTRA DE INSPECTORES
 # ---------------------------------------------------
@@ -679,44 +721,6 @@ with tab2:
             "Esto indica que el archivo solo contiene grupos no operativos."
         )
         st.stop()
-
-    # -------------------------------------------------
-    # FECHA Y USUARIO DE ÚLTIMA ACTUALIZACIÓN
-    # -------------------------------------------------
-    TZ_UTC = ZoneInfo("UTC")
-    TZ_CO = ZoneInfo("America/Bogota")
-
-    info_path = "BITACORA_INFO.json"
-    ultima_actualizacion = "—"
-    usuario_actualizo = "—"
-
-    try:
-        if os.path.exists(info_path):
-            with open(info_path, "r", encoding="utf-8") as f:
-                info = json.load(f)
-
-                fecha_utc = datetime.datetime.strptime(
-                    info.get("ultima_actualizacion"),
-                    "%Y-%m-%d %H:%M:%S"
-                ).replace(tzinfo=TZ_UTC)
-
-                fecha_colombia = fecha_utc.astimezone(TZ_CO)
-
-                ultima_actualizacion = fecha_colombia.strftime(
-                    "%Y-%m-%d %H:%M:%S"
-                )
-                usuario_actualizo = info.get("usuario_actualizo", "—")
-    except Exception:
-        pass
-
-    st.caption(
-        f"🕓 Última actualización: {ultima_actualizacion} "
-        f"| 👤 Actualizó: {usuario_actualizo}"
-    )
-
-    # -------------------------------------------------
-    # FUNCIONES UTILITARIAS DE TIEMPO
-    # -------------------------------------------------
 
     def parse_tiempo_tarea(valor):
         try:
@@ -2054,6 +2058,24 @@ with tab7:
                 
                 resp_put = requests.put(url_ad, headers=headers_ad, json=payload_ad)
                 if resp_put.status_code in (200, 201):
+                    # --- ACTUALIZAR METADATA DE PROGRAMACIÓN ---
+                    info_p = {
+                        "ultima_actualizacion": datetime.datetime.now(TZ_UTC).strftime("%Y-%m-%d %H:%M:%S"),
+                        "usuario_actualizo": st.session_state.usuario
+                    }
+                    
+                    contenido_info_p_b64 = base64.b64encode(
+                        json.dumps(info_p, indent=2).encode("utf-8")
+                    ).decode("utf-8")
+                    
+                    url_info_p = f"https://api.github.com/repos/{repo_ad}/contents/PROGRAMACION_INFO.json"
+                    r_info_p = requests.get(url_info_p, headers=headers_ad)
+                    sha_info_p = r_info_p.json().get("sha") if r_info_p.status_code == 200 else None
+                    
+                    payload_info_p = {"message": "Actualización de PROGRAMACION_INFO.json", "content": contenido_info_p_b64, "branch": branch_ad}
+                    if sha_info_p: payload_info_p["sha"] = sha_info_p
+                    requests.put(url_info_p, headers=headers_ad, json=payload_info_p)
+                    
                     st.success("✅ Archivo guardado correctamente en la nube. Ahora todos los usuarios verán esta versión.")
                     st.cache_data.clear() # Limpiar caché para forzar la lectura del nuevo archivo
                     st.rerun()
