@@ -57,6 +57,15 @@ st.set_page_config(
     layout="wide"
 )
 
+# ✅ ESTILOS GLOBALES (Evita el parpadeo visual al cambiar de login a dashboard)
+st.markdown("""
+    <style>
+    .stApp {
+        background-color: #ffffff;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 # -------------------------------------------------
 # ✅ FUNCIONES DE CACHÉ (MEJORA DE RENDIMIENTO)
 # -------------------------------------------------
@@ -231,20 +240,6 @@ def cargar_usuarios():
     return {}
 
 if st.session_state.usuario is None:
-    # Estilos CSS para mejorar la interfaz de inicio de sesión y centrar los elementos
-    st.markdown("""
-        <style>
-        /* Fondo blanco puro para limpieza visual */
-        .stApp {
-            background-color: #ffffff;
-        }
-        /* Centrado de los mensajes de error y botones */
-        div[data-testid="stVerticalBlock"] > div:has(div.stButton) {
-            text-align: center;
-        }
-        </style>
-    """, unsafe_allow_html=True)
-
     # Layout de columnas para centrar horizontalmente el login
     _, col_login, _ = st.columns([1, 1.5, 1])
 
@@ -369,13 +364,18 @@ with col_logo:
 # ===================================================
 # CARGA ÚNICA DE BITÁCORA (BASE GLOBAL)
 # ===================================================
-archivo_bitacora = "BITACORA.xlsx"
-
-df_bitacora_base = load_local_bitacora(archivo_bitacora)
-
-if df_bitacora_base is None:
-    st.error("❌ No se encontró el archivo BITACORA.xlsx.")
-    st.stop()
+with st.spinner("🚀 Cargando datos operativos, por favor espere..."):
+    archivo_bitacora = "BITACORA.xlsx"
+    
+    # Carga base de datos
+    df_bitacora_base = load_local_bitacora(archivo_bitacora)
+    
+    if df_bitacora_base is None:
+        st.error("❌ No se encontró el archivo BITACORA.xlsx.")
+        st.stop()
+    
+    # Extraer links una sola vez aquí para evitar lentitud en el Tab 2
+    df_links_global = extract_excel_links(archivo_bitacora)
 
 # ✅ CREAR PESTAÑAS
 # ---------------------------------------------------
@@ -611,12 +611,10 @@ with tab2:
 
     # Usar la base ya cargada y procesada
     df_bitacora = df_bitacora_base.copy()
-    # Los links si se extraen aparte por ser un proceso distinto (openpyxl)
-    df_links = extract_excel_links(archivo_bitacora) 
 
-    if df_bitacora is None or df_links.empty:
+    if df_bitacora is None:
         st.error(
-            "❌ Error al procesar la bitácora o los enlaces."
+            "❌ Error al procesar la bitácora."
         )
         st.stop()
 
