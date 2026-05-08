@@ -867,6 +867,7 @@ with tab_diario:
     st.dataframe(
         df_styled,
         use_container_width=True,
+        height=800,
         hide_index=True,
         column_config={
             "porcentaje_efectividad": st.column_config.NumberColumn(
