@@ -1752,53 +1752,17 @@ with tab_inv_v2:
                                         st.error(f"❌ Error al guardar el catálogo en GitHub: {resp_cat.text}")
             else:
                 st.info("No hay ítems configurados para manejar tallas en el catálogo.")
-                    r_info_p = requests.get(url_info_p, headers=headers_ad)
-                    sha_info_p = r_info_p.json().get("sha") if r_info_p.status_code == 200 else None
-                    
-                    payload_info_p = {"message": "Actualización de PROGRAMACION_INFO.json", "content": contenido_info_p_b64, "branch": branch_ad}
-                    if sha_info_p: payload_info_p["sha"] = sha_info_p
-                    requests.put(url_info_p, headers=headers_ad, json=payload_info_p)
-                    
-                    st.success("✅ Archivo guardado correctamente en la nube. Ahora todos los usuarios verán esta versión.")
-                    st.cache_data.clear() # Limpiar caché para forzar la lectura del nuevo archivo
-                    st.rerun()
-                else:
-                    st.error(f"❌ Error al sincronizar con GitHub: {resp_put.text}")
-            else:
-                st.warning("⚠️ Por favor selecciona un archivo antes de intentar guardar.")
 
-    # --- CARGA DEL ARCHIVO DESDE GITHUB (Datos compartidos) ---
-    df_p, _ = fetch_github_excel(repo_ad, nombre_archivo_git, token_ad, branch_ad)
-    
-    # Procesamiento cacheado para mayor velocidad
-    df_p = process_adicionales_data(df_p)
+# ===================================================
+# ✅ TAB — SST
+# ===================================================
+with tab_sst:
+    st.subheader("🦺 Seguridad y Salud en el Trabajo")
+    st.info("Sección para la gestión de registros SST.")
 
-    if not df_p.empty:
-        # --- FILTRO DE SEDE (CARGUE) ---
-        if "cargue" in df_p.columns:
-            sedes_raw = sorted(df_p["cargue"].astype(str).unique().tolist())
-            sedes_opciones = ["TODAS"] + sedes_raw
-            sedes_sel = st.selectbox("📍 Seleccionar Sede (Cargue):", sedes_opciones, key="filtro_sede_adicionales")
-            
-            if sedes_sel != "TODAS":
-                df_p = df_p[df_p["cargue"].astype(str) == sedes_sel]
-
-        # Selección de columnas y visualización (Fuera del bloque 'if cargue' para mayor robustez)
-        cols_req = ["contrato", "nombre_inspector", "direccion barrio", "codigo_tipo_trabajo", "cargue", "dias de asignacion"]
-        cols_final = [c for c in cols_req if c in df_p.columns]
-        
-        def color_semaforo(row):
-            # Verificación segura de la existencia de la columna calculada
-            if "dias de asignacion" not in row:
-                return [""] * len(row)
-            dias = row["dias de asignacion"]
-            if dias < 3:
-                return ["background-color: #d4edda; color: #155724"] * len(row)  # Verde
-            elif dias == 3:
-                return ["background-color: #fff3cd; color: #856404"] * len(row)  # Amarillo
-            else:
-                return ["background-color: #f8d7da; color: #721c24"] * len(row)  # Rojo
-
-        st.dataframe(df_p[cols_final].style.apply(color_semaforo, axis=1), use_container_width=True, hide_index=True)
-    else:
-        st.info("ℹ️ No hay un archivo de programación activo. Utiliza el panel superior para subir 'PROGRAMACION.xlsx'.")
+# ===================================================
+# ✅ TAB — SUBIR ARCHIVOS
+# ===================================================
+with tab_subir:
+    st.subheader("📈 Administración de Archivos")
+    st.info("Utilice esta sección para cargar la bitácora operativa y otros archivos maestros.")
