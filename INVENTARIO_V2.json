@@ -11,5 +11,18 @@
     "cantidad": 5,
     "observacion": "",
     "inspector": null
+  },
+  {
+    "tipo": "ENTRADA",
+    "fecha": "2026-05-08",
+    "timestamp": "2026-05-07 22:45:38",
+    "sede": "CALDAS",
+    "responsable": "CRISTIAN CHICA",
+    "categoria": "Dotación",
+    "item": "Camisa",
+    "talla": "S",
+    "cantidad": 10,
+    "observacion": "",
+    "inspector": "CRISTIAN CHICA"
   }
 ]
