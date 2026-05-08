@@ -1495,174 +1495,121 @@ with tab_inv_v2:
     if not isinstance(catalogo, dict) or not catalogo: catalogo = CATALOGO_DEFAULT.copy()
 
     # --- UI LAYOUT: MENÚ LATERAL INTERNO ---
-    col_nav, col_main = st.columns([1, 4]) 
+    # Layout Principal del Inventario
+    col_nav, col_main = st.columns([1.2, 4]) 
 
     with col_nav:
-        st.markdown('<div class="left-nav-bar-content">', unsafe_allow_html=True) # Contenedor de la barra lateral
-        st.markdown('<h3 class="left-nav-title">Inventario V2</h3>', unsafe_allow_html=True) # Título del menú
-        st.markdown('<p class="left-nav-user-name">**CRISTIAN ALBERTO CHICA RAMÍREZ**</p>', unsafe_allow_html=True) # Información del usuario
-        st.markdown('<p class="left-nav-company">E&C INGENIERÍA</p>', unsafe_allow_html=True) # Información de la empresa
-        st.markdown('<hr style="border-top: 1px solid rgba(255,255,255,0.2); margin: 1rem 0;">', unsafe_allow_html=True) # Separador
+        st.markdown(f"""
+            <div class="inventory-sidebar">
+                <div class="sidebar-header">
+                    <h3 style='color: white; margin:0;'>MENÚ INVENTARIO</h3>
+                    <p style='color: #cbd5e1; font-size: 0.8rem; margin:0;'>{st.session_state.usuario.upper() if st.session_state.usuario else "USUARIO"}</p>
+                    <p style='color: #94a3b8; font-size: 0.7rem;'>E&C INGENIERÍA SAS</p>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+        
         opcion_inv = st.radio(
-            "Secciones", # Este label se ocultará con label_visibility="collapsed"
+            "Navegación",
             ["📊 Stock Actual", "➕ Registrar Entrada", "➖ Registrar Salida", "📜 Historial", "⚙️ Configuración Catálogo"],
-            key="inv_menu_radio",
-            label_visibility="collapsed" # Oculta la etiqueta del grupo de radio
+            key="inv_nav_radio"
         )
-        st.markdown('</div>', unsafe_allow_html=True) # Cierra el contenedor de la barra lateral
 
     with col_main:
-        # --- FUNCIÓN DE CÁLCULO DE STOCK ---
-        def obtener_stock_df(movs_list, sede_filtro):
-            data_stock = {}
-            relevant_movs = [m for m in movs_list if m.get("sede") == sede_filtro]
-            for m in relevant_movs:
-                key = (m["categoria"], m["item"], m.get("talla") or "N/A")
-                if key not in data_stock:
-                    data_stock[key] = {"Entradas": 0, "Salidas": 0}
-                if m["tipo"] == "ENTRADA": data_stock[key]["Entradas"] += m["cantidad"]
-                else: data_stock[key]["Salidas"] += m["cantidad"]
-            rows = []
-            for (cat, item, talla), vals in data_stock.items():
-                rows.append({
-                    "Categoría": cat, "Ítem": item, "Talla": talla,
-                    "Entradas": vals["Entradas"], "Salidas": vals["Salidas"],
-                    "Stock": vals["Entradas"] - vals["Salidas"]
-                })
-            return pd.DataFrame(rows)
+        # --- LÓGICA DE STOCK (Inspirada en tu código Flask) ---
+        def calcular_stock(movs, sede):
+            res = {}
+            for m in [x for x in movs if x["sede"] == sede]:
+                k = f"{m['categoria']}|{m['item']}|{m.get('talla') or 'N/A'}"
+                res.setdefault(k, {"categoria": m["categoria"], "item": m["item"], "talla": m.get("talla") or "N/A", "ent": 0, "sal": 0})
+                if m["tipo"] == "ENTRADA": res[k]["ent"] += m["cantidad"]
+                else: res[k]["sal"] += m["cantidad"]
+            
+            return pd.DataFrame([
+                {"Categoría": v["categoria"], "Ítem": v["item"], "Talla": v["talla"], 
+                 "Entradas": v["ent"], "Salidas": v["sal"], "Stock": v["ent"]-v["sal"]} 
+                for v in res.values()
+            ])
 
         if opcion_inv == "📊 Stock Actual":
             st.markdown('<p class="section-label">📊 Disponibilidad de Stock</p>', unsafe_allow_html=True)
-            sede_consulta = st.selectbox("📍 SELECCIONAR UBICACIÓN", SEDES_INV, key="inv_sede_stock")
-            st.write("")
-
-            df_stock = obtener_stock_df(movimientos, sede_consulta)
+            sede_consulta = st.selectbox("📍 Seleccionar Sede", SEDES_INV, key="inv_sede_stock")
+            
+            df_stock = calcular_stock(movimientos, sede_consulta)
             if not df_stock.empty:
-                st.dataframe(df_stock.sort_values(["Categoría", "Ítem", "Talla"]), use_container_width=True, hide_index=True)
-                # Alertas de Stock Bajo
-                bajo_stock = df_stock[df_stock["Stock"] <= 3]
-                if not bajo_stock.empty:
-                    st.warning(f"⚠️ Hay {len(bajo_stock)} ítems con stock crítico (≤ 3 unidades)")
+                # Aplicar estilo de tabla limpia
+                st.dataframe(df_stock.sort_values(["Categoría", "Stock"]), use_container_width=True, hide_index=True)
             else:
-                st.info(f"No hay movimientos registrados para la sede {sede_consulta}.")
+                st.info("No hay inventario registrado en esta sede.")
 
         elif opcion_inv == "➕ Registrar Entrada":
-            st.markdown('<p class="section-label">➕ Registro de Entradas</p>', unsafe_allow_html=True)
-            with st.container(border=True): # Contenedor para agrupar el formulario
+            st.markdown('<p class="section-label">📥 Ingreso de Mercancía</p>', unsafe_allow_html=True)
+            with st.form("form_entrada"):
                 c1, c2, c3 = st.columns(3)
-                m_sede = c1.selectbox("SEDE DESTINO", SEDES_INV, key="entrada_sede")
-                m_fecha = c2.date_input("FECHA DE CARGUE", key="entrada_fecha")
-                m_resp = c3.selectbox("RESPONSABLE", RESPONSABLES_INV, key="entrada_responsable")
+                f_sede = c1.selectbox("Sede Destino", SEDES_INV)
+                f_resp = c2.selectbox("Responsable Recibo", RESPONSABLES_INV)
+                f_fecha = c3.date_input("Fecha Recibo")
+
+                st.markdown("---")
+                c4, c5, c6, c7 = st.columns([1.5, 1.5, 1, 1])
+                f_cat = c4.selectbox("Categoría", list(catalogo.keys()))
+                f_item = c5.selectbox("Producto", list(catalogo[f_cat].keys()))
                 
-                st.divider()
-                
-                c4, c5, c6, c7 = st.columns([2,2,1,1])
-                cat_sel = c4.selectbox("Categoría", list(catalogo.keys()), key="entrada_categoria")
-                
-                opciones_items = list(catalogo[cat_sel].keys())
-                item_sel = c5.selectbox("Ítem", opciones_items, key="entrada_item")
-                
-                talla_sel = "N/A"
-                if catalogo[cat_sel][item_sel]["tallas"]:
-                    talla_sel = c6.selectbox("Talla", catalogo[cat_sel][item_sel]["opciones_talla"], key="entrada_talla")
-                else:
-                    c6.text_input("Talla", "N/A", disabled=True, key="entrada_talla_disabled")
-                    
-                m_cant = c7.number_input("Cantidad", min_value=1, step=1, key="entrada_cantidad")
-                m_obs = st.text_input("Observaciones", key="entrada_observaciones")
-                
-                if st.button("💾 Registrar Entrada", type="primary", use_container_width=True, key="btn_registrar_entrada"):
-                    nuevo_mov = {
-                        "tipo": "ENTRADA", # Tipo fijo
-                        "fecha": str(m_fecha),
-                        "timestamp": datetime.datetime.now(TZ_CO).strftime("%Y-%m-%d %H:%M:%S"),
-                        "sede": m_sede,
-                        "responsable": m_resp,
-                        "categoria": cat_sel,
-                        "item": item_sel,
-                        "talla": talla_sel if talla_sel != "N/A" else None,
-                        "cantidad": m_cant,
-                        "observacion": m_obs,
-                        "inspector": None # No aplica para entradas
+                opciones_talla = catalogo[f_cat][f_item].get("opciones_talla", [])
+                f_talla = c6.selectbox("Talla", opciones_talla if opciones_talla else ["N/A"])
+                f_cant = c7.number_input("Cantidad", min_value=1, step=1)
+                f_obs = st.text_area("Observaciones / Remisión")
+
+                if st.form_submit_button("💾 Guardar Entrada"):
+                    nuevo = {
+                        "tipo": "ENTRADA", "fecha": str(f_fecha), "sede": f_sede,
+                        "responsable": f_resp, "categoria": f_cat, "item": f_item,
+                        "talla": f_talla if f_talla != "N/A" else None, "cantidad": f_cant,
+                        "observacion": f_obs, "timestamp": datetime.datetime.now(TZ_CO).strftime("%Y-%m-%d %H:%M:%S")
                     }
-                    
-                    movimientos.append(nuevo_mov)
-                    resp = save_github_json(inv_repo, "INVENTARIO_V2.json", inv_token, movimientos, f"Nueva entrada: {item_sel}", inv_branch)
-                    
-                    if resp.status_code in (200, 201):
-                        st.success("✅ Entrada registrada correctamente.")
-                        st.cache_data.clear()
-                        st.rerun()
-                    else:
-                        st.error(f"❌ Error al guardar en GitHub: {resp.text}")
+                    movimientos.append(nuevo)
+                    save_github_json(inv_repo, "INVENTARIO_V2.json", inv_token, movimientos, f"Entrada {f_item}")
+                    st.success("Ingreso registrado")
+                    st.rerun()
 
         elif opcion_inv == "➖ Registrar Salida":
-            st.markdown('<p class="section-label">➖ Registro de Salidas / Asignaciones</p>', unsafe_allow_html=True)
-            with st.container(border=True): # Contenedor para agrupar el formulario
+            st.markdown('<p class="section-label">📤 Salida de Mercancía / Asignación</p>', unsafe_allow_html=True)
+            with st.form("form_salida"):
                 c1, c2, c3 = st.columns(3)
-                m_sede = c1.selectbox("SEDE ORIGEN", SEDES_INV, key="salida_sede")
-                m_fecha = c2.date_input("FECHA DE ENTREGA", key="salida_fecha")
-                m_resp = c3.selectbox("ENTREGADO POR", RESPONSABLES_INV, key="salida_responsable")
+                f_sede = c1.selectbox("Sede Origen", SEDES_INV)
+                f_resp = c2.selectbox("Entrega", RESPONSABLES_INV)
+                f_insp = c3.selectbox("Recibe (Inspector)", inspectores_lista)
+
+                st.markdown("---")
+                c4, c5, c6, c7 = st.columns([1.5, 1.5, 1, 1])
+                f_cat = c4.selectbox("Categoría", list(catalogo.keys()))
+                f_item = c5.selectbox("Producto", list(catalogo[f_cat].keys()))
                 
-                c4, c5 = st.columns(2)
-                m_insp = c4.selectbox("TÉCNICO / INSPECTOR RECEPTOR", ["N/A"] + inspectores_lista, key="salida_inspector")
+                opciones_talla = catalogo[f_cat][f_item].get("opciones_talla", [])
+                f_talla = c6.selectbox("Talla", opciones_talla if opciones_talla else ["N/A"])
+                f_cant = c7.number_input("Cantidad a entregar", min_value=1, step=1)
                 
-                st.divider()
-                
-                c6, c7, c8, c9 = st.columns([2,2,1,1])
-                cat_sel = c6.selectbox("Categoría", list(catalogo.keys()), key="salida_categoria")
-                
-                opciones_items = list(catalogo[cat_sel].keys())
-                item_sel = c7.selectbox("Ítem", opciones_items, key="salida_item")
-                
-                talla_sel = "N/A"
-                if catalogo[cat_sel][item_sel]["tallas"]:
-                    talla_sel = c8.selectbox("Talla", catalogo[cat_sel][item_sel]["opciones_talla"], key="salida_talla")
-                else:
-                    c8.text_input("Talla", "N/A", disabled=True, key="salida_talla_disabled")
+                if st.form_submit_button("✅ Procesar Salida"):
+                    # Validación de Stock al estilo Flask
+                    df_stock = calcular_stock(movimientos, f_sede)
+                    talla_val = f_talla if f_talla != "N/A" else "N/A"
                     
-                m_cant = c9.number_input("Cantidad", min_value=1, step=1, key="salida_cantidad")
-                m_obs = st.text_input("Observaciones", key="salida_observaciones")
-                
-                if st.button("💾 Registrar Salida", type="primary", use_container_width=True, key="btn_registrar_salida"):
-                    error = False
-                    df_current = obtener_stock_df(movimientos, m_sede)
-                    stock_actual = 0
-                    if not df_current.empty:
-                        match = df_current[(df_current["Categoría"] == cat_sel) & 
-                                          (df_current["Ítem"] == item_sel) & 
-                                          (df_current["Talla"] == talla_sel)]
-                        if not match.empty:
-                            stock_actual = match.iloc[0]["Stock"]
+                    match = df_stock[(df_stock["Categoría"] == f_cat) & (df_stock["Ítem"] == f_item) & (df_stock["Talla"] == talla_val)]
+                    disponible = match["Stock"].iloc[0] if not match.empty else 0
                     
-                    if m_cant > stock_actual:
-                        st.error(f"❌ Stock insuficiente. Disponible: {stock_actual}")
-                        error = True
-                    
-                    if not error:
-                        nuevo_mov = {
-                            "tipo": "SALIDA", # Tipo fijo
-                            "fecha": str(m_fecha),
-                            "timestamp": datetime.datetime.now(TZ_CO).strftime("%Y-%m-%d %H:%M:%S"),
-                            "sede": m_sede,
-                            "responsable": m_resp,
-                            "categoria": cat_sel,
-                            "item": item_sel,
-                            "talla": talla_sel if talla_sel != "N/A" else None,
-                            "cantidad": m_cant,
-                            "observacion": m_obs,
-                            "inspector": m_insp if m_insp != "N/A" else None
+                    if f_cant > disponible:
+                        st.error(f"❌ No hay suficiente stock. Disponible: {disponible}")
+                    else:
+                        nuevo = {
+                            "tipo": "SALIDA", "fecha": str(datetime.date.today()), "sede": f_sede,
+                            "responsable": f_resp, "inspector": f_insp, "categoria": f_cat,
+                            "item": f_item, "talla": f_talla if f_talla != "N/A" else None,
+                            "cantidad": f_cant, "timestamp": datetime.datetime.now(TZ_CO).strftime("%Y-%m-%d %H:%M:%S")
                         }
-                        
-                        movimientos.append(nuevo_mov)
-                        resp = save_github_json(inv_repo, "INVENTARIO_V2.json", inv_token, movimientos, f"Nueva salida: {item_sel}", inv_branch)
-                        
-                        if resp.status_code in (200, 201):
-                            st.success("✅ Salida registrada correctamente.")
-                            st.cache_data.clear()
-                            st.rerun()
-                        else:
-                            st.error(f"❌ Error al guardar en GitHub: {resp.text}")
+                        movimientos.append(nuevo)
+                        save_github_json(inv_repo, "INVENTARIO_V2.json", inv_token, movimientos, f"Salida {f_item}")
+                        st.success("Entrega registrada con éxito")
+                        st.rerun()
 
         elif opcion_inv == "📜 Historial":
             st.markdown('<p class="section-label">📜 Bitácora de Movimientos</p>', unsafe_allow_html=True)
