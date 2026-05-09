@@ -1820,22 +1820,78 @@ with tab_inv_v2:
 # ===================================================
 # ✅ TAB — SST
 # ===================================================
-with tab_sst:
-    st.subheader("🦺 Seguridad y Salud en el Trabajo")
+with tab_sst: #
+    st.subheader("🦺 Seguridad y Salud en el Trabajo - Preoperacionales y Operacionales Finales") #
 
-    # Filtramos la bitácora base para mostrar solo los registros de SST
-    if "grupo" in df_bitacora_base.columns:
-        df_sst = df_bitacora_base[
-            df_bitacora_base["grupo"].astype(str).str.upper().str.strip() == "SST-NAL"
-        ].copy()
+    # Asegurarse de que df_bitacora_base esté disponible y tenga las columnas necesarias
+    required_cols = ["contrato", "tipo de trabajo", "inspector", "hora final_parsed", "cierre"] #
+    if df_bitacora_base is None or df_bitacora_base.empty: #
+        st.info("ℹ️ No hay datos en la bitácora para mostrar en SST.") #
+    elif not all(col in df_bitacora_base.columns for col in required_cols): #
+        missing_cols = [col for col in required_cols if col not in df_bitacora_base.columns] #
+        st.error(f"❌ Faltan columnas requeridas ({', '.join(missing_cols)}) en la bitácora para la sección SST.") #
+    else: #
+        # Filtrar por el contrato específico "OFM-2025-014, EJE"
+        df_eje_contract = df_bitacora_base[ #
+            df_bitacora_base["contrato"].astype(str).str.upper().str.strip() == "OFM-2025-014, EJE" #
+        ].copy() #
 
-        if not df_sst.empty:
-            st.markdown(f"### 📋 Registros encontrados: {len(df_sst)}")
-            st.dataframe(df_sst, use_container_width=True, hide_index=True)
-        else:
-            st.info("ℹ️ No se encontraron registros para el grupo 'SST-NAL' en la bitácora actual.")
-    else:
-        st.error("❌ No se pudo encontrar la columna 'grupo' en la base de datos para filtrar la información de SST.")
+        if df_eje_contract.empty: #
+            st.info("ℹ️ No se encontraron registros para el contrato 'OFM-2025-014, EJE'.") #
+        else: #
+            # --- Extraer datos de Preoperacional ---
+            df_preoperacional = df_eje_contract[ #
+                df_eje_contract["tipo de trabajo"].astype(str).str.upper().str.strip() == "PREOPERACIONAL - 2025 - EJE" #
+            ].copy() #
+            
+            # Agrupar por inspector para obtener una única entrada (la primera encontrada)
+            df_preoperacional_agg = df_preoperacional.groupby("inspector").agg( #
+                HORA_PREOPERACIONAL=("hora final_parsed", lambda x: x.iloc[0] if not x.empty else pd.NaT), #
+                CIERRE_PREOPERACIONAL=("cierre", lambda x: x.iloc[0] if not x.empty else "N/A") #
+            ).reset_index() #
+
+            # --- Extraer datos de Operacional Final ---
+            df_operacional_final = df_eje_contract[ #
+                df_eje_contract["tipo de trabajo"].astype(str).str.upper().str.strip() == "OPERACIONAL FINAL - EJE" #
+            ].copy() #
+            
+            # Agrupar por inspector para obtener una única entrada (la primera encontrada)
+            df_operacional_final_agg = df_operacional_final.groupby("inspector").agg( #
+                HORA_OPERACIONAL_FINAL=("hora final_parsed", lambda x: x.iloc[0] if not x.empty else pd.NaT) #
+            ).reset_index() #
+
+            # Obtener todos los inspectores únicos de ambos conjuntos de datos
+            all_inspectors_in_contract = pd.concat([ #
+                df_preoperacional_agg["inspector"], #
+                df_operacional_final_agg["inspector"] #
+            ]).unique() #
+
+            df_result = pd.DataFrame({"inspector": all_inspectors_in_contract}) #
+
+            # Unir los datos de preoperacional
+            df_result = df_result.merge(df_preoperacional_agg, on="inspector", how="left") #
+            # Unir los datos de operacional final
+            df_result = df_result.merge(df_operacional_final_agg, on="inspector", how="left") #
+
+            # Formatear las horas y manejar valores faltantes
+            df_result["HORA PREOPERACIONAL"] = df_result["HORA_PREOPERACIONAL"].apply( #
+                lambda x: x.strftime("%H:%M") if pd.notna(x) else "SIN PREOPERACIONAL" #
+            ) #
+            df_result["HORA OPERACIONAL FINAL"] = df_result["HORA_OPERACIONAL_FINAL"].apply( #
+                lambda x: x.strftime("%H:%M") if pd.notna(x) else "SIN OPERACIONAL FINAL" #
+            ) #
+            # Usar el CIERRE del preoperacional como principal, o N/A si no existe
+            df_result["CIERRE"] = df_result["CIERRE_PREOPERACIONAL"].fillna("N/A") #
+
+            # Renombrar columnas para la visualización final
+            df_result = df_result.rename(columns={"inspector": "INSPECTOR"}) #
+
+            # Mostrar la tabla final
+            if not df_result.empty: #
+                st.markdown(f"### 📋 Seguimiento Preoperacional y Operacional Final para 'OFM-2025-014, EJE'") #
+                st.dataframe(df_result[["INSPECTOR", "HORA PREOPERACIONAL", "HORA OPERACIONAL FINAL", "CIERRE"]], use_container_width=True, hide_index=True) #
+            else: #
+                st.info("ℹ️ No se encontraron registros de preoperacional o operacional final para el contrato 'OFM-2025-014, EJE' después de aplicar los filtros.") #
 
 # ===================================================
 # ✅ TAB — SUBIR ARCHIVOS
