@@ -1833,7 +1833,7 @@ with tab_sst:
     else:
         # --- PANELsstv3 DE FILTROS PARA SST (Sincronizado con Seguimiento Diario y Asignadas) ---
         with st.container(border=True):
-            col_f1, col_f2, col_f3 = st.columns([1, 1.2, 1.2])
+            col_f1, col_f2 = st.columns([1, 2.4])
             
             with col_f1:
                 fechas_validas_sst = sorted(df_bitacora_base["fecha"].dropna().unique())
@@ -1844,19 +1844,12 @@ with tab_sst:
                 opc_sups_sst = sorted(df_base_sst["supervisor"].unique())
                 supervisores_sel_sst = st.pills("👥 Supervisores:", opc_sups_sst, selection_mode="multi", default=opc_sups_sst, key="sst_sup_pills")
 
-            with col_f3:
-                opc_grupos_sst = sorted(df_base_sst["grupo"].unique()) if "grupo" in df_base_sst.columns else []
-                grupos_sel_sst = st.pills("📍 Sede / Grupo:", opc_grupos_sst, selection_mode="multi", default=opc_grupos_sst, key="sst_grupo_pills")
-
-        if not supervisores_sel_sst or not grupos_sel_sst:
-            st.warning("⚠️ Selecciona al menos un supervisor y una sede para ver los datos de SST.")
+        if not supervisores_sel_sst:
+            st.warning("⚠️ Selecciona al menos un supervisor para ver los datos de SST.")
             st.stop()
             
-        # Aplicar filtros de Supervisor y Sede sobre la fecha seleccionada
-        df_sst_filtered = df_base_sst[
-            (df_base_sst["supervisor"].isin(supervisores_sel_sst)) & 
-            (df_base_sst["grupo"].isin(grupos_sel_sst))
-        ].copy()
+        # Aplicar filtros de Supervisor sobre la fecha seleccionada
+        df_sst_filtered = df_base_sst[df_base_sst["supervisor"].isin(supervisores_sel_sst)].copy()
 
         # Filtrar por el contrato específico "OFM-2025-014, EJE" sobre los datos ya filtrados
         df_eje_contract = df_sst_filtered[
