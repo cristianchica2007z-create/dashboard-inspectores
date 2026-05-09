@@ -1358,7 +1358,7 @@ with tab_agendas:
                         df_display_alerta[cols_tabla], 
                         use_container_width=True,
                         on_select="rerun",
-                        selection_mode="single_row",
+                        selection_mode=["single_row"],
                         key="tabla_agendas_alerta"
                     )
                     st.error(f"🚨 TOTAL ALERTAS: {len(df_alerta)}")
