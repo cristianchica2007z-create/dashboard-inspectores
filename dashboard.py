@@ -1040,7 +1040,13 @@ with tab_mensual:
     with st.container(border=True):
         c1, c2, c3 = st.columns([1.5, 1.2, 1.2])
         with c1:
-            min_d, max_d = df_m["fecha"].min(), df_m["fecha"].max()
+            # Asegurar que hay fechas válidas antes de calcular min/max para evitar errores de tipo
+            fechas_validas = df_m["fecha"].dropna()
+            if not fechas_validas.empty:
+                min_d, max_d = fechas_validas.min(), fechas_validas.max()
+            else:
+                min_d = max_d = datetime.date.today()
+                
             rango_fecha = st.date_input("📅 Seleccionar lapso de días:", value=(min_d, max_d), min_value=min_d, max_value=max_d)
         
         if isinstance(rango_fecha, tuple) and len(rango_fecha) == 2:
