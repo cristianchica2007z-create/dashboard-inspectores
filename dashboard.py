@@ -2087,7 +2087,7 @@ with tab_subir:
         
         archivo_bit = st.file_uploader("Selecciona BITACORA.xlsx", type=["xlsx", "xls"], key="uploader_bit_global")
         
-        if st.button("🚀 Actualizar Bitácora Global", use_container_width=True, key="btn_bit_global"):
+        if st.button("🚀 Actualizar Bitácora", use_container_width=True, key="btn_bit_global"):
             if archivo_bit:
                 with st.spinner("Sincronizando con GitHub..."):
                     token = st.secrets["github"]["token"]
