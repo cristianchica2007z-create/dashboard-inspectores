@@ -9,6 +9,9 @@ import base64
 import requests
 import io
 
+# Importar lógica modularizada
+import core_logic
+
 # ---------------------------------------------------
 # ✅ CONSTANTES GLOBALES
 # ---------------------------------------------------
@@ -99,6 +102,15 @@ st.markdown("""
     div[data-testid="stPills"] button[aria-checked="true"] p,
     div[data-testid="stSegmentedControl"] button[aria-checked="true"] p {
         color: white !important;
+    }
+    /* Estilos específicos para la tabla de SST */
+    .sst-container {
+        background-color: #f8fafc;
+        padding: 1.5rem;
+        border-radius: 15px;
+        border: 1px solid #e2e8f0;
+        margin-top: 1rem;
+        box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.05);
     }
     </style>
 """, unsafe_allow_html=True)
