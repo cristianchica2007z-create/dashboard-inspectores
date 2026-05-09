@@ -295,6 +295,12 @@ def render_kpi(label, value, icon=""):
         </div>
     """, unsafe_allow_html=True)
 
+@st.dialog("Detalle de la Tarea")
+def mostrar_detalle_tarea(contrato, detalle):
+    st.markdown(f"### Contrato: {contrato}")
+    st.markdown("---")
+    st.write(detalle if detalle else "No hay detalles registrados para esta tarea.")
+
 def color_estado(val):
     if val == "Puntual": return 'background-color: #d4edda; color: #155724;'
     if "tarde" in str(val).lower(): return 'background-color: #fff3cd; color: #856404;'
@@ -1342,8 +1348,25 @@ with tab_agendas:
                 if df_alerta.empty:
                     st.info("✅ No hay agendas en ALERTA.")
                 else:
-                    st.dataframe(df_alerta[columnas_base].sort_values("fecha de visita"), use_container_width=True)
+                    st.info("💡 Haz clic en una fila para ver el detalle de la tarea.")
+                    # Preparamos los datos ordenados para que la selección coincida con el índice
+                    df_display_alerta = df_alerta[columnas_base].sort_values("fecha de visita")
+                    # Ocultamos la columna de detalle largo de la tabla para mejorar la legibilidad
+                    cols_tabla = [c for c in columnas_base if c != "detalle de tarea"]
+                    
+                    seleccion = st.dataframe(
+                        df_display_alerta[cols_tabla], 
+                        use_container_width=True,
+                        on_select="rerun",
+                        selection_mode="single_row",
+                        key="tabla_agendas_alerta"
+                    )
                     st.error(f"🚨 TOTAL ALERTAS: {len(df_alerta)}")
+
+                    if seleccion.selection.rows:
+                        idx = seleccion.selection.rows[0]
+                        fila = df_display_alerta.iloc[idx]
+                        mostrar_detalle_tarea(fila["contrato"], fila["detalle de tarea"])
     else:
         st.info("No se pudo cargar la bitácora desde GitHub para agendas.")
 # ===================================================
