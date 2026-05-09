@@ -353,7 +353,6 @@ with col_logout:
     if st.button("🚪 Cerrar sesión"):
         st.session_state.usuario = None
         st.session_state.rol = None
-        st.cache_data.clear()
         st.rerun()
 
 # ===================================================
@@ -1292,7 +1291,8 @@ with tab_adicionales:
                     requests.put(url_info_p, headers=headers_ad, json=payload_info_p)
                     
                     st.success("✅ Archivo guardado correctamente en la nube. Ahora todos los usuarios verán esta versión.")
-                    st.cache_data.clear() # Limpiar caché para forzar la lectura del nuevo archivo
+                    fetch_github_excel.clear()
+                    process_adicionales_data.clear()
                     st.rerun()
                 else:
                     st.error(f"❌ Error al sincronizar con GitHub: {resp_put.text}")
@@ -1767,7 +1767,7 @@ with tab_inv_v2:
                             resp_cat = save_github_json(inv_repo, "CATALOGO_V2.json", inv_token, catalogo, f"Añadida categoría '{n_cat}' y ítem '{n_item}' al catálogo", inv_branch)
                             if resp_cat.status_code in (200, 201):
                                 st.success(f"Categoría '{n_cat}' y ítem '{n_item}' añadidos correctamente.")
-                                st.cache_data.clear()
+                                fetch_github_json.clear()
                                 st.rerun()
                             else:
                                 st.error(f"❌ Error al guardar el catálogo en GitHub: {resp_cat.text}")
@@ -1782,7 +1782,7 @@ with tab_inv_v2:
                             resp_cat = save_github_json(inv_repo, "CATALOGO_V2.json", inv_token, catalogo, f"Añadido '{n_item}' a la categoría '{n_cat}'", inv_branch)
                             if resp_cat.status_code in (200, 201):
                                 st.success(f"Ítem '{n_item}' añadido a la categoría '{n_cat}' correctamente.")
-                                st.cache_data.clear()
+                                fetch_github_json.clear()
                                 st.rerun()
                             else:
                                 st.error(f"❌ Error al guardar el catálogo en GitHub: {resp_cat.text}")
@@ -1822,7 +1822,7 @@ with tab_inv_v2:
                                     resp_cat = save_github_json(inv_repo, "CATALOGO_V2.json", inv_token, catalogo, f"Añadida talla '{new_talla}' a '{selected_item}'", inv_branch)
                                     if resp_cat.status_code in (200, 201):
                                         st.success(f"Talla '{new_talla.strip()}' añadida a '{selected_item}' correctamente.")
-                                        st.cache_data.clear()
+                                        fetch_github_json.clear()
                                         st.rerun()
                                     else:
                                         st.error(f"❌ Error al guardar el catálogo en GitHub: {resp_cat.text}")
@@ -2008,7 +2008,9 @@ with tab_subir:
                         save_github_json(repo, "BITACORA_INFO.json", token, info_data, "Update BITACORA_INFO.json", branch)
                         
                         st.success("✅ Bitácora actualizada y sincronizada para todos los usuarios.")
-                        st.cache_data.clear()
+                        fetch_github_excel.clear()
+                        load_local_bitacora.clear()
+                        extract_excel_links.clear()
                         st.rerun()
                     else:
                         st.error(f"❌ Error al subir: {r_put.text}")
