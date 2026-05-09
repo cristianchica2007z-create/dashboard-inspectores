@@ -256,6 +256,49 @@ def extract_excel_links(path):
     return pd.DataFrame(links)
 
 
+def parse_tiempo_tarea(valor):
+    try:
+        return pd.to_timedelta(str(valor))
+    except Exception:
+        return pd.NaT
+
+def hora_to_decimal(h):
+    if h is None or h == "SIN HORA" or pd.isna(h):
+        return None
+    if isinstance(h, str): return None
+    return h.hour + h.minute / 60 + h.second / 3600
+
+def decimal_to_hora(d):
+    if d is None or pd.isna(d):
+        return None
+    h = int(d)
+    m = int((d - h) * 60)
+    return datetime.time(h, m)
+
+def hora_to_string(h):
+    return h.strftime("%I:%M %p") if h and not isinstance(h, str) else "—"
+
+def td_to_str(td):
+    if pd.isna(td):
+        return "—"
+    s = int(td.total_seconds())
+    h = s // 3600
+    m = (s % 3600) // 60
+    s2 = s % 60
+    return f"{h}h {m}m {s2}s" if h > 0 else f"{m}m {s2}s"
+
+def render_kpi(label, value, icon=""):
+    st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-label">{icon} {label}</div>
+            <div class="metric-value">{value}</div>
+        </div>
+    """, unsafe_allow_html=True)
+
+def color_estado(val):
+    if val == "Puntual": return 'background-color: #d4edda; color: #155724;'
+    if "tarde" in str(val).lower(): return 'background-color: #fff3cd; color: #856404;'
+    return ''
 
 # -------------------------------------------------
 # ZONA HORARIA COLOMBIA
@@ -495,8 +538,9 @@ with st.spinner("🔄 Sincronizando datos con el servidor... Un momento por favo
 
 # ✅ CREAR PESTAÑAS
 # ---------------------------------------------------
-tab_diario, tab_agendas, tab_adicionales, tab_asignadas, tab_inv_v2, tab_sst, tab_subir = st.tabs([
+tab_diario, tab_mensual, tab_agendas, tab_adicionales, tab_asignadas, tab_inv_v2, tab_sst, tab_subir = st.tabs([
     "🕒 Seguimiento Diario",
+    "📅 Seguimiento Mensual",
     "📅 Seguimiento agendas",
     "🏭 SEGUIMIENTO ADICIONALES",
     "📌 Órdenes Asignadas",
@@ -550,44 +594,6 @@ with tab_diario:
             "Esto indica que el archivo solo contiene grupos no operativos."
         )
         st.stop()
-
-    def parse_tiempo_tarea(valor):
-        try:
-            return pd.to_timedelta(str(valor))
-        except Exception:
-            return pd.NaT
-
-    def hora_to_decimal(h):
-        if h is None or h == "SIN HORA":
-            return None
-        return h.hour + h.minute / 60 + h.second / 3600
-
-    def decimal_to_hora(d):
-        if d is None or pd.isna(d):
-            return None
-        h = int(d)
-        m = int((d - h) * 60)
-        return datetime.time(h, m)
-
-    def hora_to_string(h):
-        return h.strftime("%I:%M %p") if h else "—"
-
-    def td_to_str(td):
-        if pd.isna(td):
-            return "—"
-        s = int(td.total_seconds())
-        h = s // 3600
-        m = (s % 3600) // 60
-        s2 = s % 60
-        return f"{h}h {m}m {s2}s" if h > 0 else f"{m}m {s2}s"
-
-    def render_kpi(label, value, icon=""):
-        st.markdown(f"""
-            <div class="metric-card">
-                <div class="metric-label">{icon} {label}</div>
-                <div class="metric-value">{value}</div>
-            </div>
-        """, unsafe_allow_html=True)
 
     # Renombrar columnas parseadas para lógica existente
     df_bitacora["hora_inicio"] = df_bitacora["hora inicio_parsed"].fillna("SIN HORA")
@@ -861,11 +867,6 @@ with tab_diario:
         ]
         columnas_disponibles = [c for c in columnas_tabla if c in df_tabla.columns]
 
-        def color_estado(val):
-            if val == "Puntual": return 'background-color: #d4edda; color: #155724;'
-            if "tarde" in str(val).lower(): return 'background-color: #fff3cd; color: #856404;'
-            return ''
-
         st.markdown("### 📋 Tabla de inspecciones del día")
 
         # Aplicar estilos: Centrar todo menos inspector y aplicar colores a estado
@@ -1017,6 +1018,131 @@ with tab_diario:
 
         st.plotly_chart(fig_prod, use_container_width=True)
  
+# ===================================================
+# ✅ TAB — SEGUIMIENTO MENSUAL
+# ===================================================
+with tab_mensual:
+    st.subheader("📅 Consolidado Mensual / Rango de Fechas")
+    df_m = df_bitacora_base.copy()
+
+    if "grupo" in df_m.columns:
+        df_m["grupo"] = df_m["grupo"].astype(str).str.upper().str.strip()
+        grupos_no_operativos = ["SST-NAL", "SUPERVISIONES", "SUSP-ANT", "ADMINISTRATIVO", "SUSPENSIONES", "ADMIN"]
+        if "cierre" in df_m.columns:
+            df_m = df_m[~df_m["cierre"].astype(str).str.upper().str.contains("ADMINISTRATIVO", na=False)]
+        df_m = df_m[~df_m["grupo"].isin(grupos_no_operativos)]
+
+    # Renombrar columnas para consistencia
+    df_m["hora_inicio"] = df_m["hora inicio_parsed"]
+    df_m["hora_final"] = df_m["hora final_parsed"]
+    
+    # Filtros de Rango
+    with st.container(border=True):
+        c1, c2, c3 = st.columns([1.5, 1.2, 1.2])
+        with c1:
+            min_d, max_d = df_m["fecha"].min(), df_m["fecha"].max()
+            rango_fecha = st.date_input("📅 Seleccionar lapso de días:", value=(min_d, max_d), min_value=min_d, max_value=max_d)
+        
+        if isinstance(rango_fecha, tuple) and len(rango_fecha) == 2:
+            start_date, end_date = rango_fecha
+            df_m = df_m[(df_m["fecha"] >= start_date) & (df_m["fecha"] <= end_date)]
+        
+        opc_sups = sorted(df_m["supervisor"].unique())
+        with c2:
+            sups_sel = st.pills("👥 Supervisores:", opc_sups, selection_mode="multi", default=opc_sups, key="m_sup_pills")
+        with c3:
+            opc_insps = sorted(df_m[df_m["supervisor"].isin(sups_sel)]["inspector"].unique())
+            with st.popover("🔍 Inspectores", use_container_width=True):
+                insps_sel = st.multiselect("Filtrar:", opc_insps, default=opc_insps)
+
+    if df_m.empty or not sups_sel or not insps_sel:
+        st.warning("Selecciona un rango y personal válido.")
+        st.stop()
+
+    df_m = df_m[(df_m["supervisor"].isin(sups_sel)) & (df_m["inspector"].isin(insps_sel))].copy()
+    
+    # Cálculo de tiempo de recorrido
+    def calc_rec(row):
+        hi, hr = row.get("hora inicio_parsed"), row.get("hora inicio de recorrido_parsed")
+        if not isinstance(hi, datetime.time) or not isinstance(hr, datetime.time): return pd.NaT
+        return datetime.datetime.combine(datetime.date.today(), hi) - datetime.datetime.combine(datetime.date.today(), hr)
+    df_m["tiempo_recorrido_td"] = df_m.apply(calc_rec, axis=1)
+    
+    # Marcar efectivas
+    valores_efectivos = ["INSPECCIONADA", "INSPECCIONADA CON DEFECTO NO CRITICO", "INSPECCIONADA CON DEFECTO CRITICO", "CERTIFICADA", "CERTIFICADA CON NOVEDAD"]
+    df_m["efectiva"] = df_m["cierre"].isin(valores_efectivos)
+
+    # --- LÓGICA DE PROMEDIOS DIARIOS ---
+    # Agrupar por inspector y día para obtener los hitos diarios
+    df_daily_hitos = df_m.groupby(["inspector", "fecha"]).agg(
+        primera_hora=("hora_inicio", "min"),
+        ultima_hora=("hora_final", "max")
+    ).reset_index()
+
+    df_daily_hitos["ini_dec"] = df_daily_hitos["primera_hora"].apply(hora_to_decimal)
+    df_daily_hitos["fin_dec"] = df_daily_hitos["ultima_hora"].apply(hora_to_decimal)
+    df_daily_hitos["es_sabado"] = pd.to_datetime(df_daily_hitos["fecha"]).dt.weekday == 5
+
+    # KPIs Globales del Rango
+    prom_ini_global = df_daily_hitos["ini_dec"].mean()
+    # Excluir sábados para el promedio de hora fin
+    df_fin_no_sab = df_daily_hitos[~df_daily_hitos["es_sabado"]]
+    prom_fin_global = df_fin_no_sab["fin_dec"].mean() if not df_fin_no_sab.empty else None
+
+    t_tarea_prom = df_m[df_m["efectiva"] & df_m["tiempo_tarea_td"].notna()]["tiempo_tarea_td"].mean()
+    t_rec_prom = df_m["tiempo_recorrido_td"].mean()
+    
+    total_ord = len(df_m)
+    total_eff = df_m["efectiva"].sum()
+    perc_eff = round((total_eff / total_ord) * 100, 1) if total_ord > 0 else 0
+
+    # Visualización
+    col_k, col_v = st.columns([1, 4])
+    with col_k:
+        st.markdown("### 📈 KPIs Periodo")
+        render_kpi("Inicio Prom.", hora_to_string(decimal_to_hora(prom_ini_global)), "⏰")
+        render_kpi("Fin Prom. (Lun-Vie)", hora_to_string(decimal_to_hora(prom_fin_global)), "🕒")
+        render_kpi("T. Tarea Prom.", td_to_str(t_tarea_prom), "🕓")
+        render_kpi("Recorrido Prom.", td_to_str(t_rec_prom), "🚗")
+        render_kpi("Total Tareas", total_ord, "📋")
+        render_kpi("Efectivas", total_eff, "✅")
+        render_kpi("% Efectividad", f"{perc_eff}%", "📈")
+
+    with col_v:
+        # Resumen por Inspector para la tabla
+        resumen_m = df_m.groupby("inspector").apply(lambda x: pd.Series({
+            "Dias Trabajados": x["fecha"].nunique(),
+            "Total Órdenes": len(x),
+            "Efectivas": x["efectiva"].sum(),
+            "Efectividad %": round((x["efectiva"].sum() / len(x)) * 100, 1) if len(x) > 0 else 0,
+            "Prom. Tarea": td_to_str(x[x["efectiva"]]["tiempo_tarea_td"].mean()),
+            "Prom. Recorrido": td_to_str(x["tiempo_recorrido_td"].mean())
+        })).reset_index()
+
+        # Añadir promedios de horas por inspector
+        prom_horas_insp = df_daily_hitos.groupby("inspector").apply(lambda x: pd.Series({
+            "Prom. Inicio": hora_to_string(decimal_to_hora(x["ini_dec"].mean())),
+            "Prom. Fin (LV)": hora_to_string(decimal_to_hora(x[~x["es_sabado"]]["fin_dec"].mean()))
+        })).reset_index()
+
+        df_tabla_m = resumen_m.merge(prom_horas_insp, on="inspector")
+        
+        st.markdown("### 📋 Resumen Consolidado por Inspector")
+        st.dataframe(
+            df_tabla_m.style.set_properties(**{'text-align': 'center'})
+            .set_properties(subset=['inspector'], **{'text-align': 'left'}),
+            use_container_width=True, height=500, hide_index=True
+        )
+
+    # Gráfica de producción mensual
+    st.markdown("### 📊 Producción Total en el Periodo")
+    df_prod_m = df_m[df_m["efectiva"]].groupby("inspector").size().reset_index(name="Efectivas").sort_values("Efectivas")
+    
+    if not df_prod_m.empty:
+        fig_m = px.bar(df_prod_m, y="inspector", x="Efectivas", orientation="h", text="Efectivas", color="Efectivas", color_continuous_scale="Viridis")
+        fig_m.update_layout(height=600, font=dict(size=14))
+        st.plotly_chart(fig_m, use_container_width=True)
+
 # =================================================
 # ✅ TAB — SEGUIMIENTO AGENDAS
 # =================================================
