@@ -1822,7 +1822,20 @@ with tab_inv_v2:
 # ===================================================
 with tab_sst:
     st.subheader("🦺 Seguridad y Salud en el Trabajo")
-    st.info("Sección para la gestión de registros SST.")
+
+    # Filtramos la bitácora base para mostrar solo los registros de SST
+    if "grupo" in df_bitacora_base.columns:
+        df_sst = df_bitacora_base[
+            df_bitacora_base["grupo"].astype(str).str.upper().str.strip() == "SST-NAL"
+        ].copy()
+
+        if not df_sst.empty:
+            st.markdown(f"### 📋 Registros encontrados: {len(df_sst)}")
+            st.dataframe(df_sst, use_container_width=True, hide_index=True)
+        else:
+            st.info("ℹ️ No se encontraron registros para el grupo 'SST-NAL' en la bitácora actual.")
+    else:
+        st.error("❌ No se pudo encontrar la columna 'grupo' en la base de datos para filtrar la información de SST.")
 
 # ===================================================
 # ✅ TAB — SUBIR ARCHIVOS
