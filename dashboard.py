@@ -1831,9 +1831,36 @@ with tab_sst:
         missing_cols = [col for col in required_cols if col not in df_bitacora_base.columns]
         st.error(f"❌ Faltan columnas requeridas ({', '.join(missing_cols)}) en la bitácora para la sección SST.")
     else:
-        # Filtrar por el contrato específico "OFM-2025-014, EJE"
-        df_eje_contract = df_bitacora_base[
-            df_bitacora_base["contrato"].astype(str).str.upper().str.strip() == "OFM-2025-014, EJE"
+        # --- PANELsstv3 DE FILTROS PARA SST (Sincronizado con Seguimiento Diario y Asignadas) ---
+        with st.container(border=True):
+            col_f1, col_f2, col_f3 = st.columns([1, 1.2, 1.2])
+            
+            with col_f1:
+                fechas_validas_sst = sorted(df_bitacora_base["fecha"].dropna().unique())
+                fecha_sel_sst = st.selectbox("📅 Fecha Consulta SST:", fechas_validas_sst, key="sst_fecha_sel")
+                df_base_sst = df_bitacora_base[df_bitacora_base["fecha"] == fecha_sel_sst].copy()
+
+            with col_f2:
+                opc_sups_sst = sorted(df_base_sst["supervisor"].unique())
+                supervisores_sel_sst = st.pills("👥 Supervisores:", opc_sups_sst, selection_mode="multi", default=opc_sups_sst, key="sst_sup_pills")
+
+            with col_f3:
+                opc_grupos_sst = sorted(df_base_sst["grupo"].unique()) if "grupo" in df_base_sst.columns else []
+                grupos_sel_sst = st.pills("📍 Sede / Grupo:", opc_grupos_sst, selection_mode="multi", default=opc_grupos_sst, key="sst_grupo_pills")
+
+        if not supervisores_sel_sst or not grupos_sel_sst:
+            st.warning("⚠️ Selecciona al menos un supervisor y una sede para ver los datos de SST.")
+            st.stop()
+            
+        # Aplicar filtros de Supervisor y Sede sobre la fecha seleccionada
+        df_sst_filtered = df_base_sst[
+            (df_base_sst["supervisor"].isin(supervisores_sel_sst)) & 
+            (df_base_sst["grupo"].isin(grupos_sel_sst))
+        ].copy()
+
+        # Filtrar por el contrato específico "OFM-2025-014, EJE" sobre los datos ya filtrados
+        df_eje_contract = df_sst_filtered[
+            df_sst_filtered["contrato"].astype(str).str.upper().str.strip() == "OFM-2025-014, EJE"
         ].copy()
 
         if df_eje_contract.empty:
