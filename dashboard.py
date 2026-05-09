@@ -1354,12 +1354,13 @@ with tab_agendas:
                     # Ocultamos la columna de detalle largo de la tabla para mejorar la legibilidad
                     cols_tabla = [c for c in columnas_base if c != "detalle de tarea"]
                     
+                    # Usamos una nueva key para limpiar cualquier estado previo corrupto
                     seleccion = st.dataframe(
-                        df_display_alerta[cols_tabla], 
+                        df_display_alerta[cols_tabla].reset_index(drop=True), 
                         use_container_width=True,
                         on_select="rerun",
-                        selection_mode=["single_row"],
-                        key="tabla_agendas_alerta"
+                        selection_mode="single_row",
+                        key="tabla_agendas_alerta_v3"
                     )
                     st.error(f"🚨 TOTAL ALERTAS: {len(df_alerta)}")
 
