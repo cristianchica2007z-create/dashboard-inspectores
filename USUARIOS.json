@@ -43,7 +43,23 @@
 "VANE": {
     "pin": "1234",
     "rol": "usuario"
+  },
+
+  "SST": {
+    "pin": "1234",
+    "rol": "usuario"
+  },
+
+    "MIGUEL": {
+    "pin": "1234",
+    "rol": "usuario"
+  },
+
+     "MAURO": {
+    "pin": "1234",
+    "rol": "usuario"
   }
+
 
 
 
