@@ -742,19 +742,9 @@ with tab_diario:
     # ✅ KPI: PROMEDIO HORA DE INICIO
     # (PRIMERA TAREA DEL DÍA POR INSPECTOR)
     # ---------------------------------------------------
-    df_inicio_jornada = (
-        df2[
-            (df2["hora_inicio"] != "SIN HORA") &
-            (df2["hora_inicio"].notna())
-        ]
-        .groupby("inspector", as_index=False)
-        .agg({"hora_inicio": "min"})
-    )
-
-    df_inicio_jornada["ini_dec"] = (
-        df_inicio_jornada["hora_inicio"]
-        .apply(hora_to_decimal)
-    )
+    # Calculamos decimal antes de agrupar para evitar errores con datetime.time en el agg
+    df2["ini_dec_tmp"] = df2["hora_inicio"].apply(hora_to_decimal)
+    df_inicio_jornada = df2[df2["ini_dec_tmp"].notna()].groupby("inspector", as_index=False).agg(ini_dec=("ini_dec_tmp", "min"))
 
     prom_ini = df_inicio_jornada["ini_dec"].mean()
 
@@ -767,18 +757,9 @@ with tab_diario:
     # ✅ KPI: PROMEDIO HORA DE FIN
     # (ÚLTIMA TAREA DEL DÍA POR INSPECTOR)
     # ---------------------------------------------------
-    df_fin_jornada = (
-        df2[
-            df2["hora_final"].notna()
-        ]
-        .groupby("inspector", as_index=False)
-        .agg({"hora_final": "max"})
-    )
-
-    df_fin_jornada["fin_dec"] = (
-        df_fin_jornada["hora_final"]
-        .apply(hora_to_decimal)
-    )
+    # Calculamos decimal antes de agrupar para evitar errores con datetime.time en el agg
+    df2["fin_dec_tmp"] = df2["hora_final"].apply(hora_to_decimal)
+    df_fin_jornada = df2[df2["fin_dec_tmp"].notna()].groupby("inspector", as_index=False).agg(fin_dec=("fin_dec_tmp", "max"))
 
     prom_fin = df_fin_jornada["fin_dec"].mean()
 
@@ -1079,14 +1060,15 @@ with tab_mensual:
     df_m["efectiva"] = df_m["cierre"].isin(valores_efectivos)
 
     # --- LÓGICA DE PROMEDIOS DIARIOS ---
+    # Convertimos a decimal antes de agrupar para evitar errores de comparación con datetime.time
+    df_m["ini_dec_tmp"] = df_m["hora_inicio"].apply(hora_to_decimal)
+    df_m["fin_dec_tmp"] = df_m["hora_final"].apply(hora_to_decimal)
+
     # Agrupar por inspector y día para obtener los hitos diarios
     df_daily_hitos = df_m.groupby(["inspector", "fecha"]).agg(
-        primera_hora=("hora_inicio", "min"),
-        ultima_hora=("hora_final", "max")
+        ini_dec=("ini_dec_tmp", "min"),
+        fin_dec=("fin_dec_tmp", "max")
     ).reset_index()
-
-    df_daily_hitos["ini_dec"] = df_daily_hitos["primera_hora"].apply(hora_to_decimal)
-    df_daily_hitos["fin_dec"] = df_daily_hitos["ultima_hora"].apply(hora_to_decimal)
     df_daily_hitos["es_sabado"] = pd.to_datetime(df_daily_hitos["fecha"]).dt.weekday == 5
 
     # KPIs Globales del Rango
