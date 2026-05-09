@@ -1350,7 +1350,7 @@ with tab_agendas:
                 else:
                     st.info("💡 Haz clic en una fila para ver el detalle de la tarea.")
                     # Preparamos los datos ordenados para que la selección coincida con el índice
-                    df_display_alerta = df_alerta[columnas_base].sort_values("fecha de visita")
+                    df_display_alerta = df_alerta[columnas_base].sort_values("fecha de visita").reset_index(drop=True)
                     # Ocultamos la columna de detalle largo de la tabla para mejorar la legibilidad
                     cols_tabla = [c for c in columnas_base if c != "detalle de tarea"]
                     
@@ -1358,7 +1358,7 @@ with tab_agendas:
                         df_display_alerta[cols_tabla], 
                         use_container_width=True,
                         on_select="rerun",
-                        selection_mode=["single_row"],
+                        selection_mode="single_row",
                         key="tabla_agendas_alerta"
                     )
                     st.error(f"🚨 TOTAL ALERTAS: {len(df_alerta)}")
