@@ -585,8 +585,8 @@ if st.session_state.usuario is None:
             border-radius: 20px !important;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
             overflow: hidden !important;
-            width: 100% !important;
-            max-width: 1400px !important; /* Tarjeta super grande (pantalla casi completa) */
+            width: 95% !important;
+            max-width: 1600px !important; /* Tarjeta gigantesca (ocupa casi toda la pantalla) */
             margin: auto !important;
             display: flex !important;
             align-items: stretch !important;
@@ -596,7 +596,7 @@ if st.session_state.usuario is None:
         /* Mitad Izquierda (Formulario) -> CORRECTO SELECTOR DE STREAMLIT */
         div[data-testid="stColumn"]:nth-of-type(1) {{
             background-color: white !important;
-            padding: 5rem 4rem !important;
+            padding: 5rem 6rem 5rem 4rem !important; /* Más padding a la derecha para que el logo no choque con el formulario */
             display: flex !important;
             flex-direction: column !important;
             justify-content: center !important;
@@ -663,11 +663,11 @@ if st.session_state.usuario is None:
         /* Círculo central superpuesto con el Imagotipo */
         .circle-logo {{
             position: absolute;
-            left: -60px; /* Para que sobresalga hacia la parte blanca */
+            left: -100px; /* Más desplazado a la izquierda según solicitud */
             top: 50%;
             transform: translateY(-50%);
-            width: 120px;
-            height: 120px;
+            width: 160px; /* Logo más grande */
+            height: 160px;
             background: white;
             border-radius: 50%;
             box-shadow: 0 10px 30px rgba(0,0,0,0.15);
