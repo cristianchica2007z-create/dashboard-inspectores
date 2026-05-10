@@ -256,8 +256,150 @@ def load_local_bitacora(path):
         if "tiempo de tarea" in df.columns:
             df["tiempo_tarea_td"] = pd.to_timedelta(df["tiempo de tarea"].astype(str), errors="coerce")
 
+        # --- PRE-CÁLCULOS GLOBALES PARA RENDIMIENTO ---
+        import datetime
+        
+        # 1. Efectiva
+        valores_efectivos = [
+            "INSPECCIONADA",
+            "INSPECCIONADA CON DEFECTO NO CRITICO",
+            "INSPECCIONADA CON DEFECTO CRITICO",
+            "CERTIFICADA",
+            "CERTIFICADA CON NOVEDAD"
+        ]
+        if "cierre" in df.columns:
+            df["efectiva"] = df["cierre"].isin(valores_efectivos)
+        else:
+            df["efectiva"] = False
+            
+        # 2. Tiempos (solo si existen las columnas parseadas)
+        if "hora inicio_parsed" in df.columns and "hora inicio de recorrido_parsed" in df.columns:
+            def calc_recorrido(row):
+                hi = row.get("hora inicio_parsed")
+                hr = row.get("hora inicio de recorrido_parsed")
+                if not isinstance(hi, datetime.time) or not isinstance(hr, datetime.time):
+                    return pd.NaT
+                dt_hi = datetime.datetime.combine(datetime.date.today(), hi)
+                dt_hr = datetime.datetime.combine(datetime.date.today(), hr)
+                return dt_hi - dt_hr if dt_hi >= dt_hr else pd.NaT
+            df["tiempo_recorrido_td"] = df.apply(calc_recorrido, axis=1)
+        else:
+            df["tiempo_recorrido_td"] = pd.NaT
+            
+        # 3. Decimales (útil para promedios rápidos)
+        def to_dec(h):
+            if not isinstance(h, datetime.time): return None
+            return h.hour + h.minute / 60.0 + h.second / 3600.0
+            
+        if "hora inicio_parsed" in df.columns:
+            df["ini_dec_tmp"] = df["hora inicio_parsed"].apply(to_dec)
+        if "hora final_parsed" in df.columns:
+            df["fin_dec_tmp"] = df["hora final_parsed"].apply(to_dec)
+            
+        # 4. Puntualidad (minutos tarde)
+        hora_oficial = datetime.time(7, 30)
+        def calc_tarde(h):
+            if not isinstance(h, datetime.time): return None
+            h1 = datetime.datetime.combine(datetime.date.today(), h)
+            h2 = datetime.datetime.combine(datetime.date.today(), hora_oficial)
+            return int((h1 - h2).total_seconds() / 60)
+            
+        if "hora inicio_parsed" in df.columns:
+            df["minutos_tarde"] = df["hora inicio_parsed"].apply(calc_tarde)
+            def calc_estado(m):
+                if m is None or pd.isna(m): return "SIN INICIO"
+                if m <= 0: return "Puntual"
+                if m <= 15: return "Tarde"
+                return "Muy tarde"
+            df["estado_puntualidad"] = df["minutos_tarde"].apply(calc_estado)
+
         return df
     return None
+
+
+@st.cache_data(ttl=300)
+def process_uploaded_mensual_file(file_content):
+    import io
+    # file_content is bytes to avoid hashing issues with UploadedFile
+    df_m = pd.read_excel(io.BytesIO(file_content))
+    df_m.columns = [str(c).strip().lower() for c in df_m.columns]
+    
+    if "inspector" in df_m.columns:
+        df_m["inspector"] = df_m["inspector"].astype(str).str.upper().str.strip().str.replace(r"\s+", " ", regex=True)
+    df_m["supervisor"] = df_m["inspector"].map(SUPERVISORES_DICT).fillna("SIN SUPERVISOR")
+    
+    if "fecha de ejecucion" in df_m.columns:
+        df_m["fecha"] = pd.to_datetime(df_m["fecha de ejecucion"], errors="coerce").dt.date
+        
+    for col in ["hora inicio", "hora inicio de recorrido", "hora final"]:
+        if col in df_m.columns:
+            df_m[col + "_parsed"] = pd.to_datetime(df_m[col].astype(str), errors='coerce').dt.time
+
+    if "tiempo de tarea" in df_m.columns:
+        df_m["tiempo_tarea_td"] = pd.to_timedelta(df_m["tiempo de tarea"].astype(str), errors="coerce")
+        
+    return df_m
+
+
+@st.cache_data(ttl=600)
+def process_sst_data(df_sst):
+    if df_sst.empty:
+        return pd.DataFrame()
+        
+    inspectores_sst = df_sst["inspector"].unique()
+    df_result = pd.DataFrame({"inspector": inspectores_sst})
+    
+    # 1. Preoperacionales
+    df_preoperacional = df_sst[
+        df_sst["tipo de trabajo"].str.upper().str.contains("INSPECCION DE VEHICULO", na=False)
+    ].copy()
+    
+    # 2. Ausentismo
+    df_ausentismo = df_sst[
+        df_sst["tipo de trabajo"].str.upper().str.contains(
+            "|".join(["AUSENTISMO", "VACACIONES", "INCAPACIDAD", "PERMISO REMUNERADO", "PERMISO NO REMUNERADO", "SUSPENSION", "LICENCIA LUTO", "LICENCIA DE PATERNIDAD", "LICENCIA NO REMUNERADA", "PERMISO SINDICAL", "SANCIÓN"]),
+            na=False
+        )
+    ].copy()
+    
+    # 3. Operacional Final
+    ausentismos_tipos = [
+        "AUSENTISMO", "VACACIONES", "INCAPACIDAD", "PERMISO REMUNERADO",
+        "PERMISO NO REMUNERADO", "SUSPENSION", "LICENCIA LUTO",
+        "LICENCIA DE PATERNIDAD", "LICENCIA NO REMUNERADA",
+        "PERMISO SINDICAL", "SANCIÓN"
+    ]
+    df_operacional_final = df_sst[
+        (~df_sst["tipo de trabajo"].str.upper().str.contains("INSPECCION DE VEHICULO", na=False)) &
+        (~df_sst["tipo de trabajo"].str.upper().str.contains("|".join(ausentismos_tipos), na=False)) &
+        (df_sst["tiempo de tarea"].notna())
+    ].copy()
+    
+    df_preoperacional_agg = df_preoperacional.groupby("inspector")["tiempo_tarea_td"].sum().reset_index(name="HORA_PREOPERACIONAL")
+    df_operacional_final_agg = df_operacional_final.groupby("inspector")["hora_final_parsed"].max().reset_index(name="HORA_OPERACIONAL_FINAL")
+    df_ausentismo_agg = df_ausentismo.groupby("inspector")["tiempo_tarea_td"].sum().reset_index(name="TIEMPO_AUSENTISMO")
+    
+    df_result = df_result.merge(df_preoperacional_agg, on="inspector", how="left")
+    df_result = df_result.merge(df_operacional_final_agg, on="inspector", how="left")
+    df_result = df_result.merge(df_ausentismo_agg, on="inspector", how="left")
+    
+    def format_timedelta(td):
+        if pd.isna(td): return "NO TIENE"
+        total_seconds = int(td.total_seconds())
+        hours, remainder = divmod(total_seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        return f"{hours:02}:{minutes:02}:{seconds:02}"
+        
+    def format_time(t):
+        if pd.isna(t) or t is None: return "NO TIENE"
+        return t.strftime("%H:%M:%S")
+
+    df_result["HORA PREOPERACIONAL"] = df_result["HORA_PREOPERACIONAL"].apply(format_timedelta)
+    df_result["HORA OPERACIONAL FINAL"] = df_result["HORA_OPERACIONAL_FINAL"].apply(format_time)
+    df_result["AUSENTISMO"] = df_result["TIEMPO_AUSENTISMO"].apply(format_timedelta)
+    
+    df_result.rename(columns={"inspector": "INSPECTOR"}, inplace=True)
+    return df_result[["INSPECTOR", "HORA PREOPERACIONAL", "HORA OPERACIONAL FINAL", "AUSENTISMO"]]
 
 @st.cache_data(ttl=600)
 def process_adicionales_data(df):
@@ -707,19 +849,7 @@ with tab_operacion:
         # -------------------------------------------
         # ⏱️ TIEMPO DE RECORRIDO (Calculado sobre datos filtrados)
         # -------------------------------------------
-        def calcular_tiempo_recorrido(row):
-            hi = row.get("hora inicio_parsed")
-            hr = row.get("hora inicio de recorrido_parsed")
-            if not isinstance(hi, datetime.time) or not isinstance(hr, datetime.time):
-                return pd.NaT
-            dt_hi = datetime.datetime.combine(datetime.date.today(), hi)
-            dt_hr = datetime.datetime.combine(datetime.date.today(), hr)
-            return dt_hi - dt_hr if dt_hi >= dt_hr else pd.NaT
-    
-        try:
-            df2["tiempo_recorrido_td"] = df2.apply(calcular_tiempo_recorrido, axis=1)
-        except Exception:
-            df2["tiempo_recorrido_td"] = pd.NaT
+        pass # Calculado en load_local_bitacora
     
     # ===================================================
       # ===================================================
@@ -733,8 +863,9 @@ with tab_operacion:
         primeras = (
             df2.sort_values("hora_inicio")
             .groupby("inspector", as_index=False)
-            .first()[["inspector", "hora_inicio", "localidad", "supervisor"]]
+            .first()[["inspector", "hora_inicio", "localidad", "supervisor", "minutos_tarde", "estado_puntualidad"]]
         )
+        primeras.rename(columns={"estado_puntualidad": "estado"}, inplace=True)
     
         ultimas = (
             df2.sort_values("hora_final")
@@ -751,46 +882,12 @@ with tab_operacion:
         # ---------------------------------------------------
         # PUNTUALIDAD (usa SOLO la primera hora del día)
         # ---------------------------------------------------
-        hora_oficial = datetime.time(7, 30)
-    
-        def mins_tarde(h):
-            if h is None or pd.isna(h):
-                return None
-            if not isinstance(h, datetime.time):
-                return None
-    
-            h1 = datetime.datetime.combine(datetime.date.today(), h)
-            h2 = datetime.datetime.combine(datetime.date.today(), hora_oficial)
-            return int((h1 - h2).total_seconds() / 60)
-    
-        df_agrupado["minutos_tarde"] = df_agrupado["hora_inicio"].apply(mins_tarde)
-    
-        # ---------------------------------------------------
-        # ESTADO DE PUNTUALIDAD (ORIGINAL)
-        # ---------------------------------------------------
-        def estado(m):
-            if m is None:
-                return "SIN INICIO"
-            if m <= 0:
-                return "Puntual"
-            if m <= 15:
-                return "Tarde"
-            return "Muy tarde"
-    
-        df_agrupado["estado"] = df_agrupado["minutos_tarde"].apply(estado)
+        pass # Calculado en load_local_bitacora e integrado en df_agrupado
     
         # ---------------------------------------------------
         # PRODUCCIÓN (MARCAR ÓRDENES EFECTIVAS)
         # ---------------------------------------------------
-        valores_efectivos = [
-            "INSPECCIONADA",
-            "INSPECCIONADA CON DEFECTO NO CRITICO",
-            "INSPECCIONADA CON DEFECTO CRITICO",
-            "CERTIFICADA",
-            "CERTIFICADA CON NOVEDAD"
-        ]
-    
-        df2["efectiva"] = df2["cierre"].isin(valores_efectivos)
+        pass # Calculado en load_local_bitacora
     
         total_ordenes = df2.shape[0]
         total_efectivas = df2["efectiva"].sum()
@@ -813,7 +910,7 @@ with tab_operacion:
         # (PRIMERA TAREA DEL DÍA POR INSPECTOR)
         # ---------------------------------------------------
         # Calculamos decimal antes de agrupar para evitar errores con datetime.time en el agg
-        df2["ini_dec_tmp"] = df2["hora_inicio"].apply(hora_to_decimal)
+        pass # Ya existe df2['ini_dec_tmp']
         df_inicio_jornada = df2[df2["ini_dec_tmp"].notna()].groupby("inspector", as_index=False).agg(ini_dec=("ini_dec_tmp", "min"))
     
         prom_ini = df_inicio_jornada["ini_dec"].mean()
@@ -828,7 +925,7 @@ with tab_operacion:
         # (ÚLTIMA TAREA DEL DÍA POR INSPECTOR)
         # ---------------------------------------------------
         # Calculamos decimal antes de agrupar para evitar errores con datetime.time en el agg
-        df2["fin_dec_tmp"] = df2["hora_final"].apply(hora_to_decimal)
+        pass # Ya existe df2['fin_dec_tmp']
         df_fin_jornada = df2[df2["fin_dec_tmp"].notna()].groupby("inspector", as_index=False).agg(fin_dec=("fin_dec_tmp", "max"))
     
         prom_fin = df_fin_jornada["fin_dec"].mean()
@@ -1084,24 +1181,8 @@ with tab_operacion:
         
         if archivo_mensual is not None:
             with st.spinner("Procesando archivo mensual..."):
-                df_m = pd.read_excel(archivo_mensual)
-                df_m.columns = [str(c).strip().lower() for c in df_m.columns]
-                
-                # Pre-procesamiento de nombres e inspectores (replicando load_local_bitacora)
-                if "inspector" in df_m.columns:
-                    df_m["inspector"] = df_m["inspector"].astype(str).str.upper().str.strip().str.replace(r"\s+", " ", regex=True)
-                df_m["supervisor"] = df_m["inspector"].map(SUPERVISORES_DICT).fillna("SIN SUPERVISOR")
-                
-                if "fecha de ejecucion" in df_m.columns:
-                    df_m["fecha"] = pd.to_datetime(df_m["fecha de ejecucion"], errors="coerce").dt.date
-                    
-                for col in ["hora inicio", "hora inicio de recorrido", "hora final"]:
-                    if col in df_m.columns:
-                        df_m[col + "_parsed"] = pd.to_datetime(df_m[col].astype(str), errors='coerce').dt.time
-
-                if "tiempo de tarea" in df_m.columns:
-                    df_m["tiempo_tarea_td"] = pd.to_timedelta(df_m["tiempo de tarea"].astype(str), errors="coerce")
-                    
+                file_bytes = archivo_mensual.getvalue()
+                df_m = process_uploaded_mensual_file(file_bytes)
             st.success("✅ Archivo mensual cargado correctamente.")
         else:
             st.info("👆 Puedes subir un archivo consolidado aquí. Si no, se usará la bitácora diaria actual.")
@@ -2023,7 +2104,7 @@ with tab_sst:
             if not df_result.empty:
                 st.markdown(f"### 📋 Control de Horarios y Ausentismo")
                 st.dataframe(
-                    df_result[["INSPECTOR", "HORA PREOPERACIONAL", "HORA OPERACIONAL FINAL", "AUSENTISMO"]].style.apply(style_sst, axis=1),
+                    df_result_sst.style.apply(style_sst, axis=1),
                     use_container_width=True,
                     hide_index=True
                 )
