@@ -74,7 +74,7 @@ st.markdown("""
         padding: 0.8rem;
         border-radius: 12px;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        border-left: 5px solid #1e3a8a;
+        border-left: 5px solid #2F9331;
         margin-bottom: 0.5rem;
     }
     .metric-label {
@@ -84,7 +84,7 @@ st.markdown("""
         text-transform: uppercase;
     }
     .metric-value {
-        color: #1e3a8a;
+        color: #2F9331;
         font-size: 1.35rem;
         font-weight: 800;
         margin-top: 5px;
@@ -93,8 +93,8 @@ st.markdown("""
     div[data-testid="stPills"] button[aria-checked="true"],
     div[data-testid="stSegmentedControl"] button[aria-checked="true"],
     div[data-baseweb="tag"] {
-        background-color: #1e3a8a !important;
-        border-color: #1e3a8a !important;
+        background-color: #39A935 !important;
+        border-color: #39A935 !important;
         color: white !important;
     }
     /* Texto blanco en elementos seleccionados */
@@ -573,7 +573,7 @@ if st.session_state.usuario is None:
         # Logo centrado
         st.image("logo.png", use_container_width=True)
         
-        st.markdown("<h2 style='text-align: center; color: #1e3a8a; font-family: sans-serif;'>Bienvenido</h2>", unsafe_allow_html=True)
+        st.markdown("<h2 style='text-align: center; color: #2F9331; font-family: sans-serif;'>Bienvenido</h2>", unsafe_allow_html=True)
         st.markdown("<p style='text-align: center; color: #64748b;'>Ingresa tus credenciales para continuar</p>", unsafe_allow_html=True)
         
         usuarios = cargar_usuarios()
@@ -1371,7 +1371,7 @@ with tab_operacion:
         st.markdown("""
             <style>
                 .agendas-sidebar {
-                    background-color: #1e3a8a;
+                    background-color: #2F9331;
                     color: white;
                     padding: 25px 15px 5px 15px;
                     border-radius: 15px 15px 0 0;
@@ -1379,7 +1379,7 @@ with tab_operacion:
                 }
                 /* Fusionar el menú con el cuadro azul superior */
                 div[data-testid="stRadio"]:has(input[id*="nav_agendas_radio"]) {
-                    background-color: #1e3a8a;
+                    background-color: #2F9331;
                     padding: 0 15px 25px 15px;
                     border-radius: 0 0 15px 15px;
                     margin-top: -1rem;
