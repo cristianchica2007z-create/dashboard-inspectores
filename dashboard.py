@@ -586,7 +586,7 @@ if st.session_state.usuario is None:
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
             overflow: hidden !important;
             width: 100% !important;
-            max-width: 1100px !important; /* Tarjeta mucho más grande y ancha */
+            max-width: 1400px !important; /* Tarjeta super grande (pantalla casi completa) */
             margin: auto !important;
             display: flex !important;
             align-items: stretch !important;
@@ -606,7 +606,7 @@ if st.session_state.usuario is None:
         /* Mitad Derecha (Texto verde) -> CORRECTO SELECTOR DE STREAMLIT */
         div[data-testid="stColumn"]:nth-of-type(2) {{
             background: linear-gradient(135deg, #1A3820 0%, #39A935 100%) !important;
-            padding: 5rem 4rem !important;
+            padding: 5rem 3rem 5rem 8rem !important; /* El 8rem de la izquierda actúa como un escudo protector para el logo */
             display: flex !important;
             flex-direction: column !important;
             justify-content: center !important;
@@ -727,10 +727,10 @@ if st.session_state.usuario is None:
             <div class="circle-logo">
                 <img src="{imago_src}" alt="e&c Imagotipo">
             </div>
-            <div class="right-title" style="font-size: 2.2rem; line-height: 1.3;">SEGUIMIENTO OPERATIVO<br>EJE CAFETERO</div>
-            <div class="right-text" style="margin-top: 2rem; margin-bottom: 2.5rem;">
-                <div style="font-size: 4rem; font-weight: 900; letter-spacing: 2px; color: white;">{hora_str}</div>
-                <div style="font-size: 1.5rem; font-weight: 400; opacity: 0.9; margin-top: 0.5rem; text-transform: uppercase;">{fecha_str}</div>
+            <div class="right-title" style="font-size: 2.8rem; line-height: 1.3;">SEGUIMIENTO OPERATIVO<br>EJE CAFETERO</div>
+            <div class="right-text" style="margin-top: 1rem; margin-bottom: 2.5rem;">
+                <div style="font-size: 4.5rem; font-weight: 900; letter-spacing: 2px; color: white;">{hora_str}</div>
+                <div style="font-size: 1.6rem; font-weight: 400; opacity: 0.9; margin-top: 0.5rem; text-transform: uppercase;">{fecha_str}</div>
             </div>
             <div style="display: flex; justify-content: center; width: 100%;">
                 <div class="chat-bubble">
