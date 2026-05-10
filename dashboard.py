@@ -1227,10 +1227,9 @@ with tab_operacion:
 
             df_merged["ZONA"] = df_merged["ZONA"].fillna("SIN ZONA")
             
-            # Definir Bloque (Prioridad Media) y Cartera (Columna CARTERA no nula)
+            # Definir Bloque (Prioridad Media)
             # Nota: prioridad ya está normalizada a Capitalize ("Media")
             df_merged["es_bloque"] = df_merged["prioridad"] == "Media"
-            df_merged["es_cartera"] = df_merged["CARTERA"].notna()
             
             def calc_pct_zona(df_subset):
                 if df_subset.empty: return 0.0
