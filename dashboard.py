@@ -764,19 +764,8 @@ if st.session_state.usuario is None:
         
     st.stop()
 
-# -------------------------------------------------
-# BOTÓN CERRAR SESIÓN
-# -------------------------------------------------
-col_vacio, col_logout = st.columns([8, 1])
-
-with col_logout:
-    if st.button("🚪 Cerrar sesión"):
-        st.session_state.usuario = None
-        st.session_state.rol = None
-        st.rerun()
-
 # ===================================================
-# ✅ MOSTRAR METADATA DE ACTUALIZACIÓN (GLOBAL)
+# ✅ MOSTRAR METADATA DE ACTUALIZACIÓN (GLOBAL) Y CERRAR SESIÓN
 # ===================================================
 def obtener_texto_meta(info_dict):
     if not info_dict or "ultima_actualizacion" not in info_dict:
@@ -786,34 +775,45 @@ def obtener_texto_meta(info_dict):
             info_dict.get("ultima_actualizacion"), "%Y-%m-%d %H:%M:%S"
         ).replace(tzinfo=TZ_UTC)
         fecha_col = fecha_utc.astimezone(TZ_CO)
-        return fecha_col.strftime("%Y-%m-%d %H:%M:%S"), info_dict.get("usuario_actualizo", "—")
+        return fecha_col.strftime("%Y-%m-%d %I:%M %p"), info_dict.get("usuario_actualizo", "—")
     except:
         return "—", "—"
 
 token_meta = st.secrets["github"]["token"]
 repo_meta = st.secrets["github"]["repo"]
 
-# Leer info de ambos archivos desde GitHub para consistencia global
+# Leer info de ambos archivos desde GitHub
 info_bitacora_meta, _ = fetch_github_json(repo_meta, "BITACORA_INFO.json", token_meta)
 info_programacion_meta, _ = fetch_github_json(repo_meta, "PROGRAMACION_INFO.json", token_meta)
 
 f_bit, u_bit = obtener_texto_meta(info_bitacora_meta)
 f_prog, u_prog = obtener_texto_meta(info_programacion_meta)
 
-st.markdown(
-    f"""
-    <div style='display: flex; justify-content: space-between; padding: 0px 15px; margin-bottom: -15px;'>
-        <div style='color: #64748b; font-size: 0.8rem; font-family: sans-serif;'>
-            🕓 <b>Bitácora:</b> {f_bit} | 👤 {u_bit}
+# Crear layout superior
+col_meta, col_logout = st.columns([7, 1])
+
+with col_meta:
+    st.markdown(
+        f"""
+        <div style='display: flex; gap: 30px; padding: 5px 15px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; width: fit-content;'>
+            <div style='color: #475569; font-size: 0.85rem; font-family: sans-serif;'>
+                🕓 <span style='color:#2F9331; font-weight:800;'>Bitácora:</span> {f_bit} <span style='color:#94a3b8;'>|</span> 👤 {u_bit}
+            </div>
+            <div style='color: #475569; font-size: 0.85rem; font-family: sans-serif;'>
+                📅 <span style='color:#2F9331; font-weight:800;'>Programación:</span> {f_prog} <span style='color:#94a3b8;'>|</span> 👤 {u_prog}
+            </div>
         </div>
-        <div style='color: #64748b; font-size: 0.8rem; font-family: sans-serif; text-align: right;'>
-            📅 <b>Programación:</b> {f_prog} | 👤 {u_prog}
-        </div>
-    </div>
-    <hr style='margin: 10px 0px; border-top: 1px solid #e2e8f0;'>
-    """, 
-    unsafe_allow_html=True
-)
+        """, 
+        unsafe_allow_html=True
+    )
+
+with col_logout:
+    if st.button("🚪 Cerrar sesión", use_container_width=True):
+        st.session_state.usuario = None
+        st.session_state.rol = None
+        st.rerun()
+
+st.markdown("<hr style='margin: 5px 0px 20px 0px; border-top: 1px solid #e2e8f0;'>", unsafe_allow_html=True)
 
 # ---------------------------------------------------
 
