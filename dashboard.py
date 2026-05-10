@@ -1074,7 +1074,38 @@ with tab_operacion:
     # ===================================================
     with tab_mensual:
         st.subheader("📅 Consolidado Mensual / Rango de Fechas")
-        df_m = df_bitacora_base.copy()
+        
+        # Opción para subir un archivo independiente para el consolidado mensual
+        archivo_mensual = st.file_uploader(
+            "📂 Sube una bitácora independiente para el análisis mensual (Rango de varios días)", 
+            type=["xlsx", "xls"], 
+            key="uploader_mensual"
+        )
+        
+        if archivo_mensual is not None:
+            with st.spinner("Procesando archivo mensual..."):
+                df_m = pd.read_excel(archivo_mensual)
+                df_m.columns = [str(c).strip().lower() for c in df_m.columns]
+                
+                # Pre-procesamiento de nombres e inspectores (replicando load_local_bitacora)
+                if "inspector" in df_m.columns:
+                    df_m["inspector"] = df_m["inspector"].astype(str).str.upper().str.strip().str.replace(r"\s+", " ", regex=True)
+                df_m["supervisor"] = df_m["inspector"].map(SUPERVISORES_DICT).fillna("SIN SUPERVISOR")
+                
+                if "fecha de ejecucion" in df_m.columns:
+                    df_m["fecha"] = pd.to_datetime(df_m["fecha de ejecucion"], errors="coerce").dt.date
+                    
+                for col in ["hora inicio", "hora inicio de recorrido", "hora final"]:
+                    if col in df_m.columns:
+                        df_m[col + "_parsed"] = pd.to_datetime(df_m[col].astype(str), errors='coerce').dt.time
+
+                if "tiempo de tarea" in df_m.columns:
+                    df_m["tiempo_tarea_td"] = pd.to_timedelta(df_m["tiempo de tarea"].astype(str), errors="coerce")
+                    
+            st.success("✅ Archivo mensual cargado correctamente.")
+        else:
+            st.info("👆 Puedes subir un archivo consolidado aquí. Si no, se usará la bitácora diaria actual.")
+            df_m = df_bitacora_base.copy()
     
         if "grupo" in df_m.columns:
             df_m["grupo"] = df_m["grupo"].astype(str).str.upper().str.strip()
