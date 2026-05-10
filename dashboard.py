@@ -137,6 +137,12 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # -------------------------------------------------
+# ✅ CONFIGURACIÓN DE CONEXIÓN GITHUB
+# -------------------------------------------------
+token = st.secrets["github"]["token"]
+repo = st.secrets["github"]["repo"]
+
+# -------------------------------------------------
 # ✅ FUNCIONES DE CACHÉ. (MEJORA DE RENDIMIENTO)
 # -------------------------------------------------
 
