@@ -104,34 +104,41 @@ st.markdown("""
     }
     
     /* =========================================
-       RESTAURACIÓN DE DISEÑO (HEADER NORMAL)
+       NUEVO: HEADER INMOVILIZADO (STICKY REFINADO)
        ========================================= */
-    .block-container {
-        padding-top: 2rem !important;
+    /* Desbloqueo de contenedores para permitir el sticky */
+    html, body, [data-testid="stAppViewMain"], .main, .block-container {
+        overflow: initial !important;
+    }
+
+    div.block-container {
+        padding-top: 1rem !important;
     }
     
-    /* Intento de Sticky suave solo para el contenedor del header si el navegador lo permite */
+    /* Contenedor del Header pegajoso */
     div[data-testid="stVerticalBlock"]:has(#sticky-header) {
         position: -webkit-sticky !important;
         position: sticky !important;
         top: 0px !important;
-        z-index: 999 !important;
         background-color: white !important;
-        padding-bottom: 10px !important;
+        z-index: 9999 !important;
+        padding: 10px 0 !important;
         border-bottom: 2px solid #2F9331 !important;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05) !important;
     }
-
-    /* Pestañas pegajosas */
+    
+    /* Pestañas pegajosas debajo del header */
     div[data-testid="stTabs"] > div[role="tablist"] {
         position: -webkit-sticky !important;
         position: sticky !important;
-        top: 130px !important;
-        z-index: 998 !important;
+        top: 130px !important; /* Ajustar según altura real del header */
         background-color: white !important;
+        z-index: 9998 !important;
+        padding-top: 5px !important;
     }
 
     header[data-testid="stHeader"] {
-        background: rgba(255, 255, 255, 0.8) !important;
+        background: rgba(255, 255, 255, 0.9) !important;
     }
     /* Estilos específicos para la tabla de SST */
     .sst-container {
