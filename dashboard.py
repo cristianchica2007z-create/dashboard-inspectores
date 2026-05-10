@@ -658,7 +658,7 @@ if st.session_state.usuario is None:
         .circle-logo {{
             position: absolute;
             left: 50%;
-            top: 280px; /* Forzado más abajo para centrado vertical real */
+            top: 120px; /* Movido hacia arriba para que no tape los textos */
             transform: translate(-50%, -50%); /* Centrado absoluto perfecto respecto a toda la tarjeta */
             width: 160px; /* Logo más grande */
             height: 160px;
