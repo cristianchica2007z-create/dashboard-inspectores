@@ -1220,13 +1220,11 @@ with tab_operacion:
             res_zona = []
             for zona, group in df_merged.groupby("ZONA"):
                 pct_bloque = calc_pct_zona(group[group["es_bloque"]])
-                pct_cartera = calc_pct_zona(group[group["es_cartera"]])
-                # Solo incluir si hay datos para esa zona
-                if group["es_bloque"].any() or group["es_cartera"].any():
+                # Solo incluir si hay datos de Bloque para esa zona
+                if group["es_bloque"].any():
                     res_zona.append({
                         "Zona": zona,
-                        "Efectividad Bloque (%)": pct_bloque if group["es_bloque"].any() else "—",
-                        "Efectividad Cartera (%)": pct_cartera if group["es_cartera"].any() else "—"
+                        "Efectividad Bloque (%)": pct_bloque
                     })
             
             df_efectividad_zona = pd.DataFrame(res_zona)
@@ -1353,7 +1351,7 @@ with tab_operacion:
         # 📊 TABLA DE EFECTIVIDAD POR ZONA
         # ---------------------------------------------------
         if not df_efectividad_zona.empty:
-            st.markdown("### 🗺️ Efectividad por Zona y Tipo (Bloque / Cartera)")
+            st.markdown("### 🗺️ Efectividad por Zona (BLOQUE)")
             
             # Estilizar la tabla de zonas
             def color_pct(val):
@@ -1362,7 +1360,7 @@ with tab_operacion:
                 return f"color: {color}; font-weight: bold;"
 
             st.dataframe(
-                df_efectividad_zona.style.map(color_pct, subset=["Efectividad Bloque (%)", "Efectividad Cartera (%)"]),
+                df_efectividad_zona.style.map(color_pct, subset=["Efectividad Bloque (%)"]),
                 use_container_width=True,
                 hide_index=True
             )
