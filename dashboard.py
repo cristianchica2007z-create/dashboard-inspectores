@@ -104,44 +104,25 @@ st.markdown("""
     }
     
     /* =========================================
-       NUEVO: HEADER INMOVILIZADO INTELIGENTE (FIXED)
+       DISEÑO LIMPIO Y OPERATIVO (RESTAURADO)
        ========================================= */
     .block-container {
-        padding-top: 180px !important;
+        padding-top: 2rem !important;
     }
-
-    /* El contenedor maestro del header será fijo pero "fantasma" (no bloquea clics) */
-    div[data-testid="stVerticalBlock"]:has(#sticky-header) {
-        position: fixed !important;
-        top: 0 !important;
-        left: 0 !important;
-        right: 0 !important;
-        width: 100vw !important;
-        background-color: white !important;
-        z-index: 999999 !important;
-        padding: 10px 5% !important;
-        border-bottom: 3px solid #2F9331 !important;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
-        pointer-events: none !important; /* TRUCO: Los clics pasan a través del contenedor */
-    }
-
-    /* Pero los elementos dentro del header (botones, links) SÍ deben recibir clics */
-    div[data-testid="stVerticalBlock"]:has(#sticky-header) * {
-        pointer-events: auto !important;
-    }
-
-    /* Pestañas pegajosas coordinadas */
-    div[data-testid="stTabs"] > div[role="tablist"] {
-        position: fixed !important;
-        top: 155px !important;
-        width: 100% !important;
-        z-index: 999998 !important;
-        background-color: white !important;
-        padding: 5px 5% !important;
-    }
-
+    
     header[data-testid="stHeader"] {
-        display: none !important;
+        background: rgba(255, 255, 255, 0.8) !important;
+    }
+
+    /* Estilos para el contenedor de metadata */
+    .meta-container {
+        display: flex;
+        gap: 30px;
+        padding: 5px 15px;
+        background: #f8fafc;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+        width: fit-content;
     }
     /* Estilos específicos para la tabla de SST */
     .sst-container {
