@@ -164,7 +164,7 @@ def get_processed_agendas_data(repo, token):
         visita = row["fecha de visita"]
         if pd.isna(visita) or visita > ahora_colombia: return "OK"
         ha = str(row.get("hora agenda", "")).upper()
-        if any(txt in ha for txt in ["TRANSCURSO DE LA TARDE", "TRANSCURSO DE LA MAÑANA", "TRANSCURSO DEL DÍA"]):
+        if any(txt in ha for txt in ["TRANSCURSO DE LA MAÑANA", "TRANSCURSO DE LA TARDE", "TRANSCURSO DEL DIA", "TRANSCURSO DEL DÍA", "JORNADA MAÑANA", "JORNADA TARDE", "JORNADA DE MAÑANA"]):
             return "OK"
         return "ALERTA"
         
