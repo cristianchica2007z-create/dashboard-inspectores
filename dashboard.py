@@ -1368,7 +1368,6 @@ with tab_agendas:
                         on_select="rerun",
                         key="tabla_agendas_alerta_v_final",
                         hide_index=True,
-                        selection_mode="single_row"
                     )
                     st.error(f"🚨 TOTAL ALERTAS: {len(df_alerta)}")
 
