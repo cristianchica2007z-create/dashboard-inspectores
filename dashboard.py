@@ -50,7 +50,7 @@ SUPERVISORES_DICT = {k.upper(): v for k, v in {
 }.items()}
 
 # ---------------------------------------------------
-# ✅ CONFIGURACIÓN GENERAL DEL DASHBOARD
+# ✅ CONFIGURACIÓN GENERAL DEL DASHBOARD.
 # ---------------------------------------------------
 st.set_page_config(
     page_title="DASHBOARD INSPECTORES e&c",
