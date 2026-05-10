@@ -1711,16 +1711,7 @@ with tab_inv_v2:
     if not isinstance(catalogo, dict) or not catalogo: catalogo = CATALOGO_DEFAULT.copy()
 
 
-    st.markdown("""
-        <div class="filter-card">
-            <div class="filter-title">FILTROS DE INVENTARIO</div>
-    """, unsafe_allow_html=True)
-    
-    col_sede, _ = st.columns([1, 3])
-    with col_sede:
-        sede_global = st.selectbox("📍 Seleccionar Sede Global:", SEDES_INV, key="inv_sede_global")
-        
-    st.markdown('</div>', unsafe_allow_html=True)
+
     def calcular_stock(movs, sede):
         res = {}
         for m in [x for x in movs if x["sede"] == sede]:
@@ -1735,29 +1726,59 @@ with tab_inv_v2:
             for v in res.values()
         ])
 
-
-    col_nav, col_main = st.columns([1.2, 4])
+    # El layout principal de la pestaña
+    col_nav, col_main = st.columns([1.2, 4.8])
     
     with col_nav:
         st.markdown('''
             <style>
-                /* Estilos para que el radio button se vea como el sidebar de la imagen */
-                .stRadio > div {
-                    background-color: #0c3e66; /* Azul oscuro como en la imagen */
-                    padding: 20px;
-                    border-radius: 10px;
-                    color: white;
+                /* Contenedor principal de los radio buttons */
+                [data-testid="stVerticalBlock"] > div > div > div > div[data-testid="stRadio"] {
+                    background-color: #0c3e66; /* Azul oscuro como la imagen */
+                    padding: 20px 10px;
+                    border-radius: 12px;
+                    box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
+                    margin-top: 5px; /* Para alinear un poco mejor */
                 }
-                .stRadio > div label {
+                
+                /* Ocultar el circulo de los radio buttons usando selectores más generales */
+                div[data-testid="stRadio"] div[role="radiogroup"] label div:first-child {
+                    display: none !important;
+                }
+                
+                /* Estilo de los "botones" del menú */
+                div[data-testid="stRadio"] div[role="radiogroup"] label {
+                    background-color: transparent !important;
+                    padding: 12px 15px !important;
+                    margin-bottom: 5px !important;
+                    border-radius: 8px !important;
+                    cursor: pointer !important;
+                    transition: all 0.3s ease !important;
+                }
+                
+                /* Texto blanco */
+                div[data-testid="stRadio"] div[role="radiogroup"] label p {
                     color: white !important;
-                    font-weight: bold;
-                    padding: 10px 5px;
+                    font-size: 1.05rem !important;
+                    font-weight: 500 !important;
+                    margin: 0 !important;
                 }
-                .stRadio > div label p {
-                    font-size: 1.1rem;
+                
+                /* Hover effect */
+                div[data-testid="stRadio"] div[role="radiogroup"] label:hover {
+                    background-color: rgba(255, 255, 255, 0.1) !important;
+                }
+                
+                /* Activo effect */
+                div[data-testid="stRadio"] div[aria-checked="true"] label {
+                    background-color: rgba(255, 255, 255, 0.2) !important;
+                    border-left: 4px solid #3b82f6 !important;
+                    border-top-left-radius: 0px !important;
+                    border-bottom-left-radius: 0px !important;
                 }
             </style>
         ''', unsafe_allow_html=True)
+        
         opcion_inv = st.radio(
             "Navegación", 
             ["📊 Stock Actual", "➕ Registrar Entrada", "➖ Registrar Salida", "📜 Historial", "⚙️ Configuración Catálogo"],
@@ -1765,7 +1786,20 @@ with tab_inv_v2:
         )
         
     with col_main:
+        # Filtros arriba a la derecha, para no empujar la columna izquierda hacia abajo!
+        st.markdown('''
+            <div class="filter-card" style="margin-bottom: 15px;">
+                <div class="filter-title">FILTROS DE INVENTARIO</div>
+        ''', unsafe_allow_html=True)
+        
+        col_sede, _ = st.columns([1, 2])
+        with col_sede:
+            sede_global = st.selectbox("📍 Seleccionar Sede Global:", SEDES_INV, key="inv_sede_global")
+            
+        st.markdown('</div>', unsafe_allow_html=True)
+        
         st.markdown('<div class="results-card">', unsafe_allow_html=True)
+
     
         if opcion_inv == "📊 Stock Actual":
             df_stock = calcular_stock(movimientos, sede_global)
