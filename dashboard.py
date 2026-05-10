@@ -119,6 +119,56 @@ st.markdown("""
 # -------------------------------------------------
 
 @st.cache_data(ttl=600)  # Cache por 10 minutos para datos de GitHub
+
+@st.cache_data(ttl=300)
+def get_processed_agendas_data(repo, token):
+    df_raw, _ = fetch_github_excel(repo, "BITACORA.xlsx", token)
+    if df_raw.empty:
+        return pd.DataFrame()
+    
+    df = df_raw.copy()
+    df.columns = [str(c).strip().lower() for c in df.columns]
+    
+    columnas_req = [
+        "grupo", "prioridad", "estado",
+        "fecha de visita", "fecha de ejecucion",
+        "inspector", "contrato", "direccion",
+        "localidad", "detalle de tarea"
+    ]
+    
+    # Verificar columnas
+    if not all(c in df.columns for c in columnas_req):
+        return pd.DataFrame() # O manejar error
+        
+    df["grupo"] = df["grupo"].astype(str).str.upper().str.strip()
+    df = df[df["grupo"].isin(["INSP-CALDAS", "INSP-RIS"])].copy()
+    
+    df["fecha de visita"] = pd.to_datetime(df["fecha de visita"], errors="coerce")
+    df["fecha de ejecucion"] = pd.to_datetime(df["fecha de ejecucion"], errors="coerce")
+    
+    ahora_colombia = datetime.datetime.now(ZoneInfo("America/Bogota")).replace(tzinfo=None)
+    
+    # Cruce con Programación
+    df_prog_aux, _ = fetch_github_excel(repo, "PROGRAMACION.xlsx", token)
+    if not df_prog_aux.empty:
+        df_prog_aux.columns = [str(c).strip().lower() for c in df_prog_aux.columns]
+        if "contrato" in df_prog_aux.columns and "hora agenda" in df_prog_aux.columns:
+            df["contrato"] = df["contrato"].astype(str).str.strip()
+            df_prog_aux["contrato"] = df_prog_aux["contrato"].astype(str).str.strip()
+            df_prog_aux = df_prog_aux.drop_duplicates(subset=["contrato"])
+            df = df.merge(df_prog_aux[["contrato", "hora agenda"]], on="contrato", how="left")
+            
+    def calc_alerta(row):
+        visita = row["fecha de visita"]
+        if pd.isna(visita) or visita > ahora_colombia: return "OK"
+        ha = str(row.get("hora agenda", "")).upper()
+        if any(txt in ha for txt in ["TRANSCURSO DE LA TARDE", "TRANSCURSO DE LA MAÑANA", "TRANSCURSO DEL DÍA"]):
+            return "OK"
+        return "ALERTA"
+        
+    df["estado_alerta"] = df.apply(calc_alerta, axis=1)
+    return df
+
 def fetch_github_excel(repo, path, token, branch="main"):
     headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
     url = f"https://api.github.com/repos/{repo}/contents/{path}"
@@ -1201,71 +1251,18 @@ with tab_agendas:
     # ======================================================
     # CARGAR BITÁCORA DESDE GITHUB (FORMA CORRECTA)
     # ======================================================
-    archivo_bitacora = "BITACORA.xlsx"
+    # ======================================================
+    # CARGAR Y PROCESAR DATOS (CON CACHÉ PARA VELOCIDAD)
+    # ======================================================
     token = st.secrets["github"]["token"]
     repo = st.secrets["github"]["repo"]
 
-    df, _ = fetch_github_excel(repo, archivo_bitacora, token)
+    df = get_processed_agendas_data(repo, token)
+    
     if not df.empty:
-        # ======================================================
-        # NORMALIZAR Y VALIDAR COLUMNAS
-        # ======================================================
-        df.columns = [str(c).strip().lower() for c in df.columns]
-
-        columnas_req = [
-            "grupo", "prioridad", "estado",
-            "fecha de visita", "fecha de ejecucion",
-            "inspector", "contrato", "direccion",
-            "localidad", "detalle de tarea"
-        ]
-
-        # Verificar columnas antes de procesar
-        faltantes = [c for c in columnas_req if c not in df.columns]
-        if faltantes:
-            st.error(f"❌ Faltan columnas requeridas en el archivo: {faltantes}")
-        else:
-            # ======================================================
-            # FILTRO FIJO DE GRUPO
-            # ======================================================
-            df["grupo"] = df["grupo"].astype(str).str.upper().str.strip()
-            grupos_validos = ["INSP-CALDAS", "INSP-RIS"]
-            df = df[df["grupo"].isin(grupos_validos)].copy()
-
-            # ======================================================
-            # FECHAS Y ALERTAS
-            # ======================================================
-            df["fecha de visita"] = pd.to_datetime(df["fecha de visita"], errors="coerce")
-            df["fecha de ejecucion"] = pd.to_datetime(df["fecha de ejecucion"], errors="coerce")
-
-            ahora_colombia = datetime.datetime.now(ZoneInfo("America/Bogota")).replace(tzinfo=None)
-
-            # --- CRUCE CON PROGRAMACIÓN (VLOOKUP) PARA HORA AGENDA ---
-            df_prog_aux, _ = fetch_github_excel(repo, "PROGRAMACION.xlsx", token)
-            if not df_prog_aux.empty:
-                df_prog_aux.columns = [str(c).strip().lower() for c in df_prog_aux.columns]
-                if "contrato" in df_prog_aux.columns and "hora agenda" in df_prog_aux.columns:
-                    # Normalizar llaves para el cruce
-                    df["contrato"] = df["contrato"].astype(str).str.strip()
-                    df_prog_aux["contrato"] = df_prog_aux["contrato"].astype(str).str.strip()
-                    # Traer HORA AGENDA (tomamos el primer registro si hay duplicados en prog)
-                    df_prog_aux = df_prog_aux.drop_duplicates(subset=["contrato"])
-                    df = df.merge(df_prog_aux[["contrato", "hora agenda"]], on="contrato", how="left")
-
-            # --- LÓGICA DE ALERTA INTELIGENTE ---
-            def calcular_alerta_smart(row):
-                visita = row["fecha de visita"]
-                if pd.isna(visita) or visita > ahora_colombia:
-                    return "OK"
-                
-                # Si es transcurso, no es alerta inmediata (es durante el bloque)
-                ha = str(row.get("hora agenda", "")).upper()
-                if any(txt in ha for txt in ["TRANSCURSO DE LA TARDE", "TRANSCURSO DE LA MAÑANA", "TRANSCURSO DEL DÍA"]):
-                    return "OK"
-                return "ALERTA"
-
-            df["estado_alerta"] = df.apply(calcular_alerta_smart, axis=1)
-
-            columnas_base = ["inspector", "contrato", "direccion", "estado", "fecha de visita", "localidad", "detalle de tarea", "estado_alerta"]
+        columnas_base = ["inspector", "contrato", "direccion", "estado", "fecha de visita", "localidad", "detalle de tarea", "estado_alerta"]
+        ahora_colombia = datetime.datetime.now(ZoneInfo("America/Bogota")).replace(tzinfo=None)
+        grupos_validos = ["INSP-CALDAS", "INSP-RIS"]
 
             # --- LAYOUT CON MENÚ LATERAL ---
             col_nav_age, col_main_age = st.columns([1.2, 4])
