@@ -71,11 +71,11 @@ st.markdown("""
     /* Estilo de Tarjetas Profesionales para KPIs */
     .metric-card {
         background-color: #ffffff;
-        padding: 0.8rem;
+        padding: 1.1rem 1rem;
         border-radius: 12px;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         border-left: 5px solid #2F9331;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.85rem;
     }
     .metric-label {
         color: #64748b;
@@ -1211,6 +1211,8 @@ with tab_operacion:
             ]
             columnas_disponibles = [c for c in columnas_tabla if c in df_tabla.columns]
     
+            st.write("") # Espacio para bajar la tabla
+            st.write("") # Espacio para bajar la tabla
             st.markdown("### 📋 Tabla de inspecciones del día")
     
             # Aplicar estilos: Centrar todo menos inspector y aplicar colores a estado
@@ -1224,7 +1226,7 @@ with tab_operacion:
             st.dataframe(
                 df_styled,
                 use_container_width=True,
-                height=400, # Acortado para dar espacio
+                height=450, # Alargado un poco más
                 hide_index=True,
                 column_config={
                     "porcentaje_efectividad": st.column_config.NumberColumn(
@@ -1237,6 +1239,7 @@ with tab_operacion:
             # ---------------------------------------------------
             # 🚨 INSPECTORES SIN ACTIVIDAD (MOVIDO AQUÍ)
             # ---------------------------------------------------
+            st.write("") # Espacio adicional
             st.markdown("### 🚨 Inspectores sin actividad registrada")
         
             inspectores_con_actividad = set(df2["inspector"].str.upper().str.strip().unique())
