@@ -614,7 +614,6 @@ if st.session_state.usuario is None:
             align-items: center !important; /* Centrar todo el contenido para evitar choque con el logo */
             color: white !important;
             margin: 0 !important;
-            position: relative !important; /* Crucial para que el logo circular se ancle exactamente al borde */
         }}
         
         /* Hacer transparente el iframe del reloj en vivo */
@@ -652,15 +651,15 @@ if st.session_state.usuario is None:
             margin-bottom: 1.5rem;
         }}
         .login-logo img {{
-            width: 280px; /* Logo principal mucho más grande */
+            width: 380px; /* Logo principal gigante */
         }}
         
         /* Círculo central superpuesto con el Imagotipo */
         .circle-logo {{
             position: absolute;
-            left: -80px; /* Exactamente en la mitad al no haber gap */
+            left: 50%;
             top: 50%;
-            transform: translateY(-50%);
+            transform: translate(-50%, -50%); /* Centrado absoluto perfecto respecto a toda la tarjeta */
             width: 160px; /* Logo más grande */
             height: 160px;
             background: white;
