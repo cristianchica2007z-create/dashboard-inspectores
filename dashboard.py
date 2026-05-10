@@ -1814,23 +1814,24 @@ with tab_inv_v2:
                 st.info("No hay inventario registrado en esta sede.")
             
         elif opcion_inv == "➕ Registrar Entrada":
-            with st.form("form_entrada"):
+            with st.container():
+                st.markdown('<p class="section-label">📥 Ingreso de Mercancía</p>', unsafe_allow_html=True)
                 c1, c2, c3 = st.columns(3)
-                f_sede = c1.selectbox("Sede Destino", SEDES_INV)
-                f_resp = c2.selectbox("Responsable Recibo", RESPONSABLES_INV)
-                f_fecha = c3.date_input("Fecha Recibo")
+                f_sede = c1.selectbox("Sede Destino", SEDES_INV, key="ent_sede")
+                f_resp = c2.selectbox("Responsable Recibo", RESPONSABLES_INV, key="ent_resp")
+                f_fecha = c3.date_input("Fecha Recibo", key="ent_fecha")
 
                 st.markdown("---")
                 c4, c5, c6, c7 = st.columns([1.5, 1.5, 1, 1])
-                f_cat = c4.selectbox("Categoría", list(catalogo.keys()))
-                f_item = c5.selectbox("Producto", list(catalogo[f_cat].keys()))
+                f_cat = c4.selectbox("Categoría", list(catalogo.keys()), key="ent_cat")
+                f_item = c5.selectbox("Producto", list(catalogo[f_cat].keys()), key="ent_item")
             
                 opciones_talla = catalogo[f_cat][f_item].get("opciones_talla", [])
-                f_talla = c6.selectbox("Talla", opciones_talla if opciones_talla else ["N/A"])
-                f_cant = c7.number_input("Cantidad", min_value=1, step=1)
-                f_obs = st.text_area("Observaciones / Remisión")
+                f_talla = c6.selectbox("Talla", opciones_talla if opciones_talla else ["N/A"], key="ent_talla")
+                f_cant = c7.number_input("Cantidad", min_value=1, step=1, key="ent_cant")
+                f_obs = st.text_area("Observaciones / Remisión", key="ent_obs")
 
-                if st.form_submit_button("💾 Guardar Entrada"):
+                if st.button("💾 Guardar Entrada", type="primary", use_container_width=True):
                     nuevo = {
                         "tipo": "ENTRADA", "fecha": str(f_fecha), "sede": f_sede,
                         "responsable": f_resp, "categoria": f_cat, "item": f_item,
@@ -1843,22 +1844,23 @@ with tab_inv_v2:
                     st.rerun()
 
         elif opcion_inv == "➖ Registrar Salida":
-            with st.form("form_salida"):
+            with st.container():
+                st.markdown('<p class="section-label">📤 Salida de Mercancía / Asignación</p>', unsafe_allow_html=True)
                 c1, c2, c3 = st.columns(3)
-                f_sede = c1.selectbox("Sede Origen", SEDES_INV)
-                f_resp = c2.selectbox("Entrega", RESPONSABLES_INV)
-                f_insp = c3.selectbox("Recibe (Inspector)", inspectores_lista)
+                f_sede = c1.selectbox("Sede Origen", SEDES_INV, key="sal_sede")
+                f_resp = c2.selectbox("Entrega", RESPONSABLES_INV, key="sal_resp")
+                f_insp = c3.selectbox("Recibe (Inspector)", inspectores_lista, key="sal_insp")
 
                 st.markdown("---")
                 c4, c5, c6, c7 = st.columns([1.5, 1.5, 1, 1])
-                f_cat = c4.selectbox("Categoría", list(catalogo.keys()))
-                f_item = c5.selectbox("Producto", list(catalogo[f_cat].keys()))
+                f_cat = c4.selectbox("Categoría", list(catalogo.keys()), key="sal_cat")
+                f_item = c5.selectbox("Producto", list(catalogo[f_cat].keys()), key="sal_item")
             
                 opciones_talla = catalogo[f_cat][f_item].get("opciones_talla", [])
-                f_talla = c6.selectbox("Talla", opciones_talla if opciones_talla else ["N/A"])
-                f_cant = c7.number_input("Cantidad a entregar", min_value=1, step=1)
+                f_talla = c6.selectbox("Talla", opciones_talla if opciones_talla else ["N/A"], key="sal_talla")
+                f_cant = c7.number_input("Cantidad a entregar", min_value=1, step=1, key="sal_cant")
             
-                if st.form_submit_button("✅ Procesar Salida"):
+                if st.button("✅ Procesar Salida", type="primary", use_container_width=True):
                     # Validación de Stock al estilo Flask
                     df_stock = calcular_stock(movimientos, f_sede)
                     talla_val = f_talla if f_talla != "N/A" else "N/A"
