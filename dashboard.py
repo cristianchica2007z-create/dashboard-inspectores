@@ -541,7 +541,7 @@ def cargar_usuarios():
     return {}
 
 # ===================================================
-# ✅ INTERFAZ DE INICIO DE SESIÓN (SPLIT SCREEN CORPORATIVO)
+# ✅ INTERFAZ DE INICIO DE SESIÓN (WIDE CARD CORPORATIVO)
 # ===================================================
 if st.session_state.usuario is None:
     import base64
@@ -554,60 +554,56 @@ if st.session_state.usuario is None:
 
     st.markdown(f"""
         <style>
-        /* Reset de contenedor principal para Full Screen */
+        /* Ocultar el top-bar de Streamlit */
         [data-testid="stHeader"] {{ display: none !important; }}
+        
+        /* Fondo premium de pantalla completa */
+        .stApp {{
+            background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%) !important;
+        }}
+        
+        /* Convertir el contenedor principal en flex para centrar la tarjeta */
         [data-testid="stMainBlockContainer"] {{
-            padding: 0 !important;
-            max-width: 100% !important;
-        }}
-        
-        /* Forzar que las columnas ocupen toda la pantalla */
-        div[data-testid="stHorizontalBlock"] {{
-            height: 100vh;
-            gap: 0 !important;
-        }}
-        
-        /* Mitad Izquierda */
-        div[data-testid="column"]:nth-child(1) {{
-            background-color: #f8fafc;
-            background-image: repeating-linear-gradient(45deg, #f1f5f9 25%, transparent 25%, transparent 75%, #f1f5f9 75%, #f1f5f9), repeating-linear-gradient(45deg, #f1f5f9 25%, #f8fafc 25%, #f8fafc 75%, #f1f5f9 75%, #f1f5f9);
-            background-position: 0 0, 40px 40px;
-            background-size: 80px 80px;
             display: flex !important;
-            flex-direction: column !important;
             justify-content: center !important;
             align-items: center !important;
-            padding: 0 !important;
-            position: relative;
+            min-height: 100vh !important;
+            padding: 2rem !important;
         }}
         
-        /* Mitad Derecha */
-        div[data-testid="column"]:nth-child(2) {{
-            background: linear-gradient(135deg, #1A3820 0%, #39A935 100%);
+        /* Nuestra tarjeta principal basada en el stHorizontalBlock */
+        div[data-testid="stHorizontalBlock"] {{
+            background-color: white !important;
+            border-radius: 20px !important;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+            overflow: hidden !important;
+            width: 100% !important;
+            max-width: 950px !important;
+            margin: auto !important;
+        }}
+
+        /* Mitad Izquierda (Formulario) */
+        div[data-testid="column"]:nth-child(1) {{
+            background-color: white !important;
+            padding: 3.5rem 3rem !important;
             display: flex !important;
             flex-direction: column !important;
             justify-content: center !important;
-            padding: 4rem 10% !important;
-            color: white;
-            position: relative;
-        }}
-        
-        /* Tarjeta de Login usando el contenedor vertical interno de Streamlit */
-        div[data-testid="column"]:nth-child(1) > div[data-testid="stVerticalBlock"] {{
-            background: white;
-            padding: 3rem 2.5rem;
-            border-radius: 16px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            width: 80% !important;
-            max-width: 450px !important;
-            margin: auto;
-            position: relative;
-            z-index: 10;
         }}
 
-        /* Textos Derecha HTML inyectado */
+        /* Mitad Derecha (Texto verde) */
+        div[data-testid="column"]:nth-child(2) {{
+            background: linear-gradient(135deg, #1A3820 0%, #39A935 100%) !important;
+            padding: 4rem 3rem !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: center !important;
+            color: white !important;
+        }}
+
+        /* Textos Derecha */
         .right-title {{
-            font-size: 4rem;
+            font-size: 3.5rem;
             font-weight: 800;
             line-height: 1.1;
             margin-bottom: 1.5rem;
@@ -615,9 +611,9 @@ if st.session_state.usuario is None:
             font-family: sans-serif;
         }}
         .right-text {{
-            font-size: 1.15rem;
+            font-size: 1.1rem;
             line-height: 1.6;
-            color: rgba(255,255,255,0.9);
+            color: rgba(255,255,255,0.95);
             text-align: justify;
             font-family: sans-serif;
             margin-bottom: 2rem;
@@ -630,49 +626,33 @@ if st.session_state.usuario is None:
             display: inline-block;
             font-weight: bold;
             box-shadow: 0 10px 20px rgba(0,0,0,0.15);
-            font-size: 1.1rem;
+            font-size: 1.05rem;
         }}
-        
-        /* Logo Circular Sobrepuesto */
-        .floating-logo {{
-            position: absolute;
-            top: 50%;
-            right: -80px;
-            transform: translateY(-50%);
-            width: 160px;
-            height: 160px;
-            background: white;
-            border-radius: 50%;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 20;
-            padding: 20px;
+
+        /* Logo superpuesto opcional */
+        .login-logo {{
+            text-align: center;
+            margin-bottom: 2rem;
         }}
-        .floating-logo img {{
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-        }}
-        
-        /* Inputs y Botón */
-        div[data-testid="stTextInput"] label {{
-            color: #334155 !important;
-            font-weight: 600;
-        }}
-        [data-testid="stButton"] button {{
-            height: 3.5rem;
-            border-radius: 10px;
-            font-size: 1.1rem;
+        .login-logo img {{
+            width: 140px;
         }}
         </style>
     """, unsafe_allow_html=True)
 
-    col1, col2 = st.columns([1, 1])
+    col_form, col_info = st.columns([1.1, 1])
 
-    with col1:
-        st.markdown("<h3 style='color: #39A935; text-align: center; font-weight: 800; margin-bottom: 1.5rem; letter-spacing: 1px;'>INICIAR SESIÓN</h3>", unsafe_allow_html=True)
+    with col_form:
+        # Título y Logo
+        img_src = f"data:image/png;base64,{logo_data}" if logo_data else ""
+        if img_src:
+            st.markdown(f"""
+                <div class="login-logo">
+                    <img src="{img_src}" alt="e&c Logo">
+                </div>
+            """, unsafe_allow_html=True)
+            
+        st.markdown("<h3 style='color: #2F9331; text-align: center; font-weight: 800; margin-bottom: 1.5rem; letter-spacing: 1px;'>CUENTAS RECIENTES</h3>", unsafe_allow_html=True)
         
         usuarios = cargar_usuarios()
         usuario_input = st.text_input("Usuario", placeholder="Ej: Juan Perez")
@@ -687,25 +667,16 @@ if st.session_state.usuario is None:
                 st.rerun()
             else:
                 st.error("❌ Usuario o PIN incorrectos. Intenta de nuevo.")
-                
-        # Logo Flotante
-        img_src = f"data:image/png;base64,{logo_data}" if logo_data else ""
-        if img_src:
-            st.markdown(f"""
-                <div class="floating-logo">
-                    <img src="{img_src}" alt="e&c Logo">
-                </div>
-            """, unsafe_allow_html=True)
 
-    with col2:
+    with col_info:
         st.markdown("""
             <div class="right-title">Bienvenid@</div>
             <div class="right-text">
                 <b>¿Listo para potenciar la operación de e&c Ingeniería SAS?</b><br><br>
-                A través de nuestro dashboard interactivo, adaptamos la información en tiempo real para brindarte el mejor análisis de desempeño, seguimiento de agendas, métricas operativas y control de SST. Centralizamos tus datos de campo para tomar decisiones eficaces y eficientes.
+                A través de nuestro dashboard interactivo, adaptamos la información de calle en tiempo real y la convertimos en indicadores de gestión para aumentar la productividad y la eficiencia.
             </div>
             <div class="chat-bubble">
-                <span style='color:#39A935;'>¡Hola!</span> Ingresa tus datos para continuar.
+                <span style='color:#39A935;'>¡Hola!</span> ¿Necesita Ayuda?
             </div>
         """, unsafe_allow_html=True)
 
