@@ -1231,18 +1231,23 @@ def render_agendas_alerta_fragment(df_alerta_raw, grupos_validos, columnas_base)
 
         if seleccion.selection.rows:
             idx = seleccion.selection.rows[0]
-            fila = df_display_alerta.iloc[idx]
             
-            # MOSTRAR INFORMACIÓN EN EL DIÁLOGO (POR ENCIMA DE LA PÁGINA)
-            fecha_str = fila['fecha de visita'].strftime('%Y-%m-%d') if hasattr(fila['fecha de visita'], 'strftime') else str(fila['fecha de visita'])
-            mostrar_detalle_tarea(
-                fila["contrato"], 
-                fila["detalle de tarea"],
-                direccion=fila["direccion"],
-                fecha=fecha_str,
-                localidad=fila["localidad"],
-                inspector=fila["inspector"]
-            )
+            # LÓGICA ANTI-FANTASMA: Solo mostrar si la selección es nueva
+            # Esto evita que el recuadro aparezca solo al filtrar en otras pestañas
+            sel_key = f"last_idx_{cols_tabla[0]}_{len(df_display_alerta)}"
+            if st.session_state.get(sel_key) != idx:
+                st.session_state[sel_key] = idx
+                fila = df_display_alerta.iloc[idx]
+                
+                fecha_str = fila['fecha de visita'].strftime('%Y-%m-%d') if hasattr(fila['fecha de visita'], 'strftime') else str(fila['fecha de visita'])
+                mostrar_detalle_tarea(
+                    fila["contrato"], 
+                    fila["detalle de tarea"],
+                    direccion=fila["direccion"],
+                    fecha=fecha_str,
+                    localidad=fila["localidad"],
+                    inspector=fila["inspector"]
+                )
 
 with tab_agendas:
     st.markdown("""
