@@ -260,6 +260,10 @@ def load_local_bitacora(path):
             
         df.columns = [str(c).strip().lower() for c in df.columns]
         
+        # Normalizar prioridad para evitar errores de mayúsculas
+        if "prioridad" in df.columns:
+            df["prioridad"] = df["prioridad"].astype(str).str.strip().str.capitalize()
+        
         # Pre-procesamiento de nombres e inspectores
         if "inspector" in df.columns:
             df["inspector"] = df["inspector"].astype(str).str.upper().str.strip().str.replace(r"\s+", " ", regex=True)
@@ -1183,8 +1187,43 @@ with tab_operacion:
             if not df2["tiempo_recorrido_td"].dropna().empty else "—"
         )
     
-    
-        # ===================================================
+        # --- NUEVO: CÁLCULO DE EFECTIVIDAD POR ZONA (BLOQUE Y CARTERA) ---
+        df_prog_zona, _ = fetch_github_excel(repo, "PROGRAMACION.xlsx", token)
+        df_efectividad_zona = pd.DataFrame()
+        
+        if not df_prog_zona.empty:
+            df_prog_zona.columns = [str(c).strip().upper() for c in df_prog_zona.columns]
+            # Seleccionar solo columnas necesarias y quitar duplicados
+            df_prog_min = df_prog_zona[["CONTRATO", "ZONA", "CARTERA"]].drop_duplicates(subset=["CONTRATO"])
+            df_prog_min["CONTRATO"] = df_prog_min["CONTRATO"].astype(str).str.strip()
+            
+            # Unir con la bitácora del día
+            df_merged = df2.merge(df_prog_min, left_on="contrato", right_on="CONTRATO", how="left")
+            df_merged["ZONA"] = df_merged["ZONA"].fillna("SIN ZONA")
+            
+            # Definir Bloque (Prioridad Media) y Cartera (Columna CARTERA no nula)
+            # Nota: prioridad ya está normalizada a Capitalize ("Media")
+            df_merged["es_bloque"] = df_merged["prioridad"] == "Media"
+            df_merged["es_cartera"] = df_merged["CARTERA"].notna()
+            
+            def calc_pct_zona(df_subset):
+                if df_subset.empty: return 0.0
+                return round((df_subset["efectiva"].sum() / len(df_subset)) * 100, 1)
+
+            # Agrupar por Zona
+            res_zona = []
+            for zona, group in df_merged.groupby("ZONA"):
+                pct_bloque = calc_pct_zona(group[group["es_bloque"]])
+                pct_cartera = calc_pct_zona(group[group["es_cartera"]])
+                # Solo incluir si hay datos para esa zona
+                if group["es_bloque"].any() or group["es_cartera"].any():
+                    res_zona.append({
+                        "Zona": zona,
+                        "Efectividad Bloque (%)": pct_bloque if group["es_bloque"].any() else "—",
+                        "Efectividad Cartera (%)": pct_cartera if group["es_cartera"].any() else "—"
+                    })
+            
+            df_efectividad_zona = pd.DataFrame(res_zona)
         # ✅ DISEÑO DE PESTAÑA: KPIs IZQUIERDA | TABLA DERECHA
         # ===================================================
         col_kpis, col_main_view = st.columns([1, 5.5])
@@ -1303,6 +1342,25 @@ with tab_operacion:
                     st.markdown(f"🕒 **Inicio más tarde:** {late_insp} ({late_val})")
                     st.markdown(f"🛣️ **Promedio de recorrido más extenso:** {max_rec_insp} ({max_rec_val})")
                     st.markdown(f"🕓 **Más tiempo promedio por tarea:** {max_task_insp} ({max_task_val})")
+    
+        # ---------------------------------------------------
+        # 📊 TABLA DE EFECTIVIDAD POR ZONA
+        # ---------------------------------------------------
+        if not df_efectividad_zona.empty:
+            st.markdown("### 🗺️ Efectividad por Zona y Tipo (Bloque / Cartera)")
+            
+            # Estilizar la tabla de zonas
+            def color_pct(val):
+                if isinstance(val, str): return ""
+                color = "#2F9331" if val >= 70 else "#f59e0b" if val >= 40 else "#ef4444"
+                return f"color: {color}; font-weight: bold;"
+
+            st.dataframe(
+                df_efectividad_zona.style.map(color_pct, subset=["Efectividad Bloque (%)", "Efectividad Cartera (%)"]),
+                use_container_width=True,
+                hide_index=True
+            )
+
     
 
     
