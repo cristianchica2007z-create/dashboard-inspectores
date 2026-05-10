@@ -295,10 +295,19 @@ def render_kpi(label, value, icon=""):
     """, unsafe_allow_html=True)
 
 @st.dialog("Detalle de la Tarea")
-def mostrar_detalle_tarea(contrato, detalle):
-    st.markdown(f"### Contrato: {contrato}")
+def mostrar_detalle_tarea(contrato, detalle, direccion="—", fecha="—", localidad="—", inspector="—"):
+    st.markdown(f"### 📋 Contrato: {contrato}")
     st.markdown("---")
-    st.write(detalle if detalle else "No hay detalles registrados para esta tarea.")
+    c1, c2 = st.columns(2)
+    with c1:
+        st.markdown(f"**🏠 Dirección:** {direccion}")
+        st.markdown(f"**📍 Localidad:** {localidad}")
+    with c2:
+        st.markdown(f"**📅 Fecha Visita:** {fecha}")
+        st.markdown(f"**👤 Inspector:** {inspector}")
+    
+    st.markdown("**📝 Detalle de la tarea:**")
+    st.info(detalle if detalle else "Sin detalle adicional.")
 
 def color_estado(val):
     if val == "Puntual": return 'background-color: #d4edda; color: #155724;'
@@ -1366,20 +1375,16 @@ with tab_agendas:
                         idx = seleccion.selection.rows[0]
                         fila = df_display_alerta.iloc[idx]
                         
-                        # MOSTRAR INFORMACIÓN COMPLETA EN UN CONTENEDOR ESTILIZADO
-                        with st.container(border=True):
-                            st.markdown(f"### 📋 Detalle de Contrato: {fila['contrato']}")
-                            st.markdown("---")
-                            c1, c2 = st.columns(2)
-                            with c1:
-                                st.markdown(f"**🏠 Dirección:** {fila['direccion']}")
-                                st.markdown(f"**📍 Localidad:** {fila['localidad']}")
-                            with c2:
-                                st.markdown(f"**📅 Fecha Visita:** {fila['fecha de visita'].strftime('%Y-%m-%d') if hasattr(fila['fecha de visita'], 'strftime') else fila['fecha de visita']}")
-                                st.markdown(f"**👤 Inspector:** {fila['inspector']}")
-                            
-                            st.markdown(f"**📝 Detalle de la tarea:**")
-                            st.info(fila['detalle de tarea'] if fila['detalle de tarea'] else "Sin detalle adicional.")
+                        # MOSTRAR INFORMACIÓN EN EL DIÁLOGO (POR ENCIMA DE LA PÁGINA)
+                        fecha_str = fila['fecha de visita'].strftime('%Y-%m-%d') if hasattr(fila['fecha de visita'], 'strftime') else str(fila['fecha de visita'])
+                        mostrar_detalle_tarea(
+                            fila["contrato"], 
+                            fila["detalle de tarea"],
+                            direccion=fila["direccion"],
+                            fecha=fecha_str,
+                            localidad=fila["localidad"],
+                            inspector=fila["inspector"]
+                        )
     else:
         st.info("No se pudo cargar la bitácora desde GitHub para agendas.")
 # ===================================================
