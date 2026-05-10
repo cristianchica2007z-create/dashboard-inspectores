@@ -1350,23 +1350,36 @@ with tab_agendas:
                     st.info("💡 Haz clic en una fila para ver el detalle de la tarea.")
                     # Preparamos los datos ordenados para que la selección coincida con el índice
                     df_display_alerta = df_alerta[columnas_base].sort_values("fecha de visita").reset_index(drop=True)
-                    # Ocultamos la columna de detalle largo de la tabla para mejorar la legibilidad
-                    cols_tabla = [c for c in columnas_base if c != "detalle de tarea"]
+                    # TABLA RESUMIDA: Inspector, Contrato, Localidad
+                    cols_tabla = ["inspector", "contrato", "localidad"]
                     
-                    # Omitimos selection_mode para evitar el error de validación interna de la API.
-                    # Al usar on_select="rerun", la selección de filas se habilita por defecto.
                     seleccion = st.dataframe(
                         df_display_alerta[cols_tabla], 
                         use_container_width=True,
                         on_select="rerun",
-                        key="tabla_agendas_alerta_v_estable"
+                        key="tabla_agendas_alerta_v_final",
+                        hide_index=True
                     )
                     st.error(f"🚨 TOTAL ALERTAS: {len(df_alerta)}")
 
                     if seleccion.selection.rows:
                         idx = seleccion.selection.rows[0]
                         fila = df_display_alerta.iloc[idx]
-                        mostrar_detalle_tarea(fila["contrato"], fila["detalle de tarea"])
+                        
+                        # MOSTRAR INFORMACIÓN COMPLETA EN UN CONTENEDOR ESTILIZADO
+                        with st.container(border=True):
+                            st.markdown(f"### 📋 Detalle de Contrato: {fila['contrato']}")
+                            st.markdown("---")
+                            c1, c2 = st.columns(2)
+                            with c1:
+                                st.markdown(f"**🏠 Dirección:** {fila['direccion']}")
+                                st.markdown(f"**📍 Localidad:** {fila['localidad']}")
+                            with c2:
+                                st.markdown(f"**📅 Fecha Visita:** {fila['fecha de visita'].strftime('%Y-%m-%d') if hasattr(fila['fecha de visita'], 'strftime') else fila['fecha de visita']}")
+                                st.markdown(f"**👤 Inspector:** {fila['inspector']}")
+                            
+                            st.markdown(f"**📝 Detalle de la tarea:**")
+                            st.info(fila['detalle de tarea'] if fila['detalle de tarea'] else "Sin detalle adicional.")
     else:
         st.info("No se pudo cargar la bitácora desde GitHub para agendas.")
 # ===================================================
