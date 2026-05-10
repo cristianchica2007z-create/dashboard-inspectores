@@ -591,6 +591,7 @@ if st.session_state.usuario is None:
             display: flex !important;
             align-items: stretch !important;
             position: relative;
+            gap: 0 !important; /* Eliminar el espacio entre columnas para un centrado perfecto del logo */
         }}
 
         /* Mitad Izquierda (Formulario) -> CORRECTO SELECTOR DE STREAMLIT */
@@ -614,6 +615,12 @@ if st.session_state.usuario is None:
             color: white !important;
             margin: 0 !important;
             position: relative !important; /* Crucial para que el logo circular se ancle exactamente al borde */
+        }}
+        
+        /* Hacer transparente el iframe del reloj en vivo */
+        iframe {{
+            background: transparent !important;
+            border: none !important;
         }}
 
         /* Textos Derecha */
@@ -651,7 +658,7 @@ if st.session_state.usuario is None:
         /* Círculo central superpuesto con el Imagotipo */
         .circle-logo {{
             position: absolute;
-            left: -88px; /* Compensación exacta por el gap de las columnas de Streamlit */
+            left: -80px; /* Exactamente en la mitad al no haber gap */
             top: 50%;
             transform: translateY(-50%);
             width: 160px; /* Logo más grande */
@@ -715,15 +722,47 @@ if st.session_state.usuario is None:
             <div class="circle-logo">
                 <img src="{imago_src}" alt="e&c Imagotipo">
             </div>
-            <div class="right-title" style="font-size: 2.8rem; line-height: 1.3;">SEGUIMIENTO OPERATIVO<br>EJE CAFETERO</div>
-            <div class="right-text" style="margin-top: 1rem;">
-                <div id="live-clock" style="font-size: 4.5rem; font-weight: 900; letter-spacing: 2px; color: white;">{hora_str}</div>
-                <div style="font-size: 1.6rem; font-weight: 400; opacity: 0.9; margin-top: 0.5rem; text-transform: uppercase;">{fecha_str}</div>
-            </div>
-            <!-- Hack JS de una sola línea para que Streamlit no rompa el código -->
-            <img src="x" onerror='setInterval(function(){{var d=new Date();var h=d.getHours();var m=d.getMinutes();var s=d.getSeconds();var p=h>=12?"PM":"AM";h=h%12;h=h?h:12;m=m<10?"0"+m:m;s=s<10?"0"+s:s;var e=window.parent.document.getElementById("live-clock");if(!e)e=document.getElementById("live-clock");if(e)e.innerHTML=h+":"+m+":"+s+" "+p;}}, 1000);' style="display:none;">
         """, unsafe_allow_html=True)
-
+        
+        # Componente HTML embebido para el reloj en vivo (sin bloqueos de seguridad de Streamlit)
+        import streamlit.components.v1 as components
+        
+        html_code = f"""
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;800;900&display=swap');
+            body {{
+                margin: 0; padding: 0;
+                display: flex; flex-direction: column;
+                justify-content: center; align-items: center;
+                background: transparent !important;
+                color: white; font-family: 'Inter', sans-serif;
+                text-align: center;
+                height: 100vh;
+                overflow: hidden;
+            }}
+            .right-title {{ font-size: 2.8rem; font-weight: 800; line-height: 1.3; margin-bottom: 1rem; }}
+            .live-clock {{ font-size: 4.5rem; font-weight: 900; letter-spacing: 2px; color: white; }}
+            .date-text {{ font-size: 1.6rem; font-weight: 400; opacity: 0.9; margin-top: 0.5rem; text-transform: uppercase; }}
+        </style>
+        <div class="right-title">SEGUIMIENTO OPERATIVO<br>EJE CAFETERO</div>
+        <div class="live-clock" id="live-clock">{hora_str}</div>
+        <div class="date-text" id="live-date">{fecha_str}</div>
+        <script>
+            setInterval(function() {{
+                var d = new Date();
+                var h = d.getHours();
+                var m = d.getMinutes();
+                var s = d.getSeconds();
+                var p = h >= 12 ? "PM" : "AM";
+                h = h % 12; h = h ? h : 12;
+                m = m < 10 ? "0" + m : m;
+                s = s < 10 ? "0" + s : s;
+                document.getElementById("live-clock").innerHTML = h + ":" + m + ":" + s + " " + p;
+            }}, 1000);
+        </script>
+        """
+        components.html(html_code, height=450)
+        
     st.stop()
 
 # -------------------------------------------------
