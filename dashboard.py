@@ -1260,10 +1260,9 @@ with tab_operacion:
                 )
                 df_sin_actividad = df_sin_actividad.sort_values("Supervisor")
         
-                st.error(f"🚨 {len(inspectores_sin_actividad)} inspector(es) sin actividad")
-                st.dataframe(df_sin_actividad, use_container_width=True, height=200)
+                st.dataframe(df_sin_actividad, use_container_width=True, height=200, hide_index=True)
             else:
-                st.success("✅ Todo el personal con actividad.")
+                pass # Diseño limpio sin mensajes de éxito si no hay inactivos
     
         # ---------------------------------------------------
         # 📝 INFORME DE DESEMPEÑO DEL DÍA
