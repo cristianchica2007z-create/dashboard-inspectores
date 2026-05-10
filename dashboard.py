@@ -1264,118 +1264,118 @@ with tab_agendas:
         ahora_colombia = datetime.datetime.now(ZoneInfo("America/Bogota")).replace(tzinfo=None)
         grupos_validos = ["INSP-CALDAS", "INSP-RIS"]
 
-            # --- LAYOUT CON MENÚ LATERAL ---
-            col_nav_age, col_main_age = st.columns([1.2, 4])
+        # --- LAYOUT CON MENÚ LATERAL ---
+        col_nav_age, col_main_age = st.columns([1.2, 4])
 
-            with col_nav_age:
-                st.markdown(f"""
-                    <div class="agendas-sidebar">
-                        <div class="sidebar-header-age">
-                            <h3 style='color: white; margin:0;'>ESTADO AGENDAS</h3>
-                            <p style='color: #cbd5e1; font-size: 0.8rem; margin:0;'>Filtros de seguimiento</p>
-                        </div>
+        with col_nav_age:
+            st.markdown(f"""
+                <div class="agendas-sidebar">
+                    <div class="sidebar-header-age">
+                        <h3 style='color: white; margin:0;'>ESTADO AGENDAS</h3>
+                        <p style='color: #cbd5e1; font-size: 0.8rem; margin:0;'>Filtros de seguimiento</p>
                     </div>
-                """, unsafe_allow_html=True)
+                </div>
+            """, unsafe_allow_html=True)
+            
+            opcion_age = st.radio(
+                "Navegación Agendas",
+                ["✅ Agendas Finalizadas", "⏳ Próximas Agendas", "🚨 Agendas en Alerta"],
+                key="nav_agendas_radio"
+            )
+
+        with col_main_age:
+          if opcion_age == "✅ Agendas Finalizadas":
+            st.markdown("### ✅ Agendas finalizadas")
+            zonas_sel = []
+            with st.expander("Seleccionar Zona"):
+                for z in grupos_validos:
+                    if st.checkbox(z, value=True, key=f"fin_zona_{z}"):
+                        zonas_sel.append(z)
+
+            inicios_sel = []
+            with st.expander("Filtrar por inicio de la tarea"):
+                for i in ["INICIO TARDE", "INICIO A TIEMPO"]:
+                    if st.checkbox(i, value=True, key=f"fin_inicio_{i}"):
+                        inicios_sel.append(i)
+
+            df_final = df[df["estado"].str.upper().str.contains("FINALIZAD", na=False)].copy()
+            if zonas_sel:
+                df_final = df_final[df_final["grupo"].isin(zonas_sel)]
+
+            def evaluar_inicio_tarde(row):
+                if pd.isna(row["fecha de ejecucion"]) or pd.isna(row["fecha de visita"]):
+                    return "SIN DATO"
+                limite = row["fecha de visita"] + pd.Timedelta(minutes=20) # Margen de 20 min
+                return "INICIO TARDE" if row["fecha de ejecucion"] > limite else "INICIO A TIEMPO"
+
+            df_final["inicio_tarea"] = df_final.apply(evaluar_inicio_tarde, axis=1)
+            if inicios_sel:
+                df_final = df_final[df_final["inicio_tarea"].isin(inicios_sel)]
+
+            if df_final.empty:
+                st.info("✅ No hay agendas finalizadas con esos filtros.")
+            else:
+                st.dataframe(df_final[columnas_base[:-1] + ["inicio_tarea"]].sort_values("fecha de visita"), use_container_width=True)
+
+          elif opcion_age == "⏳ Próximas Agendas":
+            st.markdown("### ⏳ Agendas próximas (no iniciadas)")
+            df_prox_raw = df[
+                (df["estado"].str.upper().str.contains("ASIGNAD", na=False)) & 
+                (df["fecha de ejecucion"].isna()) & 
+                (df["fecha de visita"] > ahora_colombia)
+            ].copy()
+            
+            zonas_sel = []
+            with st.expander("Seleccionar Zona"):
+                for z in grupos_validos:
+                    if st.checkbox(z, value=True, key=f"prox_zona_{z}"):
+                        zonas_sel.append(z)
+            
+            df_prox = df_prox_raw[df_prox_raw["grupo"].isin(zonas_sel)] if zonas_sel else df_prox_raw
+
+            if df_prox.empty:
+                st.info("✅ No hay agendas próximas.")
+            else:
+                st.dataframe(df_prox[columnas_base].sort_values("fecha de visita"), use_container_width=True)
+
+          elif opcion_age == "🚨 Agendas en Alerta":
+            st.markdown("### 🚨 Agendas en ALERTA")
+            df_alerta_raw = df[(df["estado"].str.upper().str.contains("ASIGNAD", na=False)) & (df["prioridad"].str.upper().isin(["ALTA", "CRITICA"])) & (df["estado_alerta"] == "ALERTA")].copy()
+            
+            zonas_sel = []
+            with st.expander("Seleccionar Zona"):
+                for z in grupos_validos:
+                    if st.checkbox(z, value=True, key=f"pen_zona_{z}"):
+                        zonas_sel.append(z)
+            
+            df_alerta = df_alerta_raw[df_alerta_raw["grupo"].isin(zonas_sel)] if zonas_sel else df_alerta_raw
+
+            if df_alerta.empty:
+                st.info("✅ No hay agendas en ALERTA.")
+            else:
+                st.info("💡 Haz clic en una fila para ver el detalle de la tarea.")
+                # Preparamos los datos ordenados para que la selección coincida con el índice
+                df_display_alerta = df_alerta[columnas_base].sort_values("fecha de visita").reset_index(drop=True)
+                # TABLA RESUMIDA: Inspector, Contrato, Localidad
+                cols_tabla = ["inspector", "contrato", "localidad"]
                 
-                opcion_age = st.radio(
-                    "Navegación Agendas",
-                    ["✅ Agendas Finalizadas", "⏳ Próximas Agendas", "🚨 Agendas en Alerta"],
-                    key="nav_agendas_radio"
+                seleccion = st.dataframe(
+                    df_display_alerta[cols_tabla], 
+                    use_container_width=True,
+                    on_select="rerun",
+                    key="tabla_agendas_alerta_v_final",
+                    hide_index=True,
+                    selection_mode="single-row"
                 )
+                st.error(f"🚨 TOTAL ALERTAS: {len(df_alerta)}")
 
-            with col_main_age:
-              if opcion_age == "✅ Agendas Finalizadas":
-                st.markdown("### ✅ Agendas finalizadas")
-                zonas_sel = []
-                with st.expander("Seleccionar Zona"):
-                    for z in grupos_validos:
-                        if st.checkbox(z, value=True, key=f"fin_zona_{z}"):
-                            zonas_sel.append(z)
-
-                inicios_sel = []
-                with st.expander("Filtrar por inicio de la tarea"):
-                    for i in ["INICIO TARDE", "INICIO A TIEMPO"]:
-                        if st.checkbox(i, value=True, key=f"fin_inicio_{i}"):
-                            inicios_sel.append(i)
-
-                df_final = df[df["estado"].str.upper().str.contains("FINALIZAD", na=False)].copy()
-                if zonas_sel:
-                    df_final = df_final[df_final["grupo"].isin(zonas_sel)]
-
-                def evaluar_inicio_tarde(row):
-                    if pd.isna(row["fecha de ejecucion"]) or pd.isna(row["fecha de visita"]):
-                        return "SIN DATO"
-                    limite = row["fecha de visita"] + pd.Timedelta(minutes=20) # Margen de 20 min
-                    return "INICIO TARDE" if row["fecha de ejecucion"] > limite else "INICIO A TIEMPO"
-
-                df_final["inicio_tarea"] = df_final.apply(evaluar_inicio_tarde, axis=1)
-                if inicios_sel:
-                    df_final = df_final[df_final["inicio_tarea"].isin(inicios_sel)]
-
-                if df_final.empty:
-                    st.info("✅ No hay agendas finalizadas con esos filtros.")
-                else:
-                    st.dataframe(df_final[columnas_base[:-1] + ["inicio_tarea"]].sort_values("fecha de visita"), use_container_width=True)
-
-              elif opcion_age == "⏳ Próximas Agendas":
-                st.markdown("### ⏳ Agendas próximas (no iniciadas)")
-                df_prox_raw = df[
-                    (df["estado"].str.upper().str.contains("ASIGNAD", na=False)) & 
-                    (df["fecha de ejecucion"].isna()) & 
-                    (df["fecha de visita"] > ahora_colombia)
-                ].copy()
-                
-                zonas_sel = []
-                with st.expander("Seleccionar Zona"):
-                    for z in grupos_validos:
-                        if st.checkbox(z, value=True, key=f"prox_zona_{z}"):
-                            zonas_sel.append(z)
-                
-                df_prox = df_prox_raw[df_prox_raw["grupo"].isin(zonas_sel)] if zonas_sel else df_prox_raw
-
-                if df_prox.empty:
-                    st.info("✅ No hay agendas próximas.")
-                else:
-                    st.dataframe(df_prox[columnas_base].sort_values("fecha de visita"), use_container_width=True)
-
-              elif opcion_age == "🚨 Agendas en Alerta":
-                st.markdown("### 🚨 Agendas en ALERTA")
-                df_alerta_raw = df[(df["estado"].str.upper().str.contains("ASIGNAD", na=False)) & (df["prioridad"].str.upper().isin(["ALTA", "CRITICA"])) & (df["estado_alerta"] == "ALERTA")].copy()
-                
-                zonas_sel = []
-                with st.expander("Seleccionar Zona"):
-                    for z in grupos_validos:
-                        if st.checkbox(z, value=True, key=f"pen_zona_{z}"):
-                            zonas_sel.append(z)
-                
-                df_alerta = df_alerta_raw[df_alerta_raw["grupo"].isin(zonas_sel)] if zonas_sel else df_alerta_raw
-
-                if df_alerta.empty:
-                    st.info("✅ No hay agendas en ALERTA.")
-                else:
-                    st.info("💡 Haz clic en una fila para ver el detalle de la tarea.")
-                    # Preparamos los datos ordenados para que la selección coincida con el índice
-                    df_display_alerta = df_alerta[columnas_base].sort_values("fecha de visita").reset_index(drop=True)
-                    # TABLA RESUMIDA: Inspector, Contrato, Localidad
-                    cols_tabla = ["inspector", "contrato", "localidad"]
+                if seleccion.selection.rows:
+                    idx = seleccion.selection.rows[0]
+                    fila = df_display_alerta.iloc[idx]
                     
-                    seleccion = st.dataframe(
-                        df_display_alerta[cols_tabla], 
-                        use_container_width=True,
-                        on_select="rerun",
-                        key="tabla_agendas_alerta_v_final",
-                        hide_index=True,
-                        selection_mode="single-row"
-                    )
-                    st.error(f"🚨 TOTAL ALERTAS: {len(df_alerta)}")
-
-                    if seleccion.selection.rows:
-                        idx = seleccion.selection.rows[0]
-                        fila = df_display_alerta.iloc[idx]
-                        
-                        # MOSTRAR INFORMACIÓN EN EL DIÁLOGO (POR ENCIMA DE LA PÁGINA)
-                        fecha_str = fila['fecha de visita'].strftime('%Y-%m-%d') if hasattr(fila['fecha de visita'], 'strftime') else str(fila['fecha de visita'])
-                        mostrar_detalle_tarea(
+                    # MOSTRAR INFORMACIÓN EN EL DIÁLOGO (POR ENCIMA DE LA PÁGINA)
+                    fecha_str = fila['fecha de visita'].strftime('%Y-%m-%d') if hasattr(fila['fecha de visita'], 'strftime') else str(fila['fecha de visita'])
+                    mostrar_detalle_tarea(
                             fila["contrato"], 
                             fila["detalle de tarea"],
                             direccion=fila["direccion"],
