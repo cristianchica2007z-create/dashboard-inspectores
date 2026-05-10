@@ -551,6 +551,14 @@ if st.session_state.usuario is None:
     if os.path.exists("logo.png"):
         with open("logo.png", "rb") as f:
             logo_data = base64.b64encode(f.read()).decode("utf-8")
+            
+    # Intentar cargar el imagotipo si el usuario lo subió
+    imagotipo_data = ""
+    if os.path.exists("E&C IMAGOTIPO VER VERDE.png"):
+        with open("E&C IMAGOTIPO VER VERDE.png", "rb") as f:
+            imagotipo_data = base64.b64encode(f.read()).decode("utf-8")
+    else:
+        imagotipo_data = logo_data  # Fallback si no está
 
     st.markdown(f"""
         <style>
@@ -573,32 +581,37 @@ if st.session_state.usuario is None:
         
         /* Nuestra tarjeta principal basada en el stHorizontalBlock */
         div[data-testid="stHorizontalBlock"] {{
-            background-color: white !important;
+            background-color: transparent !important;
             border-radius: 20px !important;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
             overflow: hidden !important;
             width: 100% !important;
             max-width: 950px !important;
             margin: auto !important;
-        }}
-
-        /* Mitad Izquierda (Formulario) */
-        div[data-testid="column"]:nth-child(1) {{
-            background-color: white !important;
-            padding: 3.5rem 3rem !important;
             display: flex !important;
-            flex-direction: column !important;
-            justify-content: center !important;
+            align-items: stretch !important;
+            position: relative;
         }}
 
-        /* Mitad Derecha (Texto verde) */
-        div[data-testid="column"]:nth-child(2) {{
-            background: linear-gradient(135deg, #1A3820 0%, #39A935 100%) !important;
+        /* Mitad Izquierda (Formulario) -> CORRECTO SELECTOR DE STREAMLIT */
+        div[data-testid="stColumn"]:nth-of-type(1) {{
+            background-color: white !important;
             padding: 4rem 3rem !important;
             display: flex !important;
             flex-direction: column !important;
             justify-content: center !important;
+            margin: 0 !important;
+        }}
+
+        /* Mitad Derecha (Texto verde) -> CORRECTO SELECTOR DE STREAMLIT */
+        div[data-testid="stColumn"]:nth-of-type(2) {{
+            background: linear-gradient(135deg, #1A3820 0%, #39A935 100%) !important;
+            padding: 4rem 3.5rem !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: center !important;
             color: white !important;
+            margin: 0 !important;
         }}
 
         /* Textos Derecha */
@@ -609,6 +622,8 @@ if st.session_state.usuario is None:
             margin-bottom: 1.5rem;
             color: white;
             font-family: sans-serif;
+            position: relative;
+            z-index: 5;
         }}
         .right-text {{
             font-size: 1.1rem;
@@ -617,6 +632,8 @@ if st.session_state.usuario is None:
             text-align: justify;
             font-family: sans-serif;
             margin-bottom: 2rem;
+            position: relative;
+            z-index: 5;
         }}
         .chat-bubble {{
             background: white;
@@ -627,23 +644,49 @@ if st.session_state.usuario is None:
             font-weight: bold;
             box-shadow: 0 10px 20px rgba(0,0,0,0.15);
             font-size: 1.05rem;
+            position: relative;
+            z-index: 5;
+            width: fit-content;
         }}
 
-        /* Logo superpuesto opcional */
+        /* Logo Completo (Formulario Izquierdo) */
         .login-logo {{
             text-align: center;
-            margin-bottom: 2rem;
+            margin-bottom: 1.5rem;
         }}
         .login-logo img {{
-            width: 140px;
+            width: 180px;
+        }}
+        
+        /* Círculo central superpuesto con el Imagotipo */
+        .circle-logo {{
+            position: absolute;
+            left: -60px; /* Para que sobresalga hacia la parte blanca */
+            top: 50%;
+            transform: translateY(-50%);
+            width: 120px;
+            height: 120px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            padding: 20px;
+        }}
+        .circle-logo img {{
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
         }}
         </style>
     """, unsafe_allow_html=True)
 
-    col_form, col_info = st.columns([1.1, 1])
+    col_form, col_info = st.columns([1, 1], gap="small")
 
     with col_form:
-        # Título y Logo
+        # Logo completo encima del formulario (como lo pidió el usuario)
         img_src = f"data:image/png;base64,{logo_data}" if logo_data else ""
         if img_src:
             st.markdown(f"""
@@ -669,7 +712,13 @@ if st.session_state.usuario is None:
                 st.error("❌ Usuario o PIN incorrectos. Intenta de nuevo.")
 
     with col_info:
-        st.markdown("""
+        # Imagotipo en el círculo central superpuesto (como en GoDoWorks)
+        imago_src = f"data:image/png;base64,{imagotipo_data}" if imagotipo_data else ""
+        
+        st.markdown(f"""
+            <div class="circle-logo">
+                <img src="{imago_src}" alt="e&c Imagotipo">
+            </div>
             <div class="right-title">Bienvenid@</div>
             <div class="right-text">
                 <b>¿Listo para potenciar la operación de e&c Ingeniería SAS?</b><br><br>
@@ -1886,25 +1935,18 @@ with tab_inv_v2:
                 background-color: transparent;
                 font-family: 'Inter', sans-serif;
             }
-            .inventory-sidebar-box {
-                background-color: #f8f9fa;
-                border: 1px solid #e2e8f0;
-                border-radius: 12px;
-                padding: 15px;
-                margin-bottom: 20px;
-            }
             #inv-v2-container .filter-card {
                 background-color: #ffffff;
                 border: 1px solid #e2e8f0;
                 border-radius: 12px;
                 padding: 24px;
-                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
                 margin-bottom: 24px;
             }
             #inv-v2-container .filter-title {
                 color: #0f172a;
                 text-align: center;
-                font-size: 1.1rem;
+                font-size: 1.25rem;
                 font-weight: 700;
                 margin-bottom: 20px;
                 text-transform: uppercase;
@@ -1930,15 +1972,26 @@ with tab_inv_v2:
     """, unsafe_allow_html=True)
     
     CATALOGO_DEFAULT = {
-        "EPPs": { "Monogafas": {"tallas": False}, "Guantes": {"tallas": False}, "Piernera": {"tallas": False} },
-        "Dotación": {
-            "Botas": {"tallas": True, "opciones_talla": ["36","37","38","39","40","41","42","43","44","45","46"]},
-            "Camisa": {"tallas": True, "opciones_talla": ["XS","S","M","L","XL","XXL"]},
-            "Pantalón": {"tallas": True, "opciones_talla": ["28","30","32","34","36","38","40"]},
-            "Chaleco": {"tallas": True, "opciones_talla": ["XS","S","M","L","XL","XXL"]},
+        "EPPs": {
+            "Monogafas":  {"tallas": False},
+            "Guantes":    {"tallas": False},
+            "Piernera":   {"tallas": False},
         },
-        "Papelería": { "Isométricos": {"tallas": False}, "Stickers": {"tallas": False}, "Papelería general": {"tallas": False} },
-        "Herramientas": { "Cepo": {"tallas": False}, "Llaves de cepo": {"tallas": False} },
+        "Dotación": {
+            "Botas":    {"tallas": True, "opciones_talla": ["36","37","38","39","40","41","42","43","44","45","46"]},
+            "Camisa":   {"tallas": True, "opciones_talla": ["XS","S","M","L","XL","XXL"]},
+            "Pantalón": {"tallas": True, "opciones_talla": ["28","30","32","34","36","38","40"]},
+            "Chaleco":  {"tallas": True, "opciones_talla": ["XS","S","M","L","XL","XXL"]},
+        },
+        "Papelería": {
+            "Isométricos (paquete x200)": {"tallas": False},
+            "Stickers":                   {"tallas": False},
+            "Papelería general":          {"tallas": False},
+        },
+        "Herramientas": {
+            "Cepo":           {"tallas": False},
+            "Llaves de cepo": {"tallas": False},
+        },
     }
 
     SEDES_INV = ["CALDAS", "RISARALDA"]
@@ -1960,110 +2013,120 @@ with tab_inv_v2:
             res.setdefault(k, {"categoria": m["categoria"], "item": m["item"], "talla": m.get("talla") or "N/A", "ent": 0, "sal": 0})
             if m["tipo"] == "ENTRADA": res[k]["ent"] += m["cantidad"]
             else: res[k]["sal"] += m["cantidad"]
+        
         return pd.DataFrame([
             {"Categoría": v["categoria"], "Ítem": v["item"], "Talla": v["talla"], 
              "Entradas": v["ent"], "Salidas": v["sal"], "Stock": v["ent"]-v["sal"]} 
             for v in res.values()
         ])
 
-    # Layout Principal: Menú a la izquierda (como estaba antes)
-    col_nav, col_main = st.columns([1.2, 4])
+    st.markdown('<div class="filter-card"><div class="filter-title">Filtros de Inventario</div>', unsafe_allow_html=True)
+    col_f1, _ = st.columns([1, 2])
+    with col_f1:
+        sede_global = st.selectbox("📍 Seleccionar Sede Global:", SEDES_INV, key="inv_sede_global_main")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown('<div class="results-card">', unsafe_allow_html=True)
+    t_stock, t_ent, t_sal, t_hist, t_conf = st.tabs(["📊 Stock Actual", "➕ Registrar Entrada", "➖ Registrar Salida", "📜 Historial", "⚙️ Configuración"])
     
-    with col_nav:
-        st.markdown(f"""
-            <div class="inventory-sidebar-box">
-                <h3 style='margin:0; font-size:1rem; color:#1e3a8a;'>MENÚ INVENTARIO</h3>
-                <p style='margin:0; font-size:0.8rem; color:#64748b;'>E&C INGENIERÍA</p>
-            </div>
-        """, unsafe_allow_html=True)
-        
-        opcion_inv = st.radio(
-            "Navegación",
-            ["📊 Stock Actual", "➕ Registrar Entrada", "➖ Registrar Salida", "📜 Historial", "⚙️ Configuración"],
-            key="inv_nav_radio_final",
-            label_visibility="collapsed"
-        )
+    with t_stock:
+        df_stock = calcular_stock(movimientos, sede_global)
+        if not df_stock.empty:
+            st.dataframe(df_stock.sort_values(["Categoría", "Stock"]), use_container_width=True, hide_index=True)
+        else:
+            st.info("No hay inventario registrado en esta sede.")
+            
+    with t_ent:
+        with st.container():
+            st.markdown('<p class="section-label">📥 Registro de Entrada</p>', unsafe_allow_html=True)
+            c1, c2, c3 = st.columns(3)
+            f_sede = c1.selectbox("Sede Destino", SEDES_INV, key="ent_sede")
+            f_resp = c2.selectbox("Responsable Recibo", RESPONSABLES_INV, key="ent_resp")
+            f_fecha = c3.date_input("Fecha Recibo", key="ent_fecha")
 
-    with col_main:
-        st.markdown('<div class="filter-card"><div class="filter-title">Filtros de Inventario</div>', unsafe_allow_html=True)
-        col_f1, _ = st.columns([1, 1])
-        with col_f1:
-            sede_global = st.selectbox("📍 Seleccionar Sede Global:", SEDES_INV, key="inv_sede_global_fin")
-        st.markdown('</div>', unsafe_allow_html=True)
+            st.markdown("---")
+            c4, c5, c6, c7 = st.columns([1.5, 1.5, 1, 1])
+            f_cat = c4.selectbox("Categoría", list(catalogo.keys()), key="ent_cat")
+            f_item = c5.selectbox("Producto", list(catalogo[f_cat].keys()), key="ent_item")
+            
+            opciones_talla = catalogo[f_cat][f_item].get("opciones_talla", [])
+            f_talla = c6.selectbox("Talla", opciones_talla if opciones_talla else ["N/A"], key="ent_talla")
+            f_cant = c7.number_input("Cantidad", min_value=1, step=1, key="ent_cant")
+            f_obs = st.text_area("Observaciones / Remisión", key="ent_obs")
 
-        st.markdown('<div class="results-card">', unsafe_allow_html=True)
-        
-        if opcion_inv == "📊 Stock Actual":
-            df_stock = calcular_stock(movimientos, sede_global)
-            if not df_stock.empty:
-                st.dataframe(df_stock.sort_values(["Categoría", "Stock"]), use_container_width=True, hide_index=True)
-            else:
-                st.info("No hay inventario registrado en esta sede.")
+            if st.button("💾 Guardar Entrada", type="primary", use_container_width=True, key="btn_save_ent"):
+                nuevo = {
+                    "tipo": "ENTRADA", "fecha": str(f_fecha), "sede": f_sede,
+                    "responsable": f_resp, "categoria": f_cat, "item": f_item,
+                    "talla": f_talla if f_talla != "N/A" else None, "cantidad": f_cant,
+                    "observacion": f_obs, "timestamp": datetime.datetime.now(TZ_CO).strftime("%Y-%m-%d %H:%M:%S")
+                }
+                movimientos.append(nuevo)
+                save_github_json(inv_repo, "INVENTARIO_V2.json", inv_token, movimientos, f"Entrada {f_item}")
+                st.success("Ingreso registrado")
+                st.rerun()
+
+    with t_sal:
+        with st.container():
+            st.markdown('<p class="section-label">📤 Registro de Salida</p>', unsafe_allow_html=True)
+            c1, c2, c3 = st.columns(3)
+            f_sede = c1.selectbox("Sede Origen", SEDES_INV, key="sal_sede")
+            f_resp = c2.selectbox("Entrega", RESPONSABLES_INV, key="sal_resp")
+            f_insp = c3.selectbox("Recibe (Inspector)", inspectores_lista, key="sal_insp")
+
+            st.markdown("---")
+            c4, c5, c6, c7 = st.columns([1.5, 1.5, 1, 1])
+            f_cat = c4.selectbox("Categoría", list(catalogo.keys()), key="sal_cat")
+            f_item = c5.selectbox("Producto", list(catalogo[f_cat].keys()), key="sal_item")
+            
+            opciones_talla = catalogo[f_cat][f_item].get("opciones_talla", [])
+            f_talla = c6.selectbox("Talla", opciones_talla if opciones_talla else ["N/A"], key="sal_talla")
+            f_cant = c7.number_input("Cantidad a entregar", min_value=1, step=1, key="sal_cant")
+            
+            if st.button("✅ Procesar Salida", type="primary", use_container_width=True, key="btn_save_sal"):
+                df_stock = calcular_stock(movimientos, f_sede)
+                talla_val = f_talla if f_talla != "N/A" else "N/A"
+                match = df_stock[(df_stock["Categoría"] == f_cat) & (df_stock["Ítem"] == f_item) & (df_stock["Talla"] == talla_val)]
+                disponible = match["Stock"].iloc[0] if not match.empty else 0
                 
-        elif opcion_inv == "➕ Registrar Entrada":
-            with st.container():
-                st.markdown('<p class="section-label">📥 Registro de Entrada</p>', unsafe_allow_html=True)
-                c1, c2, c3 = st.columns(3)
-                f_sede = c1.selectbox("Sede Destino", SEDES_INV, key="fin_ent_sede")
-                f_resp = c2.selectbox("Responsable Recibo", RESPONSABLES_INV, key="fin_ent_resp")
-                f_fecha = c3.date_input("Fecha Recibo", key="fin_ent_fecha")
-                st.markdown("---")
-                c4, c5, c6, c7 = st.columns([1.5, 1.5, 1, 1])
-                f_cat = c4.selectbox("Categoría", list(catalogo.keys()), key="fin_ent_cat")
-                f_item = c5.selectbox("Producto", list(catalogo[f_cat].keys()), key="fin_ent_item")
-                opciones_talla = catalogo[f_cat][f_item].get("opciones_talla", [])
-                f_talla = c6.selectbox("Talla", opciones_talla if opciones_talla else ["N/A"], key="fin_ent_talla")
-                f_cant = c7.number_input("Cantidad", min_value=1, step=1, key="fin_ent_cant")
-                f_obs = st.text_area("Observaciones / Remisión", key="fin_ent_obs")
-                if st.button("💾 Guardar Entrada", type="primary", use_container_width=True):
-                    nuevo = {"tipo": "ENTRADA", "fecha": str(f_fecha), "sede": f_sede, "responsable": f_resp, "categoria": f_cat, "item": f_item, "talla": f_talla if f_talla != "N/A" else None, "cantidad": f_cant, "observacion": f_obs, "timestamp": datetime.datetime.now(TZ_CO).strftime("%Y-%m-%d %H:%M:%S")}
+                if f_cant > disponible:
+                    st.error(f"❌ No hay suficiente stock. Disponible: {disponible}")
+                else:
+                    nuevo = {
+                        "tipo": "SALIDA", "fecha": str(datetime.date.today()), "sede": f_sede,
+                        "responsable": f_resp, "inspector": f_insp, "categoria": f_cat,
+                        "item": f_item, "talla": f_talla if f_talla != "N/A" else None,
+                        "cantidad": f_cant, "timestamp": datetime.datetime.now(TZ_CO).strftime("%Y-%m-%d %H:%M:%S")
+                    }
                     movimientos.append(nuevo)
-                    save_github_json(inv_repo, "INVENTARIO_V2.json", inv_token, movimientos, f"Entrada {f_item}")
-                    st.success("Ingreso registrado")
+                    save_github_json(inv_repo, "INVENTARIO_V2.json", inv_token, movimientos, f"Salida {f_item}")
+                    st.success("Entrega registrada")
                     st.rerun()
 
-        elif opcion_inv == "➖ Registrar Salida":
-            with st.container():
-                st.markdown('<p class="section-label">📤 Registro de Salida</p>', unsafe_allow_html=True)
-                c1, c2, c3 = st.columns(3)
-                f_sede = c1.selectbox("Sede Origen", SEDES_INV, key="fin_sal_sede")
-                f_resp = c2.selectbox("Entrega", RESPONSABLES_INV, key="fin_sal_resp")
-                f_insp = c3.selectbox("Recibe (Inspector)", inspectores_lista, key="fin_sal_insp")
-                st.markdown("---")
-                c4, c5, c6, c7 = st.columns([1.5, 1.5, 1, 1])
-                f_cat = c4.selectbox("Categoría", list(catalogo.keys()), key="fin_sal_cat")
-                f_item = c5.selectbox("Producto", list(catalogo[f_cat].keys()), key="fin_sal_item")
-                opciones_talla = catalogo[f_cat][f_item].get("opciones_talla", [])
-                f_talla = c6.selectbox("Talla", opciones_talla if opciones_talla else ["N/A"], key="fin_sal_talla")
-                f_cant = c7.number_input("Cantidad a entregar", min_value=1, step=1, key="fin_sal_cant")
-                if st.button("✅ Procesar Salida", type="primary", use_container_width=True):
-                    df_stock = calcular_stock(movimientos, f_sede)
-                    talla_val = f_talla if f_talla != "N/A" else "N/A"
-                    match = df_stock[(df_stock["Categoría"] == f_cat) & (df_stock["Ítem"] == f_item) & (df_stock["Talla"] == talla_val)]
-                    disponible = match["Stock"].iloc[0] if not match.empty else 0
-                    if f_cant > disponible: st.error(f"❌ No hay suficiente stock. Disponible: {disponible}")
-                    else:
-                        nuevo = {"tipo": "SALIDA", "fecha": str(datetime.date.today()), "sede": f_sede, "responsable": f_resp, "inspector": f_insp, "categoria": f_cat, "item": f_item, "talla": f_talla if f_talla != "N/A" else None, "cantidad": f_cant, "timestamp": datetime.datetime.now(TZ_CO).strftime("%Y-%m-%d %H:%M:%S")}
-                        movimientos.append(nuevo)
-                        save_github_json(inv_repo, "INVENTARIO_V2.json", inv_token, movimientos, f"Salida {f_item}")
-                        st.success("Entrega registrada")
-                        st.rerun()
+    with t_hist:
+        if movimientos:
+            df_h = pd.DataFrame(movimientos)
+            col_h1, col_h2, col_h3 = st.columns(3)
+            filter_sede = col_h1.selectbox("📍 Sede", ["TODAS"] + SEDES_INV, key="hist_f_sede")
+            filter_tipo = col_h2.selectbox("Movimiento", ["TODOS", "ENTRADA", "SALIDA"], key="hist_f_tipo")
+            filter_cat  = col_h3.selectbox("Categoría", ["TODAS"] + list(catalogo.keys()), key="hist_f_cat")
 
-        elif opcion_inv == "📜 Historial":
-            if movimientos:
-                df_h = pd.DataFrame(movimientos)
-                col_h1, col_h2, col_h3 = st.columns(3)
-                f_sede = col_h1.selectbox("📍 Sede", ["TODAS"] + SEDES_INV, key="f_h_sede")
-                f_tipo = col_h2.selectbox("Movimiento", ["TODOS", "ENTRADA", "SALIDA"], key="f_h_tipo")
-                f_cat  = col_h3.selectbox("Categoría", ["TODAS"] + list(catalogo.keys()), key="f_h_cat")
-                df_f = df_h.copy()
-                if f_sede != "TODAS": df_f = df_f[df_f["sede"] == f_sede]
-                if f_tipo != "TODOS": df_f = df_f[df_f["tipo"] == f_tipo]
-                if f_cat != "TODAS": df_f = df_f[df_f["categoria"] == f_cat]
-                st.dataframe(df_f.sort_values("timestamp", ascending=False), use_container_width=True, hide_index=True)
+            filtered_df_h = df_h.copy()
+            if filter_sede != "TODAS": filtered_df_h = filtered_df_h[filtered_df_h["sede"] == filter_sede]
+            if filter_tipo != "TODOS": filtered_df_h = filtered_df_h[filtered_df_h["tipo"] == filter_tipo]
+            if filter_cat != "TODAS":  filtered_df_h = filtered_df_h[filtered_df_h["categoria"] == filter_cat]
 
-        st.markdown('</div>', unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+            st.dataframe(filtered_df_h.sort_values("timestamp", ascending=False), use_container_width=True, hide_index=True)
+        else:
+            st.info("No hay historial.")
+
+    with t_conf:
+        st.markdown('<p class="section-label">⚙️ Configuración del Maestro</p>', unsafe_allow_html=True)
+        with st.expander("Ver Catálogo Actual"):
+            st.json(catalogo)
+            
+    st.markdown('</div> <!-- Cierra results-card -->', unsafe_allow_html=True)
+    st.markdown('</div> <!-- Cierra container principal -->', unsafe_allow_html=True)
 
 # ✅ TAB — SST
 # ===================================================
