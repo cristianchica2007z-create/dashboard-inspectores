@@ -1732,32 +1732,37 @@ with tab_inv_v2:
     with col_nav:
         st.markdown('''
             <style>
-                /* Contenedor principal de los radio buttons */
-                [data-testid="stVerticalBlock"] > div > div > div > div[data-testid="stRadio"] {
-                    background-color: #0c3e66; /* Azul oscuro como la imagen */
-                    padding: 20px 10px;
-                    border-radius: 12px;
-                    box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
-                    margin-top: 5px; /* Para alinear un poco mejor */
+                /* Contenedor principal de los radio buttons (usando :has para ser exactos y robustos) */
+                div[data-testid="stRadio"]:has(p:contains("📊 Stock Actual")) {
+                    background-color: #0c3e66 !important; /* Azul oscuro como la imagen */
+                    padding: 20px 10px !important;
+                    border-radius: 12px !important;
+                    box-shadow: 2px 2px 10px rgba(0,0,0,0.1) !important;
+                    margin-top: 5px !important;
                 }
                 
-                /* Ocultar el circulo de los radio buttons usando selectores más generales */
-                div[data-testid="stRadio"] div[role="radiogroup"] label div:first-child {
-                    display: none !important;
+                /* Ocultar el círculo nativo de forma segura */
+                div[data-testid="stRadio"]:has(p:contains("📊 Stock Actual")) div[role="radiogroup"] label > div:first-child {
+                    opacity: 0 !important;
+                    width: 0px !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
                 }
                 
                 /* Estilo de los "botones" del menú */
-                div[data-testid="stRadio"] div[role="radiogroup"] label {
+                div[data-testid="stRadio"]:has(p:contains("📊 Stock Actual")) div[role="radiogroup"] label {
                     background-color: transparent !important;
                     padding: 12px 15px !important;
                     margin-bottom: 5px !important;
                     border-radius: 8px !important;
                     cursor: pointer !important;
                     transition: all 0.3s ease !important;
+                    display: flex !important;
+                    align-items: center !important;
                 }
                 
                 /* Texto blanco */
-                div[data-testid="stRadio"] div[role="radiogroup"] label p {
+                div[data-testid="stRadio"]:has(p:contains("📊 Stock Actual")) div[role="radiogroup"] label p {
                     color: white !important;
                     font-size: 1.05rem !important;
                     font-weight: 500 !important;
@@ -1765,12 +1770,12 @@ with tab_inv_v2:
                 }
                 
                 /* Hover effect */
-                div[data-testid="stRadio"] div[role="radiogroup"] label:hover {
+                div[data-testid="stRadio"]:has(p:contains("📊 Stock Actual")) div[role="radiogroup"] label:hover {
                     background-color: rgba(255, 255, 255, 0.1) !important;
                 }
                 
                 /* Activo effect */
-                div[data-testid="stRadio"] div[aria-checked="true"] label {
+                div[data-testid="stRadio"]:has(p:contains("📊 Stock Actual")) div[aria-checked="true"] label {
                     background-color: rgba(255, 255, 255, 0.2) !important;
                     border-left: 4px solid #3b82f6 !important;
                     border-top-left-radius: 0px !important;
