@@ -104,40 +104,35 @@ st.markdown("""
     }
     
     /* =========================================
-       NUEVO: HEADER PEGAJOSO (STICKY HEADER)
+       NUEVO: HEADER PEGAJOSO (STICKY HEADER) - INTENTO FINAL
        ========================================= */
-    /* Desbloquear el scroll para que el sticky funcione en Streamlit */
-    html, body, [data-testid="stAppViewMain"], .main, .block-container, [data-testid="stVerticalBlock"] {
+    /* Desactivar cualquier restricción de scroll en los padres */
+    [data-testid="stAppViewMain"], .main, .block-container {
         overflow: visible !important;
     }
 
-    div.block-container {
-        padding-top: 2rem !important;
-    }
-    
-    /* Contenedor del Header */
-    [data-testid="stVerticalBlock"]:has(#sticky-header) {
+    /* Forzar que el contenedor del header sea pegajoso */
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(#sticky-header),
+    div[data-testid="stVerticalBlock"]:has(#sticky-header) {
         position: -webkit-sticky !important;
         position: sticky !important;
-        top: 0px !important;
-        background-color: white !important;
+        top: 0 !important;
         z-index: 999999 !important;
+        background-color: white !important;
+        width: 100% !important;
         padding: 10px 0 !important;
         border-bottom: 3px solid #2F9331 !important;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
-    }
-    
-    /* Pestañas pegajosas (Tab headers) */
-    [data-testid="stTabs"] > div[role="tablist"] {
-        position: -webkit-sticky !important;
-        position: sticky !important;
-        top: 145px !important; /* Ajustar según altura real del header */
-        background-color: white !important;
-        z-index: 999998 !important;
-        padding: 5px 0 !important;
     }
 
-    /* Ocultar header nativo */
+    /* Forzar que las pestañas sean pegajosas debajo del header */
+    div[data-testid="stTabs"] > div[role="tablist"] {
+        position: -webkit-sticky !important;
+        position: sticky !important;
+        top: 130px !important; /* Altura aproximada del header */
+        z-index: 999998 !important;
+        background-color: white !important;
+    }
+
     header[data-testid="stHeader"] {
         display: none !important;
     }
