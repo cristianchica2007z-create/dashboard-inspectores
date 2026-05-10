@@ -605,1079 +605,1082 @@ with st.spinner("🔄 Sincronizando datos con el servidor... Un momento por favo
 
 # ✅ CREAR PESTAÑAS
 # ---------------------------------------------------
-tab_diario, tab_mensual, tab_agendas, tab_adicionales, tab_asignadas, tab_inv_v2, tab_sst, tab_subir = st.tabs([
-    "🕒 Seguimiento Diario",
-    "📅 Seguimiento Mensual",
-    "📅 Seguimiento agendas",
-    "🏭 SEGUIMIENTO ADICIONALES",
-    "📌 Órdenes Asignadas",
-    "🏭 Inventario V2",
-    "🦺 SST",
-    "📈 Subir Archivos",
+tab_operacion, tab_inv_v2, tab_sst, tab_subir = st.tabs([
+    "🚀 OPERACIÓN", 
+    "📦 INVENTARIO", 
+    "🛡️ SST", 
+    "📤 CARGAR DATOS"
 ])
 
-# ===================================================
-# ✅ TAB — SEGUIMIENTO DIARIO
-# ===================================================
-with tab_diario:
-    st.subheader("🕒 Control Operativo e&c")
-    st.subheader("Eje Cafetero")
-
-    # Usar la base ya cargada y procesada
-    df_bitacora = df_bitacora_base.copy()
-
-    if df_bitacora is None:
-        st.error(
-            "❌ Error al procesar la bitácora."
-        )
-        st.stop()
-
-    # -------------------------------------------------
-    # ✅ EXCLUIR GRUPOS NO OPERATIVOS
-    # -------------------------------------------------
-    if "grupo" in df_bitacora.columns:
-        df_bitacora["grupo"] = (
-            df_bitacora["grupo"]
-            .astype(str)
-            .str.upper()
-            .str.strip()
-        )
-
-        # ✅ Restaurada exclusión de grupos no operativos y administrativos
-        grupos_no_operativos = ["SST-NAL", "SUPERVISIONES", "SUSP-ANT", "ADMINISTRATIVO", "SUSPENSIONES", "ADMIN"]
-
-        # Filtrar por grupo y también excluir cierres administrativos de los KPIs
-        if "cierre" in df_bitacora.columns:
-            df_bitacora = df_bitacora[~df_bitacora["cierre"].astype(str).str.upper().str.contains("ADMINISTRATIVO", na=False)]
-
-
-        df_bitacora = df_bitacora[
-            ~df_bitacora["grupo"].isin(grupos_no_operativos)
-        ]
-
-    if df_bitacora.empty:
-        st.warning(
-            "⚠️ No hay datos disponibles después del filtro por GRUPO.\n"
-            "Esto indica que el archivo solo contiene grupos no operativos."
-        )
-        st.stop()
-
-    # Renombrar columnas parseadas para lógica existente
-    df_bitacora["hora_inicio"] = df_bitacora["hora inicio_parsed"].fillna("SIN HORA")
-    df_bitacora["hora_inicio_recorrido"] = df_bitacora["hora inicio de recorrido_parsed"]
-    df_bitacora["hora_final"] = df_bitacora["hora final_parsed"]
-
-    # -------------------------------------------
-    # -------------------------------------------
-    # FILTRO DE FECHA
-    # -------------------------------------------
-    # -------------------------------------------
-    # ✅ PANEL DE FILTROS COMPACTO (TIPO BOX)
-    # -------------------------------------------
-    with st.container(border=True):
-        col_f1, col_f2, col_f3 = st.columns([1, 1.2, 1.2])
-        
-        with col_f1:
-            fechas_validas = sorted(df_bitacora["fecha"].dropna().unique())
-            fecha_sel = st.selectbox("📅 Fecha de consulta:", fechas_validas)
-            # Datos base para la fecha seleccionada
-            df_base_fecha = df_bitacora[df_bitacora["fecha"] == fecha_sel].copy()
-
-        # Opciones estables para la fecha elegida
-        opc_sups = sorted(df_base_fecha["supervisor"].unique())
-        opc_insps = sorted(df_base_fecha["inspector"].unique())
-
-        with col_f2:
-            supervisores_sel = st.pills("👥 Supervisores:", opc_sups, selection_mode="multi", default=opc_sups, key=f"pills_sup_{fecha_sel}")
-
-        with col_f3:
-            with st.popover("🔍 Seleccionar Inspectores", use_container_width=True):
-                inspectores_sel = st.multiselect("Filtro de inspectores:", opc_insps, default=opc_insps, key=f"ms_insp_{fecha_sel}")
-
-        # Aplicación del filtro final
-        if not supervisores_sel or not inspectores_sel:
-            st.warning("⚠️ Selecciona al menos un supervisor e inspector para ver los datos.")
-            st.stop()
-            
-        df2 = df_base_fecha[(df_base_fecha["supervisor"].isin(supervisores_sel)) & (df_base_fecha["inspector"].isin(inspectores_sel))].copy()
-
-    # -------------------------------------------
-    # ⏱️ TIEMPO DE RECORRIDO (Calculado sobre datos filtrados)
-    # -------------------------------------------
-    def calcular_tiempo_recorrido(row):
-        hi = row.get("hora inicio_parsed")
-        hr = row.get("hora inicio de recorrido_parsed")
-        if not isinstance(hi, datetime.time) or not isinstance(hr, datetime.time):
-            return pd.NaT
-        dt_hi = datetime.datetime.combine(datetime.date.today(), hi)
-        dt_hr = datetime.datetime.combine(datetime.date.today(), hr)
-        return dt_hi - dt_hr if dt_hi >= dt_hr else pd.NaT
-
-    try:
-        df2["tiempo_recorrido_td"] = df2.apply(calcular_tiempo_recorrido, axis=1)
-    except Exception:
-        df2["tiempo_recorrido_td"] = pd.NaT
+with tab_operacion:
+    tab_diario, tab_mensual, tab_agendas, tab_adicionales, tab_asignadas = st.tabs([
+            "🕒 Seguimiento Diario", 
+            "📅 Seguimiento Mensual", 
+            "📅 Seguimiento agendas", 
+            "🏭 SEGUIMIENTO ADICIONALES", 
+            "📌 Órdenes Asignadas"
+        ])
 
 # ===================================================
-  # ===================================================
-    # ✅ TAB 2 — PARTE 4 / 5
-    # Agrupación diaria, puntualidad y estado
-    # ===================================================
-
-    # ---------------------------------------------------
-    # AGRUPACIÓN DIARIA POR INSPECTOR (ESTABLE)
-    # ---------------------------------------------------
-    primeras = (
-        df2.sort_values("hora_inicio")
-        .groupby("inspector", as_index=False)
-        .first()[["inspector", "hora_inicio", "localidad", "supervisor"]]
-    )
-
-    ultimas = (
-        df2.sort_values("hora_final")
-        .groupby("inspector", as_index=False)
-        .last()[["inspector", "hora_final"]]
-    )
-
-    df_agrupado = primeras.merge(
-        ultimas,
-        on="inspector",
-        how="left"
-    )
-
-    # ---------------------------------------------------
-    # PUNTUALIDAD (usa SOLO la primera hora del día)
-    # ---------------------------------------------------
-    hora_oficial = datetime.time(7, 30)
-
-    def mins_tarde(h):
-        if h is None or pd.isna(h):
-            return None
-        if not isinstance(h, datetime.time):
-            return None
-
-        h1 = datetime.datetime.combine(datetime.date.today(), h)
-        h2 = datetime.datetime.combine(datetime.date.today(), hora_oficial)
-        return int((h1 - h2).total_seconds() / 60)
-
-    df_agrupado["minutos_tarde"] = df_agrupado["hora_inicio"].apply(mins_tarde)
-
-    # ---------------------------------------------------
-    # ESTADO DE PUNTUALIDAD (ORIGINAL)
-    # ---------------------------------------------------
-    def estado(m):
-        if m is None:
-            return "SIN INICIO"
-        if m <= 0:
-            return "Puntual"
-        if m <= 15:
-            return "Tarde"
-        return "Muy tarde"
-
-    df_agrupado["estado"] = df_agrupado["minutos_tarde"].apply(estado)
-
-    # ---------------------------------------------------
-    # PRODUCCIÓN (MARCAR ÓRDENES EFECTIVAS)
-    # ---------------------------------------------------
-    valores_efectivos = [
-        "INSPECCIONADA",
-        "INSPECCIONADA CON DEFECTO NO CRITICO",
-        "INSPECCIONADA CON DEFECTO CRITICO",
-        "CERTIFICADA",
-        "CERTIFICADA CON NOVEDAD"
-    ]
-
-    df2["efectiva"] = df2["cierre"].isin(valores_efectivos)
-
-    total_ordenes = df2.shape[0]
-    total_efectivas = df2["efectiva"].sum()
-
-    porcentaje = (
-        round((total_efectivas / total_ordenes) * 100, 1)
-        if total_ordenes > 0 else 0
-    )
-
-    # ---------------------------------------------------
-    # ÓRDENES EFECTIVAS CON TIEMPO VÁLIDO
-    # ---------------------------------------------------
-    df_eff = df2[
-        (df2["efectiva"] == True) &
-        (df2["tiempo_tarea_td"].notna())
-    ]
-
-    # ---------------------------------------------------
-    # ✅ KPI: PROMEDIO HORA DE INICIO
-    # (PRIMERA TAREA DEL DÍA POR INSPECTOR)
-    # ---------------------------------------------------
-    # Calculamos decimal antes de agrupar para evitar errores con datetime.time en el agg
-    df2["ini_dec_tmp"] = df2["hora_inicio"].apply(hora_to_decimal)
-    df_inicio_jornada = df2[df2["ini_dec_tmp"].notna()].groupby("inspector", as_index=False).agg(ini_dec=("ini_dec_tmp", "min"))
-
-    prom_ini = df_inicio_jornada["ini_dec"].mean()
-
-    hora_prom_ini = (
-        hora_to_string(decimal_to_hora(prom_ini))
-        if pd.notna(prom_ini) else "—"
-    )
-
-    # ---------------------------------------------------
-    # ✅ KPI: PROMEDIO HORA DE FIN
-    # (ÚLTIMA TAREA DEL DÍA POR INSPECTOR)
-    # ---------------------------------------------------
-    # Calculamos decimal antes de agrupar para evitar errores con datetime.time en el agg
-    df2["fin_dec_tmp"] = df2["hora_final"].apply(hora_to_decimal)
-    df_fin_jornada = df2[df2["fin_dec_tmp"].notna()].groupby("inspector", as_index=False).agg(fin_dec=("fin_dec_tmp", "max"))
-
-    prom_fin = df_fin_jornada["fin_dec"].mean()
-
-    hora_prom_fin = (
-        hora_to_string(decimal_to_hora(prom_fin))
-        if pd.notna(prom_fin) else "—"
-    )
-
-    # ---------------------------------------------------
-    # ✅ KPI: PROMEDIO TIEMPO POR TAREA (SOLO EFECTIVAS)
-    # ---------------------------------------------------
-    tiempo_prom_str = (
-        td_to_str(df_eff["tiempo_tarea_td"].mean())
-        if not df_eff.empty else "—"
-    )
-
-    # ---------------------------------------------------
-    # RESUMEN POR INSPECTOR (SOLO PARA CÁLCULO)
-    # ---------------------------------------------------
-    # ---------------------------------------------------
-    # RESUMEN POR INSPECTOR
-    # ---------------------------------------------------
-    resumen = (
-        df2.groupby("inspector")
-        .apply(lambda x: pd.Series({
-            "total_ordenes": x.shape[0],
-            "ordenes_efectivas": x["efectiva"].sum(),
-            "porcentaje_efectividad":
-                round((x["efectiva"].sum() / x.shape[0]) * 100, 1)
-                if x.shape[0] > 0 else 0,
-            "promedio_tiempo_tarea":
-                td_to_str(
-                    x.loc[x["efectiva"], "tiempo_tarea_td"].mean()
-                ),
-            "ordenes_sin_recorrido": x["tiempo_recorrido_td"].isna().sum(),
-            "promedio_tiempo_recorrido": td_to_str(x["tiempo_recorrido_td"].mean())
-        }))
-        .reset_index()
-    )
-
-    df_tabla = df_agrupado.merge(resumen, on="inspector", how="left")
-    df_tabla = df_tabla.fillna({
-        "hora_inicio": "—",
-        "hora_final": "—",
-        "localidad": "—",
-        "estado": "SIN ACTIVIDAD",
-        "total_ordenes": 0,
-        "ordenes_efectivas": 0,
-        "ordenes_sin_recorrido": 0,
-        "porcentaje_efectividad": 0,
-        "promedio_tiempo_tarea": "—",
-        "promedio_tiempo_recorrido": "—"
-    })
-
-    # ✅ KPI: PROMEDIO TIEMPO DE RECORRIDO (GENERAL)
-    prom_recorrido_global = (
-        td_to_str(df2["tiempo_recorrido_td"].mean())
-        if not df2["tiempo_recorrido_td"].dropna().empty else "—"
-    )
-
-
-    # ===================================================
-    # ✅ DISEÑO DE PESTAÑA: KPIs IZQUIERDA | TABLA DERECHA
-    # ===================================================
-    col_kpis, col_main_view = st.columns([1, 4])
-
-    with col_kpis:
-        st.markdown("### ⭐ KPIs")
-        render_kpi("Inicio Prom.", hora_prom_ini, "⏰")
-        render_kpi("Fin Prom.", hora_prom_fin, "🕒")
-        render_kpi("T. Tarea Prom.", tiempo_prom_str, "🕓")
-        render_kpi("Recorrido Prom.", prom_recorrido_global, "🚗")
-        render_kpi("Total Tareas", total_ordenes, "📋")
-        render_kpi("Efectivas", total_efectivas, "✅")
-        render_kpi("% Efectividad", f"{porcentaje}%", "📈")
-
-    with col_main_view:
-        # ---------------------------------------------------
-        # PREPARACIÓN DE LA TABLA ESTILIZADA
-        # ---------------------------------------------------
-        columnas_tabla = [
-            "inspector", "supervisor", "fecha", "hora_inicio", "hora_final",
-            "localidad", "estado", "total_ordenes", "ordenes_efectivas",
-            "ordenes_sin_recorrido", "porcentaje_efectividad",
-            "promedio_tiempo_tarea", "promedio_tiempo_recorrido"
-        ]
-        columnas_disponibles = [c for c in columnas_tabla if c in df_tabla.columns]
-
-        st.markdown("### 📋 Tabla de inspecciones del día")
-
-        # Aplicar estilos: Centrar todo menos inspector y aplicar colores a estado
-        df_styled = (
-            df_tabla[columnas_disponibles]
-            .style.set_properties(**{'text-align': 'center'})
-            .set_properties(subset=['inspector'], **{'text-align': 'left'})
-            .map(color_estado, subset=['estado'])
-        )
-
-        st.dataframe(
-            df_styled,
-            use_container_width=True,
-            height=645,
-            hide_index=True,
-            column_config={
-                "porcentaje_efectividad": st.column_config.NumberColumn(
-                    "Efectividad %",
-                    format="%.1f%%"
-                )
-            }
-        )
-
-    # ---------------------------------------------------
-    # 📝 INFORME DE DESEMPEÑO DEL DÍA
-    # ---------------------------------------------------
-    st.markdown("### 📝 Informe de Desempeño del Día")
-    with st.container(border=True):
-        h_col1, h_col2 = st.columns(2)
-        if not resumen.empty:
-            best_eff = resumen.loc[resumen["ordenes_efectivas"].idxmax()]
-            worst_eff = resumen.loc[resumen["ordenes_efectivas"].idxmin()]
-            most_no_rec = resumen.loc[resumen["ordenes_sin_recorrido"].idxmax()]
-            
-            with h_col1:
-                st.markdown(f"🏆 **Más órdenes efectivas:** {best_eff['inspector']} ({int(best_eff['ordenes_efectivas'])})")
-                st.markdown(f"📉 **Menos órdenes efectivas:** {worst_eff['inspector']} ({int(worst_eff['ordenes_efectivas'])})")
-                st.markdown(f"🚗 **Más órdenes sin recorrido:** {most_no_rec['inspector']} ({int(most_no_rec['ordenes_sin_recorrido'])})")
-
-            df_ini_check = df_agrupado[df_agrupado["hora_inicio"] != "SIN HORA"].copy()
-            late_insp, late_val = "—", "—"
-            if not df_ini_check.empty:
-                df_ini_check["dec"] = df_ini_check["hora_inicio"].apply(hora_to_decimal)
-                row_late = df_ini_check.loc[df_ini_check["dec"].idxmax()]
-                late_insp, late_val = row_late["inspector"], hora_to_string(row_late["hora_inicio"])
-
-            avg_rec_series = df2.groupby("inspector")["tiempo_recorrido_td"].mean()
-            max_rec_insp, max_rec_val = "—", "—"
-            if not avg_rec_series.dropna().empty:
-                max_rec_insp = avg_rec_series.idxmax()
-                max_rec_val = td_to_str(avg_rec_series.max())
-
-            avg_task_series = df2.loc[df2["efectiva"]].groupby("inspector")["tiempo_tarea_td"].mean()
-            max_task_insp, max_task_val = "—", "—"
-            if not avg_task_series.dropna().empty:
-                max_task_insp = avg_task_series.idxmax()
-                max_task_val = td_to_str(avg_task_series.max())
-
-            with h_col2:
-                st.markdown(f"🕒 **Inicio más tarde:** {late_insp} ({late_val})")
-                st.markdown(f"🛣️ **Promedio de recorrido más extenso:** {max_rec_insp} ({max_rec_val})")
-                st.markdown(f"🕓 **Más tiempo promedio por tarea:** {max_task_insp} ({max_task_val})")
-
-    # ===================================================
-    # 🚨 INSPECTORES SIN ACTIVIDAD EN LA FECHA
-    # ===================================================
-    st.markdown("### 🚨 Inspectores sin actividad registrada")
-
-    inspectores_con_actividad = set(df2["inspector"].str.upper().str.strip().unique())
-
-    inspectores_del_filtro = [
-        insp for insp in inspectores_lista
-        if SUPERVISORES_DICT.get(insp.upper(), "SIN SUPERVISOR") in supervisores_sel
-    ]
-
-    inspectores_sin_actividad = [
-        insp for insp in inspectores_del_filtro
-        if insp.upper().strip() not in inspectores_con_actividad
-    ]
-
-    if inspectores_sin_actividad:
-        df_sin_actividad = pd.DataFrame({
-            "Inspector": inspectores_sin_actividad
-        })
-        df_sin_actividad["Supervisor"] = df_sin_actividad["Inspector"].apply(
-            lambda x: SUPERVISORES_DICT.get(x.upper(), "SIN SUPERVISOR")
-        )
-        df_sin_actividad = df_sin_actividad.sort_values("Supervisor")
-
-        st.error(f"🚨 {len(inspectores_sin_actividad)} inspector(es) sin actividad registrada para {fecha_sel}")
-        st.dataframe(df_sin_actividad, use_container_width=True)
-    else:
-        st.success("✅ Todos los inspectores tienen actividad registrada para esta fecha.")
-
-    # ===================================================
-    # 📊 Producción por inspector (órdenes efectivas)
-  
-    # ===================================================
-    st.markdown("## 📊 Producción por inspector (órdenes efectivas)")
-
-    df_prod = (
-        df2[df2["efectiva"] == True]
-        .groupby("inspector")
-        .size()
-        .reset_index(name="Órdenes efectivas")
-        .sort_values("Órdenes efectivas", ascending=True)
-    )
-
-    if df_prod.empty:
-        st.info("⚠️ No hay órdenes efectivas para esta fecha.")
-    else:
-        # Colores según producción
-        def color_por_produccion(valor):
-            if valor <= 3:
-                return "#dc3545"      # rojo
-            elif valor <= 6:
-                return "#f5b7b1"      # rosado
-            elif valor <= 8:
-                return "#f7dc6f"      # amarillo
-            else:
-                return "#28a745"      # verde
-
-        df_prod["color"] = df_prod["Órdenes efectivas"].apply(color_por_produccion)
-
-        fig_prod = px.bar(
-            df_prod,
-            y="inspector",
-            x="Órdenes efectivas",
-            orientation="h",
-            text="Órdenes efectivas",
-            title="Órdenes efectivas por inspector"
-        )
-
-        # Colores y barras más gruesas
-        fig_prod.update_traces(
-            marker_color=df_prod["color"],
-            textposition="outside",
-            textfont_size=28,
-            cliponaxis=False
-        )
-
-        fig_prod.update_layout(
-            bargap=0.15,              # barras más gruesas
-            xaxis_title="Órdenes efectivas",
-            yaxis_title="Inspector",
-            font=dict(size=18),
-            height=650
-        )
-
-        st.plotly_chart(fig_prod, use_container_width=True)
- 
-# ===================================================
-# ✅ TAB — SEGUIMIENTO MENSUAL
-# ===================================================
-with tab_mensual:
-    st.subheader("📅 Consolidado Mensual / Rango de Fechas")
-    df_m = df_bitacora_base.copy()
-
-    if "grupo" in df_m.columns:
-        df_m["grupo"] = df_m["grupo"].astype(str).str.upper().str.strip()
-        grupos_no_operativos = ["SST-NAL", "SUPERVISIONES", "SUSP-ANT", "ADMINISTRATIVO", "SUSPENSIONES", "ADMIN"]
-        if "cierre" in df_m.columns:
-            df_m = df_m[~df_m["cierre"].astype(str).str.upper().str.contains("ADMINISTRATIVO", na=False)]
-        df_m = df_m[~df_m["grupo"].isin(grupos_no_operativos)]
-
-    # Renombrar columnas para consistencia
-    df_m["hora_inicio"] = df_m["hora inicio_parsed"]
-    df_m["hora_final"] = df_m["hora final_parsed"]
+    with tab_diario:
+        st.subheader("🕒 Control Operativo e&c")
+        st.subheader("Eje Cafetero")
     
-    # Filtros de Rango
-    with st.container(border=True):
-        c1, c2, c3 = st.columns([1.5, 1.2, 1.2])
-        with c1:
-            # Asegurar que hay fechas válidas antes de calcular min/max para evitar errores de tipo
-            fechas_validas = df_m["fecha"].dropna()
-            if not fechas_validas.empty:
-                min_d, max_d = fechas_validas.min(), fechas_validas.max()
-            else:
-                min_d = max_d = datetime.date.today()
-                
-            rango_fecha = st.date_input("📅 Seleccionar lapso de días:", value=(min_d, max_d), min_value=min_d, max_value=max_d)
-        
-        if isinstance(rango_fecha, tuple) and len(rango_fecha) == 2:
-            start_date, end_date = rango_fecha
-            df_m = df_m[(df_m["fecha"] >= start_date) & (df_m["fecha"] <= end_date)]
-        
-        opc_sups = sorted(df_m["supervisor"].unique())
-        with c2:
-            sups_sel = st.pills("👥 Supervisores:", opc_sups, selection_mode="multi", default=opc_sups, key="m_sup_pills")
-        with c3:
-            opc_insps = sorted(df_m[df_m["supervisor"].isin(sups_sel)]["inspector"].unique())
-            with st.popover("🔍 Inspectores", use_container_width=True):
-                insps_sel = st.multiselect("Filtrar:", opc_insps, default=opc_insps)
-
-    if df_m.empty or not sups_sel or not insps_sel:
-        st.warning("Selecciona un rango y personal válido.")
-        st.stop()
-
-    df_m = df_m[(df_m["supervisor"].isin(sups_sel)) & (df_m["inspector"].isin(insps_sel))].copy()
+        # Usar la base ya cargada y procesada
+        df_bitacora = df_bitacora_base.copy()
     
-    # Cálculo de tiempo de recorrido
-    def calc_rec(row):
-        hi, hr = row.get("hora inicio_parsed"), row.get("hora inicio de recorrido_parsed")
-        if not isinstance(hi, datetime.time) or not isinstance(hr, datetime.time): return pd.NaT
-        return datetime.datetime.combine(datetime.date.today(), hi) - datetime.datetime.combine(datetime.date.today(), hr)
-    df_m["tiempo_recorrido_td"] = df_m.apply(calc_rec, axis=1)
-    
-    # Marcar efectivas
-    valores_efectivos = ["INSPECCIONADA", "INSPECCIONADA CON DEFECTO NO CRITICO", "INSPECCIONADA CON DEFECTO CRITICO", "CERTIFICADA", "CERTIFICADA CON NOVEDAD"]
-    df_m["efectiva"] = df_m["cierre"].isin(valores_efectivos)
-
-    # --- LÓGICA DE PROMEDIOS DIARIOS ---
-    # Convertimos a decimal antes de agrupar para evitar errores de comparación con datetime.time
-    df_m["ini_dec_tmp"] = df_m["hora_inicio"].apply(hora_to_decimal)
-    df_m["fin_dec_tmp"] = df_m["hora_final"].apply(hora_to_decimal)
-
-    # Agrupar por inspector y día para obtener los hitos diarios
-    df_daily_hitos = df_m.groupby(["inspector", "fecha"]).agg(
-        ini_dec=("ini_dec_tmp", "min"),
-        fin_dec=("fin_dec_tmp", "max")
-    ).reset_index()
-    df_daily_hitos["es_sabado"] = pd.to_datetime(df_daily_hitos["fecha"]).dt.weekday == 5
-
-    # KPIs Globales del Rango
-    prom_ini_global = df_daily_hitos["ini_dec"].mean()
-    # Excluir sábados para el promedio de hora fin
-    df_fin_no_sab = df_daily_hitos[~df_daily_hitos["es_sabado"]]
-    prom_fin_global = df_fin_no_sab["fin_dec"].mean() if not df_fin_no_sab.empty else None
-
-    t_tarea_prom = df_m[df_m["efectiva"] & df_m["tiempo_tarea_td"].notna()]["tiempo_tarea_td"].mean()
-    t_rec_prom = df_m["tiempo_recorrido_td"].mean()
-    
-    total_ord = len(df_m)
-    total_eff = df_m["efectiva"].sum()
-    perc_eff = round((total_eff / total_ord) * 100, 1) if total_ord > 0 else 0
-
-    # Visualización
-    col_k, col_v = st.columns([1, 4])
-    with col_k:
-        st.markdown("### 📈 KPIs Periodo")
-        render_kpi("Inicio Prom.", hora_to_string(decimal_to_hora(prom_ini_global)), "⏰")
-        render_kpi("Fin Prom. (Lun-Vie)", hora_to_string(decimal_to_hora(prom_fin_global)), "🕒")
-        render_kpi("T. Tarea Prom.", td_to_str(t_tarea_prom), "🕓")
-        render_kpi("Recorrido Prom.", td_to_str(t_rec_prom), "🚗")
-        render_kpi("Total Tareas", total_ord, "📋")
-        render_kpi("Efectivas", total_eff, "✅")
-        render_kpi("% Efectividad", f"{perc_eff}%", "📈")
-
-    with col_v:
-        # Resumen por Inspector para la tabla
-        resumen_m = df_m.groupby("inspector").apply(lambda x: pd.Series({
-            "Dias Trabajados": x["fecha"].nunique(),
-            "Total Órdenes": len(x),
-            "Efectivas": x["efectiva"].sum(),
-            "Efectividad %": round((x["efectiva"].sum() / len(x)) * 100, 1) if len(x) > 0 else 0,
-            "Prom. Tarea": td_to_str(x[x["efectiva"]]["tiempo_tarea_td"].mean()),
-            "Prom. Recorrido": td_to_str(x["tiempo_recorrido_td"].mean())
-        })).reset_index()
-
-        # Añadir promedios de horas por inspector
-        prom_horas_insp = df_daily_hitos.groupby("inspector").apply(lambda x: pd.Series({
-            "Prom. Inicio": hora_to_string(decimal_to_hora(x["ini_dec"].mean())),
-            "Prom. Fin (LV)": hora_to_string(decimal_to_hora(x[~x["es_sabado"]]["fin_dec"].mean()))
-        })).reset_index()
-
-        df_tabla_m = resumen_m.merge(prom_horas_insp, on="inspector")
-        
-        st.markdown("### 📋 Resumen Consolidado por Inspector")
-        st.dataframe(
-            df_tabla_m.style.set_properties(**{'text-align': 'center'})
-            .set_properties(subset=['inspector'], **{'text-align': 'left'}),
-            use_container_width=True, height=500, hide_index=True
-        )
-
-    # Gráfica de producción mensual
-    st.markdown("### 📊 Producción Total en el Periodo")
-    df_prod_m = df_m[df_m["efectiva"]].groupby("inspector").size().reset_index(name="Efectivas").sort_values("Efectivas")
-    
-    if not df_prod_m.empty:
-        fig_m = px.bar(df_prod_m, y="inspector", x="Efectivas", orientation="h", text="Efectivas", color="Efectivas", color_continuous_scale="Viridis")
-        fig_m.update_layout(height=600, font=dict(size=14))
-        st.plotly_chart(fig_m, use_container_width=True)
-
-# =================================================
-# ✅ TAB — SEGUIMIENTO AGENDAS
-# =================================================
-
-@st.fragment
-def render_agendas_alerta_fragment(df_alerta_raw, grupos_validos, columnas_base):
-    zonas_sel = []
-    with st.expander("Seleccionar Zona"):
-        for z in grupos_validos:
-            if st.checkbox(z, value=True, key=f"pen_zona_frag_{z}"):
-                zonas_sel.append(z)
-    
-    df_alerta = df_alerta_raw[df_alerta_raw["grupo"].isin(zonas_sel)] if zonas_sel else df_alerta_raw
-
-    if df_alerta.empty:
-        st.info("✅ No hay agendas en ALERTA.")
-    else:
-        st.info("💡 Haz clic en una fila para ver el detalle de la tarea.")
-        # Preparamos los datos ordenados para que la selección coincida con el índice
-        df_display_alerta = df_alerta[columnas_base].sort_values("fecha de visita").reset_index(drop=True)
-        # TABLA RESUMIDA: Inspector, Contrato, Localidad
-        cols_tabla = ["inspector", "contrato", "localidad"]
-        
-        seleccion = st.dataframe(
-            df_display_alerta[cols_tabla], 
-            use_container_width=True,
-            on_select="rerun",
-            key="tabla_agendas_alerta_fragment",
-            hide_index=True,
-            selection_mode="single-row",
-            height=600
-        )
-        st.error(f"🚨 TOTAL ALERTAS: {len(df_alerta)}")
-
-        if seleccion.selection.rows:
-            idx = seleccion.selection.rows[0]
-            
-            # LÓGICA ANTI-FANTASMA: Solo mostrar si la selección es nueva
-            # Esto evita que el recuadro aparezca solo al filtrar en otras pestañas
-            sel_key = f"last_idx_{cols_tabla[0]}_{len(df_display_alerta)}"
-            if st.session_state.get(sel_key) != idx:
-                st.session_state[sel_key] = idx
-                fila = df_display_alerta.iloc[idx]
-                
-                fecha_str = fila['fecha de visita'].strftime('%Y-%m-%d') if hasattr(fila['fecha de visita'], 'strftime') else str(fila['fecha de visita'])
-                mostrar_detalle_tarea(
-                    fila["contrato"], 
-                    fila["detalle de tarea"],
-                    direccion=fila["direccion"],
-                    fecha=fecha_str,
-                    localidad=fila["localidad"],
-                    inspector=fila["inspector"]
-                )
-
-with tab_agendas:
-    st.markdown("""
-        <style>
-            .agendas-sidebar {
-                background-color: #1e3a8a;
-                color: white;
-                padding: 25px 15px 5px 15px;
-                border-radius: 15px 15px 0 0;
-                margin-bottom: 0;
-            }
-            /* Fusionar el menú con el cuadro azul superior */
-            div[data-testid="stRadio"]:has(input[id*="nav_agendas_radio"]) {
-                background-color: #1e3a8a;
-                padding: 0 15px 25px 15px;
-                border-radius: 0 0 15px 15px;
-                margin-top: -1rem;
-            }
-            .sidebar-header-age {
-                border-bottom: 1px solid rgba(255,255,255,0.2);
-                margin-bottom: 20px;
-                padding-bottom: 15px;
-            }
-            /* Estilizar el radio de navegación de agendas */
-            div[data-testid="stRadio"] > label {
-                display: none; 
-            }
-            div[data-testid="stRadio"] div[role="radiogroup"] > label {
-                background-color: rgba(255,255,255,0.05);
-                color: white !important;
-                padding: 10px 15px;
-                border-radius: 8px;
-                margin-bottom: 8px;
-                transition: all 0.3s;
-                border: 1px solid transparent;
-            }
-            div[data-testid="stRadio"] div[role="radiogroup"] > label:hover {
-                background-color: rgba(255,255,255,0.15);
-            }
-            div[data-testid="stRadio"] div[role="radiogroup"] > label[data-baseweb="radio"][aria-checked="true"] {
-                background-color: white !important;
-                color: #1e3a8a !important;
-                font-weight: bold;
-            }
-        </style>
-    """, unsafe_allow_html=True)
-
-    # ======================================================
-    # TÍTULO PRINCIPAL
-    st.markdown("## 🗂️ Control agendas")
-
-    # ======================================================
-    # CARGAR BITÁCORA DESDE GITHUB (FORMA CORRECTA)
-    # ======================================================
-    # ======================================================
-    # CARGAR Y PROCESAR DATOS (CON CACHÉ PARA VELOCIDAD)
-    # ======================================================
-    token = st.secrets["github"]["token"]
-    repo = st.secrets["github"]["repo"]
-
-    df = get_processed_agendas_data(repo, token)
-    
-    if not df.empty:
-        ahora_colombia = datetime.datetime.now(ZoneInfo("America/Bogota")).replace(tzinfo=None)
-        
-        # CÁLCULOS GLOBALES PARA KPIs
-        count_final = len(df[df["estado"].str.upper().str.contains("FINALIZAD", na=False)])
-        count_prox = len(df[(df["estado"].str.upper().str.contains("ASIGNAD", na=False)) & (df["fecha de ejecucion"].isna()) & (df["fecha de visita"] > ahora_colombia)])
-        count_alerta = len(df[(df["estado"].str.upper().str.contains("ASIGNAD", na=False)) & (df["prioridad"].str.upper() == "ALTA") & (df["estado_alerta"] == "ALERTA")])
-
-    if not df.empty:
-        columnas_base = ["inspector", "contrato", "direccion", "estado", "fecha de visita", "localidad", "detalle de tarea", "estado_alerta"]
-        ahora_colombia = datetime.datetime.now(ZoneInfo("America/Bogota")).replace(tzinfo=None)
-        grupos_validos = ["INSP-CALDAS", "INSP-RIS"]
-
-        # --- LAYOUT CON MENÚ LATERAL ---
-        col_nav_age, col_main_age = st.columns([1.2, 4])
-
-        with col_nav_age:
-            st.markdown(f"""
-                <div class="agendas-sidebar">
-                    <div class="sidebar-header-age">
-                        <h3 style='color: white; margin:0;'>ESTADO AGENDAS</h3>
-                        <p style='color: #cbd5e1; font-size: 0.8rem; margin:0;'>Filtros de seguimiento</p>
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
-            
-            opcion_age = st.radio(
-                "Navegación Agendas",
-                ["✅ Agendas Finalizadas", "⏳ Próximas Agendas", "🚨 Alerta"],
-                key="nav_agendas_radio"
+        if df_bitacora is None:
+            st.error(
+                "❌ Error al procesar la bitácora."
             )
-            
-            st.markdown("---")
-            st.markdown("### 📊 Resumen")
-            render_kpi("En Alerta", count_alerta, "🚨")
-            render_kpi("Próximas", count_prox, "⏳")
-            render_kpi("Finalizadas", count_final, "✅")
-
-        with col_main_age:
-          if opcion_age == "✅ Agendas Finalizadas":
-            st.markdown("### ✅ Agendas finalizadas")
-            zonas_sel = []
-            with st.expander("Seleccionar Zona"):
-                for z in grupos_validos:
-                    if st.checkbox(z, value=True, key=f"fin_zona_{z}"):
-                        zonas_sel.append(z)
-
-            inicios_sel = []
-            with st.expander("Filtrar por inicio de la tarea"):
-                for i in ["INICIO TARDE", "INICIO A TIEMPO"]:
-                    if st.checkbox(i, value=True, key=f"fin_inicio_{i}"):
-                        inicios_sel.append(i)
-
-            df_final = df[df["estado"].str.upper().str.contains("FINALIZAD", na=False)].copy()
-            if zonas_sel:
-                df_final = df_final[df_final["grupo"].isin(zonas_sel)]
-
-            def evaluar_inicio_tarde(row):
-                if pd.isna(row["fecha de ejecucion"]) or pd.isna(row["fecha de visita"]):
-                    return "SIN DATO"
-                limite = row["fecha de visita"] + pd.Timedelta(minutes=20) # Margen de 20 min
-                return "INICIO TARDE" if row["fecha de ejecucion"] > limite else "INICIO A TIEMPO"
-
-            df_final["inicio_tarea"] = df_final.apply(evaluar_inicio_tarde, axis=1)
-            if inicios_sel:
-                df_final = df_final[df_final["inicio_tarea"].isin(inicios_sel)]
-
-            if df_final.empty:
-                st.info("✅ No hay agendas finalizadas con esos filtros.")
-            else:
-                st.dataframe(df_final[columnas_base[:-1] + ["inicio_tarea"]].sort_values("fecha de visita"), use_container_width=True, height=600)
-
-          elif opcion_age == "⏳ Próximas Agendas":
-            st.markdown("### ⏳ Agendas próximas (no iniciadas)")
-            df_prox_raw = df[
-                (df["estado"].str.upper().str.contains("ASIGNAD", na=False)) & 
-                (df["fecha de ejecucion"].isna()) & 
-                (df["fecha de visita"] > ahora_colombia)
-            ].copy()
-            
-            zonas_sel = []
-            with st.expander("Seleccionar Zona"):
-                for z in grupos_validos:
-                    if st.checkbox(z, value=True, key=f"prox_zona_{z}"):
-                        zonas_sel.append(z)
-            
-            df_prox = df_prox_raw[df_prox_raw["grupo"].isin(zonas_sel)] if zonas_sel else df_prox_raw
-
-            if df_prox.empty:
-                st.info("✅ No hay agendas próximas.")
-            else:
-                st.dataframe(df_prox[columnas_base].sort_values("fecha de visita"), use_container_width=True, height=600)
-
-          elif opcion_age == "🚨 Alerta":
-            st.markdown("### 🚨 ALERTA")
-            df_alerta_raw = df[(df["estado"].str.upper().str.contains("ASIGNAD", na=False)) & (df["prioridad"].str.upper() == "ALTA") & (df["estado_alerta"] == "ALERTA")].copy()
-            render_agendas_alerta_fragment(df_alerta_raw, grupos_validos, columnas_base)
-    else:
-        st.info("No se pudo cargar la bitácora desde GitHub para agendas.")
-# ===================================================
-# ✅ TAB — SEGUIMIENTO ADICIONALES
-# ===================================================
-with tab_adicionales:
-    st.subheader("🏭 Seguimiento de Adicionales")
-
-    # --- CONFIGURACIÓN DE PERSISTENCIA EN GITHUB ---
-    token_ad = st.secrets["github"]["token"]
-    repo_ad = st.secrets["github"]["repo"]
-    branch_ad = st.secrets["github"].get("branch", "main")
-    nombre_archivo_git = "PROGRAMACION.xlsx"
-
-    # --- SECCIÓN PARA ACTUALIZAR EL ARCHIVO (Sincronizado con GitHub) ---
-    with st.expander("⬆️ Actualizar Base de Datos de Programación"):
-        archivo_nuevo = st.file_uploader(
-            "Sube el nuevo archivo PROGRAMACION.xlsx para actualizar el dashboard global",
-            type=["xlsx", "xls"],
-            key="uploader_adicionales_github"
-        )
-        if st.button("🚀 Guardar y compartir con el equipo", key="btn_subir_adicionales"):
-            if archivo_nuevo is not None:
-                contenido_bin = archivo_nuevo.read()
-                contenido_b64_ad = base64.b64encode(contenido_bin).decode("utf-8")
-                
-                url_ad = f"https://api.github.com/repos/{repo_ad}/contents/{nombre_archivo_git}"
-                headers_ad = {"Authorization": f"Bearer {token_ad}", "Accept": "application/vnd.github+json"}
-                
-                # Obtener el SHA actual para permitir el reemplazo (evita conflictos de versión)
-                resp_get = requests.get(url_ad, headers=headers_ad)
-                sha_ad = resp_get.json().get("sha") if resp_get.status_code == 200 else None
-                
-                payload_ad = {
-                    "message": "Actualización global de PROGRAMACION.xlsx desde Dashboard",
-                    "content": contenido_b64_ad,
-                    "branch": branch_ad
-                }
-                if sha_ad: payload_ad["sha"] = sha_ad
-                
-                resp_put = requests.put(url_ad, headers=headers_ad, json=payload_ad)
-                if resp_put.status_code in (200, 201):
-                    # --- ACTUALIZAR METADATA DE PROGRAMACIÓN ---
-                    info_p = {
-                        "ultima_actualizacion": datetime.datetime.now(TZ_UTC).strftime("%Y-%m-%d %H:%M:%S"),
-                        "usuario_actualizo": st.session_state.usuario
-                    }
-                    
-                    contenido_info_p_b64 = base64.b64encode(
-                        json.dumps(info_p, indent=2).encode("utf-8")
-                    ).decode("utf-8")
-                    
-                    url_info_p = f"https://api.github.com/repos/{repo_ad}/contents/PROGRAMACION_INFO.json"
-                    r_info_p = requests.get(url_info_p, headers=headers_ad)
-                    sha_info_p = r_info_p.json().get("sha") if r_info_p.status_code == 200 else None
-                    
-                    payload_info_p = {"message": "Actualización de PROGRAMACION_INFO.json", "content": contenido_info_p_b64, "branch": branch_ad}
-                    if sha_info_p: payload_info_p["sha"] = sha_info_p
-                    requests.put(url_info_p, headers=headers_ad, json=payload_info_p)
-                    
-                    st.success("✅ Archivo guardado correctamente en la nube. Ahora todos los usuarios verán esta versión.")
-                    fetch_github_excel.clear()
-                    process_adicionales_data.clear()
-                    st.rerun()
-                else:
-                    st.error(f"❌ Error al sincronizar con GitHub: {resp_put.text}")
-            else:
-                st.warning("⚠️ Por favor selecciona un archivo antes de intentar guardar.")
-
-    # --- CARGA DEL ARCHIVO DESDE GITHUB (Datos compartidos) ---
-    df_p, _ = fetch_github_excel(repo_ad, nombre_archivo_git, token_ad, branch_ad)
+            st.stop()
     
-    # Procesamiento cacheado para mayor velocidad
-    df_p = process_adicionales_data(df_p)
-
-    if not df_p.empty:
-        # --- FILTRO DE SEDE (CARGUE) ---
-        if "cargue" in df_p.columns:
-            sedes_raw = sorted(df_p["cargue"].astype(str).unique().tolist())
-            sedes_opciones = ["TODAS"] + sedes_raw
-            sedes_sel = st.selectbox("📍 Seleccionar Sede (Cargue):", sedes_opciones, key="filtro_sede_adicionales")
+        # -------------------------------------------------
+        # ✅ EXCLUIR GRUPOS NO OPERATIVOS
+        # -------------------------------------------------
+        if "grupo" in df_bitacora.columns:
+            df_bitacora["grupo"] = (
+                df_bitacora["grupo"]
+                .astype(str)
+                .str.upper()
+                .str.strip()
+            )
+    
+            # ✅ Restaurada exclusión de grupos no operativos y administrativos
+            grupos_no_operativos = ["SST-NAL", "SUPERVISIONES", "SUSP-ANT", "ADMINISTRATIVO", "SUSPENSIONES", "ADMIN"]
+    
+            # Filtrar por grupo y también excluir cierres administrativos de los KPIs
+            if "cierre" in df_bitacora.columns:
+                df_bitacora = df_bitacora[~df_bitacora["cierre"].astype(str).str.upper().str.contains("ADMINISTRATIVO", na=False)]
+    
+    
+            df_bitacora = df_bitacora[
+                ~df_bitacora["grupo"].isin(grupos_no_operativos)
+            ]
+    
+        if df_bitacora.empty:
+            st.warning(
+                "⚠️ No hay datos disponibles después del filtro por GRUPO.\n"
+                "Esto indica que el archivo solo contiene grupos no operativos."
+            )
+            st.stop()
+    
+        # Renombrar columnas parseadas para lógica existente
+        df_bitacora["hora_inicio"] = df_bitacora["hora inicio_parsed"].fillna("SIN HORA")
+        df_bitacora["hora_inicio_recorrido"] = df_bitacora["hora inicio de recorrido_parsed"]
+        df_bitacora["hora_final"] = df_bitacora["hora final_parsed"]
+    
+        # -------------------------------------------
+        # -------------------------------------------
+        # FILTRO DE FECHA
+        # -------------------------------------------
+        # -------------------------------------------
+        # ✅ PANEL DE FILTROS COMPACTO (TIPO BOX)
+        # -------------------------------------------
+        with st.container(border=True):
+            col_f1, col_f2, col_f3 = st.columns([1, 1.2, 1.2])
             
-            if sedes_sel != "TODAS":
-                df_p = df_p[df_p["cargue"].astype(str) == sedes_sel]
-
-        # Selección de columnas y visualización (Fuera del bloque 'if cargue' para mayor robustez)
-        cols_req = ["contrato", "nombre_inspector", "direccion barrio", "codigo_tipo_trabajo", "cargue", "dias de asignacion"]
-        cols_final = [c for c in cols_req if c in df_p.columns]
-        
-        def color_semaforo(row):
-            # Verificación segura de la existencia de la columna calculada
-            if "dias de asignacion" not in row:
-                return [""] * len(row)
-            dias = row["dias de asignacion"]
-            if dias < 3:
-                return ["background-color: #d4edda; color: #155724"] * len(row)  # Verde
-            elif dias == 3:
-                return ["background-color: #fff3cd; color: #856404"] * len(row)  # Amarillo
-            else:
-                return ["background-color: #f8d7da; color: #721c24"] * len(row)  # Rojo
-
-        st.dataframe(df_p[cols_final].style.apply(color_semaforo, axis=1), use_container_width=True, hide_index=True)
-    else:
-        st.info("ℹ️ No hay un archivo de programación activo. Utiliza el panel superior para subir 'PROGRAMACION.xlsx'.")
-
-
-# ===================================================
-# ✅ TAB — ÓRDENES ASIGNADAS
-# ===================================================
-with tab_asignadas:
-    st.markdown("## 📌 Órdenes ASIGNADAS")
-
-    # ===================================================
-    # VALIDAR Y CARGAR BITÁCORA LOCAL
-    # ===================================================
-    archivo_bitacora = "BITACORA.xlsx"
-
-    df = df_bitacora_base.copy()
+            with col_f1:
+                fechas_validas = sorted(df_bitacora["fecha"].dropna().unique())
+                fecha_sel = st.selectbox("📅 Fecha de consulta:", fechas_validas)
+                # Datos base para la fecha seleccionada
+                df_base_fecha = df_bitacora[df_bitacora["fecha"] == fecha_sel].copy()
+    
+            # Opciones estables para la fecha elegida
+            opc_sups = sorted(df_base_fecha["supervisor"].unique())
+            opc_insps = sorted(df_base_fecha["inspector"].unique())
+    
+            with col_f2:
+                supervisores_sel = st.pills("👥 Supervisores:", opc_sups, selection_mode="multi", default=opc_sups, key=f"pills_sup_{fecha_sel}")
+    
+            with col_f3:
+                with st.popover("🔍 Seleccionar Inspectores", use_container_width=True):
+                    inspectores_sel = st.multiselect("Filtro de inspectores:", opc_insps, default=opc_insps, key=f"ms_insp_{fecha_sel}")
+    
+            # Aplicación del filtro final
+            if not supervisores_sel or not inspectores_sel:
+                st.warning("⚠️ Selecciona al menos un supervisor e inspector para ver los datos.")
+                st.stop()
+                
+            df2 = df_base_fecha[(df_base_fecha["supervisor"].isin(supervisores_sel)) & (df_base_fecha["inspector"].isin(inspectores_sel))].copy()
+    
+        # -------------------------------------------
+        # ⏱️ TIEMPO DE RECORRIDO (Calculado sobre datos filtrados)
+        # -------------------------------------------
+        def calcular_tiempo_recorrido(row):
+            hi = row.get("hora inicio_parsed")
+            hr = row.get("hora inicio de recorrido_parsed")
+            if not isinstance(hi, datetime.time) or not isinstance(hr, datetime.time):
+                return pd.NaT
+            dt_hi = datetime.datetime.combine(datetime.date.today(), hi)
+            dt_hr = datetime.datetime.combine(datetime.date.today(), hr)
+            return dt_hi - dt_hr if dt_hi >= dt_hr else pd.NaT
+    
+        try:
+            df2["tiempo_recorrido_td"] = df2.apply(calcular_tiempo_recorrido, axis=1)
+        except Exception:
+            df2["tiempo_recorrido_td"] = pd.NaT
     
     # ===================================================
-    # ✅ FILTRAR SOLO GRUPOS PERMITIDOS
-    # ===================================================
-    if "grupo" in df.columns:
-        df["grupo"] = df["grupo"].astype(str).str.upper().str.strip()
-
-        # Filtro más flexible para grupos operativos
-        df = df[df["grupo"].str.contains("INSP-CALDAS|INSP-RIS", na=False)]
-
+      # ===================================================
+        # ✅ TAB 2 — PARTE 4 / 5
+        # Agrupación diaria, puntualidad y estado
         # ===================================================
-        # VALIDAR COLUMNAS NECESARIAS
-    # ===================================================
-    columnas_requeridas = ["inspector", "estado", "prioridad", "grupo"]
-    for col in columnas_requeridas:
-        if col not in df.columns:
-            st.error(f"❌ Falta la columna requerida: {col}")
-
-    # ===================================================
-    # FILTRAR ÓRDENES EN PROCESO (Asignadas, En Camino, Iniciadas)
-    # ===================================================
-    estados_carga_regex = "Asignad|En Camino|Iniciada"
-    df_asignadas = df[
-        df["estado"]
-        .astype(str)
-        .str.contains(estados_carga_regex, case=False, na=False)
-    ].copy()
-
-    if df_asignadas.empty:
-        st.info("✅ No hay órdenes ASIGNADAS en la bitácora.")
-
-    # ===================================================
-    # ================= FILTROS =================
-    # ===================================================
-    st.markdown("### 🔎 Filtros")
-
-    # -------- PANEL DE FILTROS TIPO "BOX" - LÓGICA ESTABLE --------
-    with st.container(border=True):
-        col_f1, col_f2, col_f3, col_f4 = st.columns([0.8, 1.2, 1.2, 1])
-
-        # Opciones estables basadas en el conjunto inicial de órdenes
-        opc_grupos = sorted(df_asignadas["grupo"].dropna().unique())
-        opc_estados = sorted(df_asignadas["estado"].dropna().unique())
-        opc_prioridades = sorted(df_asignadas["prioridad"].dropna().unique())
-
-        with col_f1:
-            grupos_sel = st.pills("📍 Grupo", opc_grupos, selection_mode="multi", default=opc_grupos, key="tab5_grupo_pills")
-        with col_f2:
-            estados_sel = st.pills("📊 Estado", opc_estados, selection_mode="multi", default=opc_estados, key="tab5_estado_pills")
-        with col_f3:
-            prioridades_sel = st.pills("⚡ Prioridad", opc_prioridades, selection_mode="multi", default=opc_prioridades, key="tab5_prio_pills")
-        with col_f4:
-            ver_por = st.segmented_control("📈 Ver por:", ["Prioridad", "Estado"], default="Prioridad", key="tab5_ver_por_seg")
-            col_agrupar = ver_por.lower()
-
-    # Aplicar todos los filtros al final para evitar reinicios de widgets
-    df_finalizados_base = df[df["grupo"].isin(grupos_sel)] if grupos_sel else df
-    if grupos_sel: df_asignadas = df_asignadas[df_asignadas["grupo"].isin(grupos_sel)]
-    if estados_sel: df_asignadas = df_asignadas[df_asignadas["estado"].isin(estados_sel)]
-    if prioridades_sel: df_asignadas = df_asignadas[df_asignadas["prioridad"].isin(prioridades_sel)]
-
-    # Identificar inspectores que ya terminaron (Tienen 'Finalizada' y NO tienen carga activa)
-    # en los grupos seleccionados para identificar disponibilidad
-    insp_con_asig = set(df_finalizados_base[df_finalizados_base["estado"].astype(str).str.contains(estados_carga_regex, case=False, na=False)]["inspector"].unique())
-    insp_con_fin = set(df_finalizados_base[df_finalizados_base["estado"].astype(str).str.contains("Finalizad", case=False, na=False)]["inspector"].unique())
-    inspectores_finalizados = insp_con_fin - insp_con_asig
-
-    if df_asignadas.empty:
-        st.warning("⚠️ No hay datos con los filtros seleccionados.")
-
-    # ===================================================
-    # AGRUPAR POR INSPECTOR Y DIMENSIÓN SELECCIONADA
-    # ===================================================
-    df_prio = (
-        df_asignadas
-        .groupby(["inspector", col_agrupar])
-        .size()
-        .reset_index(name="cantidad")
-    )
-
-    # Agregar inspectores que ya terminaron su obra (con cantidad 0 para que aparezcan en el eje Y)
-    if inspectores_finalizados:
-        df_terminados = pd.DataFrame({
-            "inspector": list(inspectores_finalizados),
-            col_agrupar: "TERMINÓ OBRA",
-            "cantidad": 0
+    
+        # ---------------------------------------------------
+        # AGRUPACIÓN DIARIA POR INSPECTOR (ESTABLE)
+        # ---------------------------------------------------
+        primeras = (
+            df2.sort_values("hora_inicio")
+            .groupby("inspector", as_index=False)
+            .first()[["inspector", "hora_inicio", "localidad", "supervisor"]]
+        )
+    
+        ultimas = (
+            df2.sort_values("hora_final")
+            .groupby("inspector", as_index=False)
+            .last()[["inspector", "hora_final"]]
+        )
+    
+        df_agrupado = primeras.merge(
+            ultimas,
+            on="inspector",
+            how="left"
+        )
+    
+        # ---------------------------------------------------
+        # PUNTUALIDAD (usa SOLO la primera hora del día)
+        # ---------------------------------------------------
+        hora_oficial = datetime.time(7, 30)
+    
+        def mins_tarde(h):
+            if h is None or pd.isna(h):
+                return None
+            if not isinstance(h, datetime.time):
+                return None
+    
+            h1 = datetime.datetime.combine(datetime.date.today(), h)
+            h2 = datetime.datetime.combine(datetime.date.today(), hora_oficial)
+            return int((h1 - h2).total_seconds() / 60)
+    
+        df_agrupado["minutos_tarde"] = df_agrupado["hora_inicio"].apply(mins_tarde)
+    
+        # ---------------------------------------------------
+        # ESTADO DE PUNTUALIDAD (ORIGINAL)
+        # ---------------------------------------------------
+        def estado(m):
+            if m is None:
+                return "SIN INICIO"
+            if m <= 0:
+                return "Puntual"
+            if m <= 15:
+                return "Tarde"
+            return "Muy tarde"
+    
+        df_agrupado["estado"] = df_agrupado["minutos_tarde"].apply(estado)
+    
+        # ---------------------------------------------------
+        # PRODUCCIÓN (MARCAR ÓRDENES EFECTIVAS)
+        # ---------------------------------------------------
+        valores_efectivos = [
+            "INSPECCIONADA",
+            "INSPECCIONADA CON DEFECTO NO CRITICO",
+            "INSPECCIONADA CON DEFECTO CRITICO",
+            "CERTIFICADA",
+            "CERTIFICADA CON NOVEDAD"
+        ]
+    
+        df2["efectiva"] = df2["cierre"].isin(valores_efectivos)
+    
+        total_ordenes = df2.shape[0]
+        total_efectivas = df2["efectiva"].sum()
+    
+        porcentaje = (
+            round((total_efectivas / total_ordenes) * 100, 1)
+            if total_ordenes > 0 else 0
+        )
+    
+        # ---------------------------------------------------
+        # ÓRDENES EFECTIVAS CON TIEMPO VÁLIDO
+        # ---------------------------------------------------
+        df_eff = df2[
+            (df2["efectiva"] == True) &
+            (df2["tiempo_tarea_td"].notna())
+        ]
+    
+        # ---------------------------------------------------
+        # ✅ KPI: PROMEDIO HORA DE INICIO
+        # (PRIMERA TAREA DEL DÍA POR INSPECTOR)
+        # ---------------------------------------------------
+        # Calculamos decimal antes de agrupar para evitar errores con datetime.time en el agg
+        df2["ini_dec_tmp"] = df2["hora_inicio"].apply(hora_to_decimal)
+        df_inicio_jornada = df2[df2["ini_dec_tmp"].notna()].groupby("inspector", as_index=False).agg(ini_dec=("ini_dec_tmp", "min"))
+    
+        prom_ini = df_inicio_jornada["ini_dec"].mean()
+    
+        hora_prom_ini = (
+            hora_to_string(decimal_to_hora(prom_ini))
+            if pd.notna(prom_ini) else "—"
+        )
+    
+        # ---------------------------------------------------
+        # ✅ KPI: PROMEDIO HORA DE FIN
+        # (ÚLTIMA TAREA DEL DÍA POR INSPECTOR)
+        # ---------------------------------------------------
+        # Calculamos decimal antes de agrupar para evitar errores con datetime.time en el agg
+        df2["fin_dec_tmp"] = df2["hora_final"].apply(hora_to_decimal)
+        df_fin_jornada = df2[df2["fin_dec_tmp"].notna()].groupby("inspector", as_index=False).agg(fin_dec=("fin_dec_tmp", "max"))
+    
+        prom_fin = df_fin_jornada["fin_dec"].mean()
+    
+        hora_prom_fin = (
+            hora_to_string(decimal_to_hora(prom_fin))
+            if pd.notna(prom_fin) else "—"
+        )
+    
+        # ---------------------------------------------------
+        # ✅ KPI: PROMEDIO TIEMPO POR TAREA (SOLO EFECTIVAS)
+        # ---------------------------------------------------
+        tiempo_prom_str = (
+            td_to_str(df_eff["tiempo_tarea_td"].mean())
+            if not df_eff.empty else "—"
+        )
+    
+        # ---------------------------------------------------
+        # RESUMEN POR INSPECTOR (SOLO PARA CÁLCULO)
+        # ---------------------------------------------------
+        # ---------------------------------------------------
+        # RESUMEN POR INSPECTOR
+        # ---------------------------------------------------
+        resumen = (
+            df2.groupby("inspector")
+            .apply(lambda x: pd.Series({
+                "total_ordenes": x.shape[0],
+                "ordenes_efectivas": x["efectiva"].sum(),
+                "porcentaje_efectividad":
+                    round((x["efectiva"].sum() / x.shape[0]) * 100, 1)
+                    if x.shape[0] > 0 else 0,
+                "promedio_tiempo_tarea":
+                    td_to_str(
+                        x.loc[x["efectiva"], "tiempo_tarea_td"].mean()
+                    ),
+                "ordenes_sin_recorrido": x["tiempo_recorrido_td"].isna().sum(),
+                "promedio_tiempo_recorrido": td_to_str(x["tiempo_recorrido_td"].mean())
+            }))
+            .reset_index()
+        )
+    
+        df_tabla = df_agrupado.merge(resumen, on="inspector", how="left")
+        df_tabla = df_tabla.fillna({
+            "hora_inicio": "—",
+            "hora_final": "—",
+            "localidad": "—",
+            "estado": "SIN ACTIVIDAD",
+            "total_ordenes": 0,
+            "ordenes_efectivas": 0,
+            "ordenes_sin_recorrido": 0,
+            "porcentaje_efectividad": 0,
+            "promedio_tiempo_tarea": "—",
+            "promedio_tiempo_recorrido": "—"
         })
-        df_prio = pd.concat([df_prio, df_terminados], ignore_index=True)
-
-    # Ordenar inspectores por carga total
-    orden_inspectores = (
-        df_prio.groupby("inspector")["cantidad"].sum()
-        .sort_values(ascending=False).index.tolist()
-    )
-
+    
+        # ✅ KPI: PROMEDIO TIEMPO DE RECORRIDO (GENERAL)
+        prom_recorrido_global = (
+            td_to_str(df2["tiempo_recorrido_td"].mean())
+            if not df2["tiempo_recorrido_td"].dropna().empty else "—"
+        )
+    
+    
+        # ===================================================
+        # ✅ DISEÑO DE PESTAÑA: KPIs IZQUIERDA | TABLA DERECHA
+        # ===================================================
+        col_kpis, col_main_view = st.columns([1, 4])
+    
+        with col_kpis:
+            st.markdown("### ⭐ KPIs")
+            render_kpi("Inicio Prom.", hora_prom_ini, "⏰")
+            render_kpi("Fin Prom.", hora_prom_fin, "🕒")
+            render_kpi("T. Tarea Prom.", tiempo_prom_str, "🕓")
+            render_kpi("Recorrido Prom.", prom_recorrido_global, "🚗")
+            render_kpi("Total Tareas", total_ordenes, "📋")
+            render_kpi("Efectivas", total_efectivas, "✅")
+            render_kpi("% Efectividad", f"{porcentaje}%", "📈")
+    
+        with col_main_view:
+            # ---------------------------------------------------
+            # PREPARACIÓN DE LA TABLA ESTILIZADA
+            # ---------------------------------------------------
+            columnas_tabla = [
+                "inspector", "supervisor", "fecha", "hora_inicio", "hora_final",
+                "localidad", "estado", "total_ordenes", "ordenes_efectivas",
+                "ordenes_sin_recorrido", "porcentaje_efectividad",
+                "promedio_tiempo_tarea", "promedio_tiempo_recorrido"
+            ]
+            columnas_disponibles = [c for c in columnas_tabla if c in df_tabla.columns]
+    
+            st.markdown("### 📋 Tabla de inspecciones del día")
+    
+            # Aplicar estilos: Centrar todo menos inspector y aplicar colores a estado
+            df_styled = (
+                df_tabla[columnas_disponibles]
+                .style.set_properties(**{'text-align': 'center'})
+                .set_properties(subset=['inspector'], **{'text-align': 'left'})
+                .map(color_estado, subset=['estado'])
+            )
+    
+            st.dataframe(
+                df_styled,
+                use_container_width=True,
+                height=645,
+                hide_index=True,
+                column_config={
+                    "porcentaje_efectividad": st.column_config.NumberColumn(
+                        "Efectividad %",
+                        format="%.1f%%"
+                    )
+                }
+            )
+    
+        # ---------------------------------------------------
+        # 📝 INFORME DE DESEMPEÑO DEL DÍA
+        # ---------------------------------------------------
+        st.markdown("### 📝 Informe de Desempeño del Día")
+        with st.container(border=True):
+            h_col1, h_col2 = st.columns(2)
+            if not resumen.empty:
+                best_eff = resumen.loc[resumen["ordenes_efectivas"].idxmax()]
+                worst_eff = resumen.loc[resumen["ordenes_efectivas"].idxmin()]
+                most_no_rec = resumen.loc[resumen["ordenes_sin_recorrido"].idxmax()]
+                
+                with h_col1:
+                    st.markdown(f"🏆 **Más órdenes efectivas:** {best_eff['inspector']} ({int(best_eff['ordenes_efectivas'])})")
+                    st.markdown(f"📉 **Menos órdenes efectivas:** {worst_eff['inspector']} ({int(worst_eff['ordenes_efectivas'])})")
+                    st.markdown(f"🚗 **Más órdenes sin recorrido:** {most_no_rec['inspector']} ({int(most_no_rec['ordenes_sin_recorrido'])})")
+    
+                df_ini_check = df_agrupado[df_agrupado["hora_inicio"] != "SIN HORA"].copy()
+                late_insp, late_val = "—", "—"
+                if not df_ini_check.empty:
+                    df_ini_check["dec"] = df_ini_check["hora_inicio"].apply(hora_to_decimal)
+                    row_late = df_ini_check.loc[df_ini_check["dec"].idxmax()]
+                    late_insp, late_val = row_late["inspector"], hora_to_string(row_late["hora_inicio"])
+    
+                avg_rec_series = df2.groupby("inspector")["tiempo_recorrido_td"].mean()
+                max_rec_insp, max_rec_val = "—", "—"
+                if not avg_rec_series.dropna().empty:
+                    max_rec_insp = avg_rec_series.idxmax()
+                    max_rec_val = td_to_str(avg_rec_series.max())
+    
+                avg_task_series = df2.loc[df2["efectiva"]].groupby("inspector")["tiempo_tarea_td"].mean()
+                max_task_insp, max_task_val = "—", "—"
+                if not avg_task_series.dropna().empty:
+                    max_task_insp = avg_task_series.idxmax()
+                    max_task_val = td_to_str(avg_task_series.max())
+    
+                with h_col2:
+                    st.markdown(f"🕒 **Inicio más tarde:** {late_insp} ({late_val})")
+                    st.markdown(f"🛣️ **Promedio de recorrido más extenso:** {max_rec_insp} ({max_rec_val})")
+                    st.markdown(f"🕓 **Más tiempo promedio por tarea:** {max_task_insp} ({max_task_val})")
+    
+        # ===================================================
+        # 🚨 INSPECTORES SIN ACTIVIDAD EN LA FECHA
+        # ===================================================
+        st.markdown("### 🚨 Inspectores sin actividad registrada")
+    
+        inspectores_con_actividad = set(df2["inspector"].str.upper().str.strip().unique())
+    
+        inspectores_del_filtro = [
+            insp for insp in inspectores_lista
+            if SUPERVISORES_DICT.get(insp.upper(), "SIN SUPERVISOR") in supervisores_sel
+        ]
+    
+        inspectores_sin_actividad = [
+            insp for insp in inspectores_del_filtro
+            if insp.upper().strip() not in inspectores_con_actividad
+        ]
+    
+        if inspectores_sin_actividad:
+            df_sin_actividad = pd.DataFrame({
+                "Inspector": inspectores_sin_actividad
+            })
+            df_sin_actividad["Supervisor"] = df_sin_actividad["Inspector"].apply(
+                lambda x: SUPERVISORES_DICT.get(x.upper(), "SIN SUPERVISOR")
+            )
+            df_sin_actividad = df_sin_actividad.sort_values("Supervisor")
+    
+            st.error(f"🚨 {len(inspectores_sin_actividad)} inspector(es) sin actividad registrada para {fecha_sel}")
+            st.dataframe(df_sin_actividad, use_container_width=True)
+        else:
+            st.success("✅ Todos los inspectores tienen actividad registrada para esta fecha.")
+    
+        # ===================================================
+        # 📊 Producción por inspector (órdenes efectivas)
+      
+        # ===================================================
+        st.markdown("## 📊 Producción por inspector (órdenes efectivas)")
+    
+        df_prod = (
+            df2[df2["efectiva"] == True]
+            .groupby("inspector")
+            .size()
+            .reset_index(name="Órdenes efectivas")
+            .sort_values("Órdenes efectivas", ascending=True)
+        )
+    
+        if df_prod.empty:
+            st.info("⚠️ No hay órdenes efectivas para esta fecha.")
+        else:
+            # Colores según producción
+            def color_por_produccion(valor):
+                if valor <= 3:
+                    return "#dc3545"      # rojo
+                elif valor <= 6:
+                    return "#f5b7b1"      # rosado
+                elif valor <= 8:
+                    return "#f7dc6f"      # amarillo
+                else:
+                    return "#28a745"      # verde
+    
+            df_prod["color"] = df_prod["Órdenes efectivas"].apply(color_por_produccion)
+    
+            fig_prod = px.bar(
+                df_prod,
+                y="inspector",
+                x="Órdenes efectivas",
+                orientation="h",
+                text="Órdenes efectivas",
+                title="Órdenes efectivas por inspector"
+            )
+    
+            # Colores y barras más gruesas
+            fig_prod.update_traces(
+                marker_color=df_prod["color"],
+                textposition="outside",
+                textfont_size=28,
+                cliponaxis=False
+            )
+    
+            fig_prod.update_layout(
+                bargap=0.15,              # barras más gruesas
+                xaxis_title="Órdenes efectivas",
+                yaxis_title="Inspector",
+                font=dict(size=18),
+                height=650
+            )
+    
+            st.plotly_chart(fig_prod, use_container_width=True)
+     
     # ===================================================
-    # MAPA DE COLORES (Prioridades y Estados)
+    # ✅ TAB — SEGUIMIENTO MENSUAL
     # ===================================================
-    color_map = {
-        # Prioridades
-        "Alta": "#dc3545",        # 🔴 rojo
-        "Media": "#ffc107",       # 🟡 amarillo
-        "Baja": "#7cd992",        # 🟢 verde claro
-        "Critica": "#fd7e14",     # 🟠 naranja
-        "Prioridad": "#6f4e37",    # 🟤 café
+    with tab_mensual:
+        st.subheader("📅 Consolidado Mensual / Rango de Fechas")
+        df_m = df_bitacora_base.copy()
+    
+        if "grupo" in df_m.columns:
+            df_m["grupo"] = df_m["grupo"].astype(str).str.upper().str.strip()
+            grupos_no_operativos = ["SST-NAL", "SUPERVISIONES", "SUSP-ANT", "ADMINISTRATIVO", "SUSPENSIONES", "ADMIN"]
+            if "cierre" in df_m.columns:
+                df_m = df_m[~df_m["cierre"].astype(str).str.upper().str.contains("ADMINISTRATIVO", na=False)]
+            df_m = df_m[~df_m["grupo"].isin(grupos_no_operativos)]
+    
+        # Renombrar columnas para consistencia
+        df_m["hora_inicio"] = df_m["hora inicio_parsed"]
+        df_m["hora_final"] = df_m["hora final_parsed"]
         
-        "60 Meses": "#6f42c1",        # 🟣 morado
-        "Segunda visita": "#ff8c00",   # 🟠 naranja
-
-        # Estados
-        "Asignada": "#3498db", "En Camino": "#e67e22", "Iniciada": "#9b59b6",
-
-        # Disponibilidad
-        "TERMINÓ OBRA": "#28a745"      # 🟢 verde (disponible)
-    }
-
+        # Filtros de Rango
+        with st.container(border=True):
+            c1, c2, c3 = st.columns([1.5, 1.2, 1.2])
+            with c1:
+                # Asegurar que hay fechas válidas antes de calcular min/max para evitar errores de tipo
+                fechas_validas = df_m["fecha"].dropna()
+                if not fechas_validas.empty:
+                    min_d, max_d = fechas_validas.min(), fechas_validas.max()
+                else:
+                    min_d = max_d = datetime.date.today()
+                    
+                rango_fecha = st.date_input("📅 Seleccionar lapso de días:", value=(min_d, max_d), min_value=min_d, max_value=max_d)
+            
+            if isinstance(rango_fecha, tuple) and len(rango_fecha) == 2:
+                start_date, end_date = rango_fecha
+                df_m = df_m[(df_m["fecha"] >= start_date) & (df_m["fecha"] <= end_date)]
+            
+            opc_sups = sorted(df_m["supervisor"].unique())
+            with c2:
+                sups_sel = st.pills("👥 Supervisores:", opc_sups, selection_mode="multi", default=opc_sups, key="m_sup_pills")
+            with c3:
+                opc_insps = sorted(df_m[df_m["supervisor"].isin(sups_sel)]["inspector"].unique())
+                with st.popover("🔍 Inspectores", use_container_width=True):
+                    insps_sel = st.multiselect("Filtrar:", opc_insps, default=opc_insps)
+    
+        if df_m.empty or not sups_sel or not insps_sel:
+            st.warning("Selecciona un rango y personal válido.")
+            st.stop()
+    
+        df_m = df_m[(df_m["supervisor"].isin(sups_sel)) & (df_m["inspector"].isin(insps_sel))].copy()
+        
+        # Cálculo de tiempo de recorrido
+        def calc_rec(row):
+            hi, hr = row.get("hora inicio_parsed"), row.get("hora inicio de recorrido_parsed")
+            if not isinstance(hi, datetime.time) or not isinstance(hr, datetime.time): return pd.NaT
+            return datetime.datetime.combine(datetime.date.today(), hi) - datetime.datetime.combine(datetime.date.today(), hr)
+        df_m["tiempo_recorrido_td"] = df_m.apply(calc_rec, axis=1)
+        
+        # Marcar efectivas
+        valores_efectivos = ["INSPECCIONADA", "INSPECCIONADA CON DEFECTO NO CRITICO", "INSPECCIONADA CON DEFECTO CRITICO", "CERTIFICADA", "CERTIFICADA CON NOVEDAD"]
+        df_m["efectiva"] = df_m["cierre"].isin(valores_efectivos)
+    
+        # --- LÓGICA DE PROMEDIOS DIARIOS ---
+        # Convertimos a decimal antes de agrupar para evitar errores de comparación con datetime.time
+        df_m["ini_dec_tmp"] = df_m["hora_inicio"].apply(hora_to_decimal)
+        df_m["fin_dec_tmp"] = df_m["hora_final"].apply(hora_to_decimal)
+    
+        # Agrupar por inspector y día para obtener los hitos diarios
+        df_daily_hitos = df_m.groupby(["inspector", "fecha"]).agg(
+            ini_dec=("ini_dec_tmp", "min"),
+            fin_dec=("fin_dec_tmp", "max")
+        ).reset_index()
+        df_daily_hitos["es_sabado"] = pd.to_datetime(df_daily_hitos["fecha"]).dt.weekday == 5
+    
+        # KPIs Globales del Rango
+        prom_ini_global = df_daily_hitos["ini_dec"].mean()
+        # Excluir sábados para el promedio de hora fin
+        df_fin_no_sab = df_daily_hitos[~df_daily_hitos["es_sabado"]]
+        prom_fin_global = df_fin_no_sab["fin_dec"].mean() if not df_fin_no_sab.empty else None
+    
+        t_tarea_prom = df_m[df_m["efectiva"] & df_m["tiempo_tarea_td"].notna()]["tiempo_tarea_td"].mean()
+        t_rec_prom = df_m["tiempo_recorrido_td"].mean()
+        
+        total_ord = len(df_m)
+        total_eff = df_m["efectiva"].sum()
+        perc_eff = round((total_eff / total_ord) * 100, 1) if total_ord > 0 else 0
+    
+        # Visualización
+        col_k, col_v = st.columns([1, 4])
+        with col_k:
+            st.markdown("### 📈 KPIs Periodo")
+            render_kpi("Inicio Prom.", hora_to_string(decimal_to_hora(prom_ini_global)), "⏰")
+            render_kpi("Fin Prom. (Lun-Vie)", hora_to_string(decimal_to_hora(prom_fin_global)), "🕒")
+            render_kpi("T. Tarea Prom.", td_to_str(t_tarea_prom), "🕓")
+            render_kpi("Recorrido Prom.", td_to_str(t_rec_prom), "🚗")
+            render_kpi("Total Tareas", total_ord, "📋")
+            render_kpi("Efectivas", total_eff, "✅")
+            render_kpi("% Efectividad", f"{perc_eff}%", "📈")
+    
+        with col_v:
+            # Resumen por Inspector para la tabla
+            resumen_m = df_m.groupby("inspector").apply(lambda x: pd.Series({
+                "Dias Trabajados": x["fecha"].nunique(),
+                "Total Órdenes": len(x),
+                "Efectivas": x["efectiva"].sum(),
+                "Efectividad %": round((x["efectiva"].sum() / len(x)) * 100, 1) if len(x) > 0 else 0,
+                "Prom. Tarea": td_to_str(x[x["efectiva"]]["tiempo_tarea_td"].mean()),
+                "Prom. Recorrido": td_to_str(x["tiempo_recorrido_td"].mean())
+            })).reset_index()
+    
+            # Añadir promedios de horas por inspector
+            prom_horas_insp = df_daily_hitos.groupby("inspector").apply(lambda x: pd.Series({
+                "Prom. Inicio": hora_to_string(decimal_to_hora(x["ini_dec"].mean())),
+                "Prom. Fin (LV)": hora_to_string(decimal_to_hora(x[~x["es_sabado"]]["fin_dec"].mean()))
+            })).reset_index()
+    
+            df_tabla_m = resumen_m.merge(prom_horas_insp, on="inspector")
+            
+            st.markdown("### 📋 Resumen Consolidado por Inspector")
+            st.dataframe(
+                df_tabla_m.style.set_properties(**{'text-align': 'center'})
+                .set_properties(subset=['inspector'], **{'text-align': 'left'}),
+                use_container_width=True, height=500, hide_index=True
+            )
+    
+        # Gráfica de producción mensual
+        st.markdown("### 📊 Producción Total en el Periodo")
+        df_prod_m = df_m[df_m["efectiva"]].groupby("inspector").size().reset_index(name="Efectivas").sort_values("Efectivas")
+        
+        if not df_prod_m.empty:
+            fig_m = px.bar(df_prod_m, y="inspector", x="Efectivas", orientation="h", text="Efectivas", color="Efectivas", color_continuous_scale="Viridis")
+            fig_m.update_layout(height=600, font=dict(size=14))
+            st.plotly_chart(fig_m, use_container_width=True)
+    
+    # =================================================
+    # ✅ TAB — SEGUIMIENTO AGENDAS
+    # =================================================
+    
+    @st.fragment
+    def render_agendas_alerta_fragment(df_alerta_raw, grupos_validos, columnas_base):
+        zonas_sel = []
+        with st.expander("Seleccionar Zona"):
+            for z in grupos_validos:
+                if st.checkbox(z, value=True, key=f"pen_zona_frag_{z}"):
+                    zonas_sel.append(z)
+        
+        df_alerta = df_alerta_raw[df_alerta_raw["grupo"].isin(zonas_sel)] if zonas_sel else df_alerta_raw
+    
+        if df_alerta.empty:
+            st.info("✅ No hay agendas en ALERTA.")
+        else:
+            st.info("💡 Haz clic en una fila para ver el detalle de la tarea.")
+            # Preparamos los datos ordenados para que la selección coincida con el índice
+            df_display_alerta = df_alerta[columnas_base].sort_values("fecha de visita").reset_index(drop=True)
+            # TABLA RESUMIDA: Inspector, Contrato, Localidad
+            cols_tabla = ["inspector", "contrato", "localidad"]
+            
+            seleccion = st.dataframe(
+                df_display_alerta[cols_tabla], 
+                use_container_width=True,
+                on_select="rerun",
+                key="tabla_agendas_alerta_fragment",
+                hide_index=True,
+                selection_mode="single-row",
+                height=600
+            )
+            st.error(f"🚨 TOTAL ALERTAS: {len(df_alerta)}")
+    
+            if seleccion.selection.rows:
+                idx = seleccion.selection.rows[0]
+                
+                # LÓGICA ANTI-FANTASMA: Solo mostrar si la selección es nueva
+                # Esto evita que el recuadro aparezca solo al filtrar en otras pestañas
+                sel_key = f"last_idx_{cols_tabla[0]}_{len(df_display_alerta)}"
+                if st.session_state.get(sel_key) != idx:
+                    st.session_state[sel_key] = idx
+                    fila = df_display_alerta.iloc[idx]
+                    
+                    fecha_str = fila['fecha de visita'].strftime('%Y-%m-%d') if hasattr(fila['fecha de visita'], 'strftime') else str(fila['fecha de visita'])
+                    mostrar_detalle_tarea(
+                        fila["contrato"], 
+                        fila["detalle de tarea"],
+                        direccion=fila["direccion"],
+                        fecha=fecha_str,
+                        localidad=fila["localidad"],
+                        inspector=fila["inspector"]
+                    )
+    
+    with tab_agendas:
+        st.markdown("""
+            <style>
+                .agendas-sidebar {
+                    background-color: #1e3a8a;
+                    color: white;
+                    padding: 25px 15px 5px 15px;
+                    border-radius: 15px 15px 0 0;
+                    margin-bottom: 0;
+                }
+                /* Fusionar el menú con el cuadro azul superior */
+                div[data-testid="stRadio"]:has(input[id*="nav_agendas_radio"]) {
+                    background-color: #1e3a8a;
+                    padding: 0 15px 25px 15px;
+                    border-radius: 0 0 15px 15px;
+                    margin-top: -1rem;
+                }
+                .sidebar-header-age {
+                    border-bottom: 1px solid rgba(255,255,255,0.2);
+                    margin-bottom: 20px;
+                    padding-bottom: 15px;
+                }
+                /* Estilizar el radio de navegación de agendas */
+                div[data-testid="stRadio"] > label {
+                    display: none; 
+                }
+                div[data-testid="stRadio"] div[role="radiogroup"] > label {
+                    background-color: rgba(255,255,255,0.05);
+                    color: white !important;
+                    padding: 10px 15px;
+                    border-radius: 8px;
+                    margin-bottom: 8px;
+                    transition: all 0.3s;
+                    border: 1px solid transparent;
+                }
+                div[data-testid="stRadio"] div[role="radiogroup"] > label:hover {
+                    background-color: rgba(255,255,255,0.15);
+                }
+                div[data-testid="stRadio"] div[role="radiogroup"] > label[data-baseweb="radio"][aria-checked="true"] {
+                    background-color: white !important;
+                    color: #1e3a8a !important;
+                    font-weight: bold;
+                }
+            </style>
+        """, unsafe_allow_html=True)
+    
+        # ======================================================
+        # TÍTULO PRINCIPAL
+        st.markdown("## 🗂️ Control agendas")
+    
+        # ======================================================
+        # CARGAR BITÁCORA DESDE GITHUB (FORMA CORRECTA)
+        # ======================================================
+        # ======================================================
+        # CARGAR Y PROCESAR DATOS (CON CACHÉ PARA VELOCIDAD)
+        # ======================================================
+        token = st.secrets["github"]["token"]
+        repo = st.secrets["github"]["repo"]
+    
+        df = get_processed_agendas_data(repo, token)
+        
+        if not df.empty:
+            ahora_colombia = datetime.datetime.now(ZoneInfo("America/Bogota")).replace(tzinfo=None)
+            
+            # CÁLCULOS GLOBALES PARA KPIs
+            count_final = len(df[df["estado"].str.upper().str.contains("FINALIZAD", na=False)])
+            count_prox = len(df[(df["estado"].str.upper().str.contains("ASIGNAD", na=False)) & (df["fecha de ejecucion"].isna()) & (df["fecha de visita"] > ahora_colombia)])
+            count_alerta = len(df[(df["estado"].str.upper().str.contains("ASIGNAD", na=False)) & (df["prioridad"].str.upper() == "ALTA") & (df["estado_alerta"] == "ALERTA")])
+    
+        if not df.empty:
+            columnas_base = ["inspector", "contrato", "direccion", "estado", "fecha de visita", "localidad", "detalle de tarea", "estado_alerta"]
+            ahora_colombia = datetime.datetime.now(ZoneInfo("America/Bogota")).replace(tzinfo=None)
+            grupos_validos = ["INSP-CALDAS", "INSP-RIS"]
+    
+            # --- LAYOUT CON MENÚ LATERAL ---
+            col_nav_age, col_main_age = st.columns([1.2, 4])
+    
+            with col_nav_age:
+                st.markdown(f"""
+                    <div class="agendas-sidebar">
+                        <div class="sidebar-header-age">
+                            <h3 style='color: white; margin:0;'>ESTADO AGENDAS</h3>
+                            <p style='color: #cbd5e1; font-size: 0.8rem; margin:0;'>Filtros de seguimiento</p>
+                        </div>
+                    </div>
+                """, unsafe_allow_html=True)
+                
+                opcion_age = st.radio(
+                    "Navegación Agendas",
+                    ["✅ Agendas Finalizadas", "⏳ Próximas Agendas", "🚨 Alerta"],
+                    key="nav_agendas_radio"
+                )
+                
+                st.markdown("---")
+                st.markdown("### 📊 Resumen")
+                render_kpi("En Alerta", count_alerta, "🚨")
+                render_kpi("Próximas", count_prox, "⏳")
+                render_kpi("Finalizadas", count_final, "✅")
+    
+            with col_main_age:
+              if opcion_age == "✅ Agendas Finalizadas":
+                st.markdown("### ✅ Agendas finalizadas")
+                zonas_sel = []
+                with st.expander("Seleccionar Zona"):
+                    for z in grupos_validos:
+                        if st.checkbox(z, value=True, key=f"fin_zona_{z}"):
+                            zonas_sel.append(z)
+    
+                inicios_sel = []
+                with st.expander("Filtrar por inicio de la tarea"):
+                    for i in ["INICIO TARDE", "INICIO A TIEMPO"]:
+                        if st.checkbox(i, value=True, key=f"fin_inicio_{i}"):
+                            inicios_sel.append(i)
+    
+                df_final = df[df["estado"].str.upper().str.contains("FINALIZAD", na=False)].copy()
+                if zonas_sel:
+                    df_final = df_final[df_final["grupo"].isin(zonas_sel)]
+    
+                def evaluar_inicio_tarde(row):
+                    if pd.isna(row["fecha de ejecucion"]) or pd.isna(row["fecha de visita"]):
+                        return "SIN DATO"
+                    limite = row["fecha de visita"] + pd.Timedelta(minutes=20) # Margen de 20 min
+                    return "INICIO TARDE" if row["fecha de ejecucion"] > limite else "INICIO A TIEMPO"
+    
+                df_final["inicio_tarea"] = df_final.apply(evaluar_inicio_tarde, axis=1)
+                if inicios_sel:
+                    df_final = df_final[df_final["inicio_tarea"].isin(inicios_sel)]
+    
+                if df_final.empty:
+                    st.info("✅ No hay agendas finalizadas con esos filtros.")
+                else:
+                    st.dataframe(df_final[columnas_base[:-1] + ["inicio_tarea"]].sort_values("fecha de visita"), use_container_width=True, height=600)
+    
+              elif opcion_age == "⏳ Próximas Agendas":
+                st.markdown("### ⏳ Agendas próximas (no iniciadas)")
+                df_prox_raw = df[
+                    (df["estado"].str.upper().str.contains("ASIGNAD", na=False)) & 
+                    (df["fecha de ejecucion"].isna()) & 
+                    (df["fecha de visita"] > ahora_colombia)
+                ].copy()
+                
+                zonas_sel = []
+                with st.expander("Seleccionar Zona"):
+                    for z in grupos_validos:
+                        if st.checkbox(z, value=True, key=f"prox_zona_{z}"):
+                            zonas_sel.append(z)
+                
+                df_prox = df_prox_raw[df_prox_raw["grupo"].isin(zonas_sel)] if zonas_sel else df_prox_raw
+    
+                if df_prox.empty:
+                    st.info("✅ No hay agendas próximas.")
+                else:
+                    st.dataframe(df_prox[columnas_base].sort_values("fecha de visita"), use_container_width=True, height=600)
+    
+              elif opcion_age == "🚨 Alerta":
+                st.markdown("### 🚨 ALERTA")
+                df_alerta_raw = df[(df["estado"].str.upper().str.contains("ASIGNAD", na=False)) & (df["prioridad"].str.upper() == "ALTA") & (df["estado_alerta"] == "ALERTA")].copy()
+                render_agendas_alerta_fragment(df_alerta_raw, grupos_validos, columnas_base)
+        else:
+            st.info("No se pudo cargar la bitácora desde GitHub para agendas.")
     # ===================================================
-    # GRÁFICA ACUMULADA
+    # ✅ TAB — SEGUIMIENTO ADICIONALES
     # ===================================================
-    fig = px.bar(
-        df_prio,
-        y="inspector",
-        x="cantidad",
-        color=col_agrupar,
-        orientation="h",
-        category_orders={"inspector": orden_inspectores},
-        color_discrete_map=color_map,
-        text="cantidad",
-        title="Órdenes ASIGNADAS por inspector (según filtros)"
-    )
-
-    fig.update_traces(
-        textposition="inside",
-        textfont_size=16
-    )
-
-    fig.update_layout(
-        barmode="stack",
-        xaxis_title="Cantidad de órdenes ASIGNADAS",
-        yaxis_title="Inspector",
-        legend_title=ver_por,
-        height=700
-    )
-
-    st.plotly_chart(fig, use_container_width=True)
-
-
-# ===================================================
-# ✅ TAB — INVENTARIO V2.
-# ===================================================
+    with tab_adicionales:
+        st.subheader("🏭 Seguimiento de Adicionales")
+    
+        # --- CONFIGURACIÓN DE PERSISTENCIA EN GITHUB ---
+        token_ad = st.secrets["github"]["token"]
+        repo_ad = st.secrets["github"]["repo"]
+        branch_ad = st.secrets["github"].get("branch", "main")
+        nombre_archivo_git = "PROGRAMACION.xlsx"
+    
+        # --- SECCIÓN PARA ACTUALIZAR EL ARCHIVO (Sincronizado con GitHub) ---
+        with st.expander("⬆️ Actualizar Base de Datos de Programación"):
+            archivo_nuevo = st.file_uploader(
+                "Sube el nuevo archivo PROGRAMACION.xlsx para actualizar el dashboard global",
+                type=["xlsx", "xls"],
+                key="uploader_adicionales_github"
+            )
+            if st.button("🚀 Guardar y compartir con el equipo", key="btn_subir_adicionales"):
+                if archivo_nuevo is not None:
+                    contenido_bin = archivo_nuevo.read()
+                    contenido_b64_ad = base64.b64encode(contenido_bin).decode("utf-8")
+                    
+                    url_ad = f"https://api.github.com/repos/{repo_ad}/contents/{nombre_archivo_git}"
+                    headers_ad = {"Authorization": f"Bearer {token_ad}", "Accept": "application/vnd.github+json"}
+                    
+                    # Obtener el SHA actual para permitir el reemplazo (evita conflictos de versión)
+                    resp_get = requests.get(url_ad, headers=headers_ad)
+                    sha_ad = resp_get.json().get("sha") if resp_get.status_code == 200 else None
+                    
+                    payload_ad = {
+                        "message": "Actualización global de PROGRAMACION.xlsx desde Dashboard",
+                        "content": contenido_b64_ad,
+                        "branch": branch_ad
+                    }
+                    if sha_ad: payload_ad["sha"] = sha_ad
+                    
+                    resp_put = requests.put(url_ad, headers=headers_ad, json=payload_ad)
+                    if resp_put.status_code in (200, 201):
+                        # --- ACTUALIZAR METADATA DE PROGRAMACIÓN ---
+                        info_p = {
+                            "ultima_actualizacion": datetime.datetime.now(TZ_UTC).strftime("%Y-%m-%d %H:%M:%S"),
+                            "usuario_actualizo": st.session_state.usuario
+                        }
+                        
+                        contenido_info_p_b64 = base64.b64encode(
+                            json.dumps(info_p, indent=2).encode("utf-8")
+                        ).decode("utf-8")
+                        
+                        url_info_p = f"https://api.github.com/repos/{repo_ad}/contents/PROGRAMACION_INFO.json"
+                        r_info_p = requests.get(url_info_p, headers=headers_ad)
+                        sha_info_p = r_info_p.json().get("sha") if r_info_p.status_code == 200 else None
+                        
+                        payload_info_p = {"message": "Actualización de PROGRAMACION_INFO.json", "content": contenido_info_p_b64, "branch": branch_ad}
+                        if sha_info_p: payload_info_p["sha"] = sha_info_p
+                        requests.put(url_info_p, headers=headers_ad, json=payload_info_p)
+                        
+                        st.success("✅ Archivo guardado correctamente en la nube. Ahora todos los usuarios verán esta versión.")
+                        fetch_github_excel.clear()
+                        process_adicionales_data.clear()
+                        st.rerun()
+                    else:
+                        st.error(f"❌ Error al sincronizar con GitHub: {resp_put.text}")
+                else:
+                    st.warning("⚠️ Por favor selecciona un archivo antes de intentar guardar.")
+    
+        # --- CARGA DEL ARCHIVO DESDE GITHUB (Datos compartidos) ---
+        df_p, _ = fetch_github_excel(repo_ad, nombre_archivo_git, token_ad, branch_ad)
+        
+        # Procesamiento cacheado para mayor velocidad
+        df_p = process_adicionales_data(df_p)
+    
+        if not df_p.empty:
+            # --- FILTRO DE SEDE (CARGUE) ---
+            if "cargue" in df_p.columns:
+                sedes_raw = sorted(df_p["cargue"].astype(str).unique().tolist())
+                sedes_opciones = ["TODAS"] + sedes_raw
+                sedes_sel = st.selectbox("📍 Seleccionar Sede (Cargue):", sedes_opciones, key="filtro_sede_adicionales")
+                
+                if sedes_sel != "TODAS":
+                    df_p = df_p[df_p["cargue"].astype(str) == sedes_sel]
+    
+            # Selección de columnas y visualización (Fuera del bloque 'if cargue' para mayor robustez)
+            cols_req = ["contrato", "nombre_inspector", "direccion barrio", "codigo_tipo_trabajo", "cargue", "dias de asignacion"]
+            cols_final = [c for c in cols_req if c in df_p.columns]
+            
+            def color_semaforo(row):
+                # Verificación segura de la existencia de la columna calculada
+                if "dias de asignacion" not in row:
+                    return [""] * len(row)
+                dias = row["dias de asignacion"]
+                if dias < 3:
+                    return ["background-color: #d4edda; color: #155724"] * len(row)  # Verde
+                elif dias == 3:
+                    return ["background-color: #fff3cd; color: #856404"] * len(row)  # Amarillo
+                else:
+                    return ["background-color: #f8d7da; color: #721c24"] * len(row)  # Rojo
+    
+            st.dataframe(df_p[cols_final].style.apply(color_semaforo, axis=1), use_container_width=True, hide_index=True)
+        else:
+            st.info("ℹ️ No hay un archivo de programación activo. Utiliza el panel superior para subir 'PROGRAMACION.xlsx'.")
+    
+    
+    # ===================================================
+    # ✅ TAB — ÓRDENES ASIGNADAS
+    # ===================================================
+    with tab_asignadas:
+        st.markdown("## 📌 Órdenes ASIGNADAS")
+    
+        # ===================================================
+        # VALIDAR Y CARGAR BITÁCORA LOCAL
+        # ===================================================
+        archivo_bitacora = "BITACORA.xlsx"
+    
+        df = df_bitacora_base.copy()
+        
+        # ===================================================
+        # ✅ FILTRAR SOLO GRUPOS PERMITIDOS
+        # ===================================================
+        if "grupo" in df.columns:
+            df["grupo"] = df["grupo"].astype(str).str.upper().str.strip()
+    
+            # Filtro más flexible para grupos operativos
+            df = df[df["grupo"].str.contains("INSP-CALDAS|INSP-RIS", na=False)]
+    
+            # ===================================================
+            # VALIDAR COLUMNAS NECESARIAS
+        # ===================================================
+        columnas_requeridas = ["inspector", "estado", "prioridad", "grupo"]
+        for col in columnas_requeridas:
+            if col not in df.columns:
+                st.error(f"❌ Falta la columna requerida: {col}")
+    
+        # ===================================================
+        # FILTRAR ÓRDENES EN PROCESO (Asignadas, En Camino, Iniciadas)
+        # ===================================================
+        estados_carga_regex = "Asignad|En Camino|Iniciada"
+        df_asignadas = df[
+            df["estado"]
+            .astype(str)
+            .str.contains(estados_carga_regex, case=False, na=False)
+        ].copy()
+    
+        if df_asignadas.empty:
+            st.info("✅ No hay órdenes ASIGNADAS en la bitácora.")
+    
+        # ===================================================
+        # ================= FILTROS =================
+        # ===================================================
+        st.markdown("### 🔎 Filtros")
+    
+        # -------- PANEL DE FILTROS TIPO "BOX" - LÓGICA ESTABLE --------
+        with st.container(border=True):
+            col_f1, col_f2, col_f3, col_f4 = st.columns([0.8, 1.2, 1.2, 1])
+    
+            # Opciones estables basadas en el conjunto inicial de órdenes
+            opc_grupos = sorted(df_asignadas["grupo"].dropna().unique())
+            opc_estados = sorted(df_asignadas["estado"].dropna().unique())
+            opc_prioridades = sorted(df_asignadas["prioridad"].dropna().unique())
+    
+            with col_f1:
+                grupos_sel = st.pills("📍 Grupo", opc_grupos, selection_mode="multi", default=opc_grupos, key="tab5_grupo_pills")
+            with col_f2:
+                estados_sel = st.pills("📊 Estado", opc_estados, selection_mode="multi", default=opc_estados, key="tab5_estado_pills")
+            with col_f3:
+                prioridades_sel = st.pills("⚡ Prioridad", opc_prioridades, selection_mode="multi", default=opc_prioridades, key="tab5_prio_pills")
+            with col_f4:
+                ver_por = st.segmented_control("📈 Ver por:", ["Prioridad", "Estado"], default="Prioridad", key="tab5_ver_por_seg")
+                col_agrupar = ver_por.lower()
+    
+        # Aplicar todos los filtros al final para evitar reinicios de widgets
+        df_finalizados_base = df[df["grupo"].isin(grupos_sel)] if grupos_sel else df
+        if grupos_sel: df_asignadas = df_asignadas[df_asignadas["grupo"].isin(grupos_sel)]
+        if estados_sel: df_asignadas = df_asignadas[df_asignadas["estado"].isin(estados_sel)]
+        if prioridades_sel: df_asignadas = df_asignadas[df_asignadas["prioridad"].isin(prioridades_sel)]
+    
+        # Identificar inspectores que ya terminaron (Tienen 'Finalizada' y NO tienen carga activa)
+        # en los grupos seleccionados para identificar disponibilidad
+        insp_con_asig = set(df_finalizados_base[df_finalizados_base["estado"].astype(str).str.contains(estados_carga_regex, case=False, na=False)]["inspector"].unique())
+        insp_con_fin = set(df_finalizados_base[df_finalizados_base["estado"].astype(str).str.contains("Finalizad", case=False, na=False)]["inspector"].unique())
+        inspectores_finalizados = insp_con_fin - insp_con_asig
+    
+        if df_asignadas.empty:
+            st.warning("⚠️ No hay datos con los filtros seleccionados.")
+    
+        # ===================================================
+        # AGRUPAR POR INSPECTOR Y DIMENSIÓN SELECCIONADA
+        # ===================================================
+        df_prio = (
+            df_asignadas
+            .groupby(["inspector", col_agrupar])
+            .size()
+            .reset_index(name="cantidad")
+        )
+    
+        # Agregar inspectores que ya terminaron su obra (con cantidad 0 para que aparezcan en el eje Y)
+        if inspectores_finalizados:
+            df_terminados = pd.DataFrame({
+                "inspector": list(inspectores_finalizados),
+                col_agrupar: "TERMINÓ OBRA",
+                "cantidad": 0
+            })
+            df_prio = pd.concat([df_prio, df_terminados], ignore_index=True)
+    
+        # Ordenar inspectores por carga total
+        orden_inspectores = (
+            df_prio.groupby("inspector")["cantidad"].sum()
+            .sort_values(ascending=False).index.tolist()
+        )
+    
+        # ===================================================
+        # MAPA DE COLORES (Prioridades y Estados)
+        # ===================================================
+        color_map = {
+            # Prioridades
+            "Alta": "#dc3545",        # 🔴 rojo
+            "Media": "#ffc107",       # 🟡 amarillo
+            "Baja": "#7cd992",        # 🟢 verde claro
+            "Critica": "#fd7e14",     # 🟠 naranja
+            "Prioridad": "#6f4e37",    # 🟤 café
+            
+            "60 Meses": "#6f42c1",        # 🟣 morado
+            "Segunda visita": "#ff8c00",   # 🟠 naranja
+    
+            # Estados
+            "Asignada": "#3498db", "En Camino": "#e67e22", "Iniciada": "#9b59b6",
+    
+            # Disponibilidad
+            "TERMINÓ OBRA": "#28a745"      # 🟢 verde (disponible)
+        }
+    
+        # ===================================================
+        # GRÁFICA ACUMULADA
+        # ===================================================
+        fig = px.bar(
+            df_prio,
+            y="inspector",
+            x="cantidad",
+            color=col_agrupar,
+            orientation="h",
+            category_orders={"inspector": orden_inspectores},
+            color_discrete_map=color_map,
+            text="cantidad",
+            title="Órdenes ASIGNADAS por inspector (según filtros)"
+        )
+    
+        fig.update_traces(
+            textposition="inside",
+            textfont_size=16
+        )
+    
+        fig.update_layout(
+            barmode="stack",
+            xaxis_title="Cantidad de órdenes ASIGNADAS",
+            yaxis_title="Inspector",
+            legend_title=ver_por,
+            height=700
+        )
+    
+        st.plotly_chart(fig, use_container_width=True)
+    
+    
+    # ===================================================
+    # ✅ TAB — INVENTARIO V2.
+    # ===================================================
 with tab_inv_v2:
     st.markdown("""
         <style>
