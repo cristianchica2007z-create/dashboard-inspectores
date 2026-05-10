@@ -1721,19 +1721,19 @@ with tab_inv_v2:
         sede_global = st.selectbox("📍 Seleccionar Sede Global:", SEDES_INV, key="inv_sede_global")
         
     st.markdown('</div>', unsafe_allow_html=True)
-        def calcular_stock(movs, sede):
-            res = {}
-            for m in [x for x in movs if x["sede"] == sede]:
-                k = f"{m['categoria']}|{m['item']}|{m.get('talla') or 'N/A'}"
-                res.setdefault(k, {"categoria": m["categoria"], "item": m["item"], "talla": m.get("talla") or "N/A", "ent": 0, "sal": 0})
-                if m["tipo"] == "ENTRADA": res[k]["ent"] += m["cantidad"]
-                else: res[k]["sal"] += m["cantidad"]
-            
-            return pd.DataFrame([
-                {"Categoría": v["categoria"], "Ítem": v["item"], "Talla": v["talla"], 
-                 "Entradas": v["ent"], "Salidas": v["sal"], "Stock": v["ent"]-v["sal"]} 
-                for v in res.values()
-            ])
+    def calcular_stock(movs, sede):
+        res = {}
+        for m in [x for x in movs if x["sede"] == sede]:
+            k = f"{m['categoria']}|{m['item']}|{m.get('talla') or 'N/A'}"
+            res.setdefault(k, {"categoria": m["categoria"], "item": m["item"], "talla": m.get("talla") or "N/A", "ent": 0, "sal": 0})
+            if m["tipo"] == "ENTRADA": res[k]["ent"] += m["cantidad"]
+            else: res[k]["sal"] += m["cantidad"]
+        
+        return pd.DataFrame([
+            {"Categoría": v["categoria"], "Ítem": v["item"], "Talla": v["talla"], 
+             "Entradas": v["ent"], "Salidas": v["sal"], "Stock": v["ent"]-v["sal"]} 
+            for v in res.values()
+        ])
 
 
     st.markdown('<div class="results-card">', unsafe_allow_html=True)
