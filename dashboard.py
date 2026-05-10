@@ -1199,6 +1199,51 @@ with tab_mensual:
 # =================================================
 # ✅ TAB — SEGUIMIENTO AGENDAS
 # =================================================
+
+@st.fragment
+def render_agendas_alerta_fragment(df_alerta_raw, grupos_validos, columnas_base):
+    zonas_sel = []
+    with st.expander("Seleccionar Zona"):
+        for z in grupos_validos:
+            if st.checkbox(z, value=True, key=f"pen_zona_frag_{z}"):
+                zonas_sel.append(z)
+    
+    df_alerta = df_alerta_raw[df_alerta_raw["grupo"].isin(zonas_sel)] if zonas_sel else df_alerta_raw
+
+    if df_alerta.empty:
+        st.info("✅ No hay agendas en ALERTA.")
+    else:
+        st.info("💡 Haz clic en una fila para ver el detalle de la tarea.")
+        # Preparamos los datos ordenados para que la selección coincida con el índice
+        df_display_alerta = df_alerta[columnas_base].sort_values("fecha de visita").reset_index(drop=True)
+        # TABLA RESUMIDA: Inspector, Contrato, Localidad
+        cols_tabla = ["inspector", "contrato", "localidad"]
+        
+        seleccion = st.dataframe(
+            df_display_alerta[cols_tabla], 
+            use_container_width=True,
+            on_select="rerun",
+            key="tabla_agendas_alerta_fragment",
+            hide_index=True,
+            selection_mode="single-row"
+        )
+        st.error(f"🚨 TOTAL ALERTAS: {len(df_alerta)}")
+
+        if seleccion.selection.rows:
+            idx = seleccion.selection.rows[0]
+            fila = df_display_alerta.iloc[idx]
+            
+            # MOSTRAR INFORMACIÓN EN EL DIÁLOGO (POR ENCIMA DE LA PÁGINA)
+            fecha_str = fila['fecha de visita'].strftime('%Y-%m-%d') if hasattr(fila['fecha de visita'], 'strftime') else str(fila['fecha de visita'])
+            mostrar_detalle_tarea(
+                fila["contrato"], 
+                fila["detalle de tarea"],
+                direccion=fila["direccion"],
+                fecha=fecha_str,
+                localidad=fila["localidad"],
+                inspector=fila["inspector"]
+            )
+
 with tab_agendas:
     st.markdown("""
         <style>
@@ -1339,51 +1384,10 @@ with tab_agendas:
             else:
                 st.dataframe(df_prox[columnas_base].sort_values("fecha de visita"), use_container_width=True)
 
-          elif opcion_age == "🚨 Alerta":
+                    elif opcion_age == "🚨 Alerta":
             st.markdown("### 🚨 ALERTA")
             df_alerta_raw = df[(df["estado"].str.upper().str.contains("ASIGNAD", na=False)) & (df["prioridad"].str.upper().isin(["ALTA", "CRITICA"])) & (df["estado_alerta"] == "ALERTA")].copy()
-            
-            zonas_sel = []
-            with st.expander("Seleccionar Zona"):
-                for z in grupos_validos:
-                    if st.checkbox(z, value=True, key=f"pen_zona_{z}"):
-                        zonas_sel.append(z)
-            
-            df_alerta = df_alerta_raw[df_alerta_raw["grupo"].isin(zonas_sel)] if zonas_sel else df_alerta_raw
-
-            if df_alerta.empty:
-                st.info("✅ No hay agendas en ALERTA.")
-            else:
-                st.info("💡 Haz clic en una fila para ver el detalle de la tarea.")
-                # Preparamos los datos ordenados para que la selección coincida con el índice
-                df_display_alerta = df_alerta[columnas_base].sort_values("fecha de visita").reset_index(drop=True)
-                # TABLA RESUMIDA: Inspector, Contrato, Localidad
-                cols_tabla = ["inspector", "contrato", "localidad"]
-                
-                seleccion = st.dataframe(
-                    df_display_alerta[cols_tabla], 
-                    use_container_width=True,
-                    on_select="rerun",
-                    key="tabla_agendas_alerta_v_final",
-                    hide_index=True,
-                    selection_mode="single-row"
-                )
-                st.error(f"🚨 TOTAL ALERTAS: {len(df_alerta)}")
-
-                if seleccion.selection.rows:
-                    idx = seleccion.selection.rows[0]
-                    fila = df_display_alerta.iloc[idx]
-                    
-                    # MOSTRAR INFORMACIÓN EN EL DIÁLOGO (POR ENCIMA DE LA PÁGINA)
-                    fecha_str = fila['fecha de visita'].strftime('%Y-%m-%d') if hasattr(fila['fecha de visita'], 'strftime') else str(fila['fecha de visita'])
-                    mostrar_detalle_tarea(
-                            fila["contrato"], 
-                            fila["detalle de tarea"],
-                            direccion=fila["direccion"],
-                            fecha=fecha_str,
-                            localidad=fila["localidad"],
-                            inspector=fila["inspector"]
-                        )
+            render_agendas_alerta_fragment(df_alerta_raw, grupos_validos, columnas_base)
     else:
         st.info("No se pudo cargar la bitácora desde GitHub para agendas.")
 # ===================================================
