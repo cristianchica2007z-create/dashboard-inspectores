@@ -586,7 +586,7 @@ if st.session_state.usuario is None:
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
             overflow: hidden !important;
             width: 100% !important;
-            max-width: 950px !important;
+            max-width: 1100px !important; /* Tarjeta mucho más grande y ancha */
             margin: auto !important;
             display: flex !important;
             align-items: stretch !important;
@@ -596,7 +596,7 @@ if st.session_state.usuario is None:
         /* Mitad Izquierda (Formulario) -> CORRECTO SELECTOR DE STREAMLIT */
         div[data-testid="stColumn"]:nth-of-type(1) {{
             background-color: white !important;
-            padding: 4rem 3rem !important;
+            padding: 5rem 4rem !important;
             display: flex !important;
             flex-direction: column !important;
             justify-content: center !important;
@@ -606,10 +606,11 @@ if st.session_state.usuario is None:
         /* Mitad Derecha (Texto verde) -> CORRECTO SELECTOR DE STREAMLIT */
         div[data-testid="stColumn"]:nth-of-type(2) {{
             background: linear-gradient(135deg, #1A3820 0%, #39A935 100%) !important;
-            padding: 4rem 3.5rem 4rem 5rem !important; /* Más espacio a la izquierda para el logo circular */
+            padding: 5rem 4rem !important;
             display: flex !important;
             flex-direction: column !important;
             justify-content: center !important;
+            align-items: center !important; /* Centrar todo el contenido para evitar choque con el logo */
             color: white !important;
             margin: 0 !important;
         }}
@@ -624,12 +625,13 @@ if st.session_state.usuario is None:
             font-family: sans-serif;
             position: relative;
             z-index: 5;
+            text-align: center;
         }}
         .right-text {{
             font-size: 1.1rem;
             line-height: 1.6;
             color: rgba(255,255,255,0.95);
-            text-align: justify;
+            text-align: center;
             font-family: sans-serif;
             margin-bottom: 2rem;
             position: relative;
@@ -725,12 +727,12 @@ if st.session_state.usuario is None:
             <div class="circle-logo">
                 <img src="{imago_src}" alt="e&c Imagotipo">
             </div>
-            <div class="right-title" style="font-size: 2.2rem; line-height: 1.2;">SEGUIMIENTO OPERATIVO<br>EJE CAFETERO</div>
+            <div class="right-title" style="font-size: 2.2rem; line-height: 1.3;">SEGUIMIENTO OPERATIVO<br>EJE CAFETERO</div>
             <div class="right-text" style="margin-top: 2rem; margin-bottom: 2.5rem;">
-                <div style="font-size: 3.5rem; font-weight: 900; letter-spacing: 2px; color: white;">{hora_str}</div>
-                <div style="font-size: 1.5rem; font-weight: 400; opacity: 0.9; margin-top: 0.2rem; text-transform: uppercase;">{fecha_str}</div>
+                <div style="font-size: 4rem; font-weight: 900; letter-spacing: 2px; color: white;">{hora_str}</div>
+                <div style="font-size: 1.5rem; font-weight: 400; opacity: 0.9; margin-top: 0.5rem; text-transform: uppercase;">{fecha_str}</div>
             </div>
-            <div style="display: flex; justify-content: flex-end;">
+            <div style="display: flex; justify-content: center; width: 100%;">
                 <div class="chat-bubble">
                     <span style='color:#39A935;'>¡Hola!</span> ¿Necesita Ayuda?
                 </div>
