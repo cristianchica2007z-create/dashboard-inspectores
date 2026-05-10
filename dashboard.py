@@ -503,9 +503,9 @@ def td_to_str(td):
     s2 = s % 60
     return f"{h}h {m}m {s2}s" if h > 0 else f"{m}m {s2}s"
 
-def render_kpi(label, value, icon=""):
+def render_kpi(label, value, icon="", extra_style=""):
     st.markdown(f"""
-        <div class="metric-card">
+        <div class="metric-card" style="{extra_style}">
             <div class="metric-label">{icon} {label}</div>
             <div class="metric-value">{value}</div>
         </div>
@@ -1197,7 +1197,7 @@ with tab_operacion:
             render_kpi("Recorrido Prom.", prom_recorrido_global, "🚗")
             render_kpi("Total Tareas", total_ordenes, "📋")
             render_kpi("Efectivas", total_efectivas, "✅")
-            render_kpi("% Efectividad", f"{porcentaje}%", "📈")
+            render_kpi("% Efectividad", f"{porcentaje}%", "📈", extra_style="padding-bottom: 2.5rem;")
     
         with col_main_view:
             # ---------------------------------------------------
@@ -1260,7 +1260,7 @@ with tab_operacion:
                 )
                 df_sin_actividad = df_sin_actividad.sort_values("Supervisor")
         
-                st.dataframe(df_sin_actividad, use_container_width=True, height=120, hide_index=True)
+                st.dataframe(df_sin_actividad, use_container_width=True, height=160, hide_index=True)
             else:
                 pass # Diseño limpio sin mensajes de éxito si no hay inactivos
     
