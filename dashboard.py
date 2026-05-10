@@ -193,6 +193,7 @@ def get_processed_agendas_data(repo, token):
     df["estado_alerta"] = df.apply(calc_alerta, axis=1)
     return df
 
+@st.cache_data(ttl=300)
 def fetch_github_excel(repo, path, token, branch="main"):
     headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
     url = f"https://api.github.com/repos/{repo}/contents/{path}"
@@ -450,7 +451,6 @@ def process_adicionales_data(df):
     
     return df
 
-@st.cache_data(ttl=600)
 @st.cache_data(ttl=600)
 def extract_excel_links(path):
     from openpyxl import load_workbook
