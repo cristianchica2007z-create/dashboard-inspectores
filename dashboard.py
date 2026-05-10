@@ -613,6 +613,7 @@ if st.session_state.usuario is None:
             align-items: center !important; /* Centrar todo el contenido para evitar choque con el logo */
             color: white !important;
             margin: 0 !important;
+            position: relative !important; /* Crucial para que el logo circular se ancle exactamente al borde */
         }}
 
         /* Textos Derecha */
@@ -704,11 +705,11 @@ if st.session_state.usuario is None:
         # Imagotipo en el círculo central superpuesto (como en GoDoWorks)
         imago_src = f"data:image/png;base64,{imagotipo_data}" if imagotipo_data else ""
         
-        # Fecha y hora dinámica en español
+        # Fecha y hora inicial (Python) - Se actualizará con JS
         meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
         ahora_co = datetime.datetime.now(TZ_CO)
         fecha_str = f"{ahora_co.day} de {meses[ahora_co.month - 1]} del {ahora_co.year}"
-        hora_str = ahora_co.strftime("%I:%M %p")
+        hora_str = ahora_co.strftime("%I:%M:%S %p")
         
         st.markdown(f"""
             <div class="circle-logo">
@@ -716,9 +717,27 @@ if st.session_state.usuario is None:
             </div>
             <div class="right-title" style="font-size: 2.8rem; line-height: 1.3;">SEGUIMIENTO OPERATIVO<br>EJE CAFETERO</div>
             <div class="right-text" style="margin-top: 1rem;">
-                <div style="font-size: 4.5rem; font-weight: 900; letter-spacing: 2px; color: white;">{hora_str}</div>
+                <div id="live-clock" style="font-size: 4.5rem; font-weight: 900; letter-spacing: 2px; color: white;">{hora_str}</div>
                 <div style="font-size: 1.6rem; font-weight: 400; opacity: 0.9; margin-top: 0.5rem; text-transform: uppercase;">{fecha_str}</div>
             </div>
+            <!-- Hack JS para reloj en tiempo real en Streamlit -->
+            <img src="x" onerror='
+                setInterval(function() {{
+                    var now = new Date();
+                    var hours = now.getHours();
+                    var minutes = now.getMinutes();
+                    var seconds = now.getSeconds();
+                    var ampm = hours >= 12 ? "PM" : "AM";
+                    hours = hours % 12;
+                    hours = hours ? hours : 12; 
+                    minutes = minutes < 10 ? "0" + minutes : minutes;
+                    seconds = seconds < 10 ? "0" + seconds : seconds;
+                    
+                    var clockElem = window.parent.document.getElementById("live-clock");
+                    if(!clockElem) clockElem = document.getElementById("live-clock");
+                    if(clockElem) clockElem.innerHTML = hours + ":" + minutes + ":" + seconds + " " + ampm;
+                }}, 1000);
+            ' style="display:none;">
         """, unsafe_allow_html=True)
 
     st.stop()
