@@ -1260,7 +1260,7 @@ with tab_operacion:
                 )
                 df_sin_actividad = df_sin_actividad.sort_values("Supervisor")
         
-                st.dataframe(df_sin_actividad, use_container_width=True, height=200, hide_index=True)
+                st.dataframe(df_sin_actividad, use_container_width=True, height=120, hide_index=True)
             else:
                 pass # Diseño limpio sin mensajes de éxito si no hay inactivos
     
