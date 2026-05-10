@@ -1638,58 +1638,43 @@ with tab_asignadas:
 with tab_inv_v2:
     st.markdown("""
         <style>
-            /* Contenedor principal del menú lateral */
-            .inv-menu-container {
-                background-color: #f8f9fa; /* Fondo claro */
-                border-radius: 10px;
-                box-shadow: 2px 2px 10px rgba(0,0,0,0.05);
-                padding: 1rem;
-                height: 100%; /* Ocupa toda la altura disponible */
+            #inv-v2-container {
+                background-color: transparent;
+                font-family: sans-serif;
             }
-
-            /* Estilo para el expander que actúa como menú */
-            .stExpander {
-                border-left: 6px solid #1e3a8a; /* Barra de color distintiva */
-                background-color: #e9ecef; /* Fondo del encabezado del expander */
+            #inv-v2-container .filter-card {
+                background-color: #ffffff;
+                border: 1px solid #e2e8f0;
                 border-radius: 8px;
-                margin-bottom: 10px;
-                transition: all 0.3s ease-in-out; /* Transición suave */
+                padding: 20px;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+                margin-bottom: 20px;
             }
-            .stExpander:hover {
-                background-color: #dee2e6; /* Cambio de color al pasar el mouse */
+            #inv-v2-container .filter-title {
+                color: #0284c7;
+                text-align: center;
+                font-size: 1.1rem;
+                font-weight: bold;
+                margin-bottom: 20px;
+                text-transform: uppercase;
+                letter-spacing: 1px;
             }
-
-            /* Estilo del texto del encabezado del expander */
-            .stExpander > div:first-child > div:first-child > div:first-child {
-                color: #1e3a8a; /* Color del texto del encabezado */
-                font-weight: 600;
-                padding: 10px 15px;
-                font-size: 1rem;
+            #inv-v2-container .results-card {
+                background-color: #ffffff;
+                border: 1px solid #e2e8f0;
+                border-radius: 8px;
+                padding: 10px;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
             }
-
-            /* Estilo del contenido del expander (los radio buttons) */
-            .stExpander > div:last-child {
-                padding-top: 10px;
-                padding-bottom: 10px;
-                padding-left: 15px;
-                padding-right: 15px;
-                background-color: white; /* Fondo del contenido */
-                border-bottom-left-radius: 8px;
-                border-bottom-right-radius: 8px;
-            }
-
-            /* Estilo para las etiquetas de sección dentro del contenido principal */
-            .section-label {
+            #inv-v2-container .section-label {
                 font-weight: 600;
                 color: #343a40;
                 margin-bottom: 15px;
                 font-size: 1.3rem;
             }
-
         </style>
+        <div id="inv-v2-container">
     """, unsafe_allow_html=True)
-
-    # --- CONFIGURACIÓN Y CARGA DE DATOS ---
     CATALOGO_DEFAULT = {
         "EPPs": {
             "Monogafas":  {"tallas": False},
@@ -1725,29 +1710,17 @@ with tab_inv_v2:
     if not isinstance(movimientos, list): movimientos = []
     if not isinstance(catalogo, dict) or not catalogo: catalogo = CATALOGO_DEFAULT.copy()
 
-    # --- UI LAYOUT: MENÚ LATERAL INTERNO ---
-    # Layout Principal del Inventario
-    col_nav, col_main = st.columns([1.2, 4]) 
 
-    with col_nav:
-        st.markdown(f"""
-            <div class="inventory-sidebar">
-                <div class="sidebar-header">
-                    <h3 style='color: white; margin:0;'>MENÚ INVENTARIO</h3>
-                    <p style='color: #cbd5e1; font-size: 0.8rem; margin:0;'>{st.session_state.usuario.upper() if st.session_state.usuario else "USUARIO"}</p>
-                    <p style='color: #94a3b8; font-size: 0.7rem;'>E&C INGENIERÍA SAS</p>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
+    st.markdown("""
+        <div class="filter-card">
+            <div class="filter-title">FILTROS DE INVENTARIO</div>
+    """, unsafe_allow_html=True)
+    
+    col_sede, _ = st.columns([1, 3])
+    with col_sede:
+        sede_global = st.selectbox("📍 Seleccionar Sede Global:", SEDES_INV, key="inv_sede_global")
         
-        opcion_inv = st.radio(
-            "Navegación",
-            ["📊 Stock Actual", "➕ Registrar Entrada", "➖ Registrar Salida", "📜 Historial", "⚙️ Configuración Catálogo"],
-            key="inv_nav_radio"
-        )
-
-    with col_main:
-        # --- LÓGICA DE STOCK (Inspirada en tu código Flask) ---
+    st.markdown('</div>', unsafe_allow_html=True)
         def calcular_stock(movs, sede):
             res = {}
             for m in [x for x in movs if x["sede"] == sede]:
@@ -1762,209 +1735,211 @@ with tab_inv_v2:
                 for v in res.values()
             ])
 
-        if opcion_inv == "📊 Stock Actual":
-            st.markdown('<p class="section-label">📊 Disponibilidad de Stock</p>', unsafe_allow_html=True)
-            sede_consulta = st.selectbox("📍 Seleccionar Sede", SEDES_INV, key="inv_sede_stock")
+
+    st.markdown('<div class="results-card">', unsafe_allow_html=True)
+    t_stock, t_ent, t_sal, t_hist, t_conf = st.tabs(["📊 Stock Actual", "➕ Registrar Entrada", "➖ Registrar Salida", "📜 Historial", "⚙️ Configuración Catálogo"])
+    
+    with t_stock:
+        df_stock = calcular_stock(movimientos, sede_global)
+        if not df_stock.empty:
+            st.dataframe(df_stock.sort_values(["Categoría", "Stock"]), use_container_width=True, hide_index=True)
+        else:
+            st.info("No hay inventario registrado en esta sede.")
             
-            df_stock = calcular_stock(movimientos, sede_consulta)
-            if not df_stock.empty:
-                # Aplicar estilo de tabla limpia
-                st.dataframe(df_stock.sort_values(["Categoría", "Stock"]), use_container_width=True, hide_index=True)
-            else:
-                st.info("No hay inventario registrado en esta sede.")
+    with t_ent:
+        with st.form("form_entrada"):
+            c1, c2, c3 = st.columns(3)
+            f_sede = c1.selectbox("Sede Destino", SEDES_INV)
+            f_resp = c2.selectbox("Responsable Recibo", RESPONSABLES_INV)
+            f_fecha = c3.date_input("Fecha Recibo")
 
-        elif opcion_inv == "➕ Registrar Entrada":
-            st.markdown('<p class="section-label">📥 Ingreso de Mercancía</p>', unsafe_allow_html=True)
-            with st.form("form_entrada"):
-                c1, c2, c3 = st.columns(3)
-                f_sede = c1.selectbox("Sede Destino", SEDES_INV)
-                f_resp = c2.selectbox("Responsable Recibo", RESPONSABLES_INV)
-                f_fecha = c3.date_input("Fecha Recibo")
+            st.markdown("---")
+            c4, c5, c6, c7 = st.columns([1.5, 1.5, 1, 1])
+            f_cat = c4.selectbox("Categoría", list(catalogo.keys()))
+            f_item = c5.selectbox("Producto", list(catalogo[f_cat].keys()))
+            
+            opciones_talla = catalogo[f_cat][f_item].get("opciones_talla", [])
+            f_talla = c6.selectbox("Talla", opciones_talla if opciones_talla else ["N/A"])
+            f_cant = c7.number_input("Cantidad", min_value=1, step=1)
+            f_obs = st.text_area("Observaciones / Remisión")
 
-                st.markdown("---")
-                c4, c5, c6, c7 = st.columns([1.5, 1.5, 1, 1])
-                f_cat = c4.selectbox("Categoría", list(catalogo.keys()))
-                f_item = c5.selectbox("Producto", list(catalogo[f_cat].keys()))
+            if st.form_submit_button("💾 Guardar Entrada"):
+                nuevo = {
+                    "tipo": "ENTRADA", "fecha": str(f_fecha), "sede": f_sede,
+                    "responsable": f_resp, "categoria": f_cat, "item": f_item,
+                    "talla": f_talla if f_talla != "N/A" else None, "cantidad": f_cant,
+                    "observacion": f_obs, "timestamp": datetime.datetime.now(TZ_CO).strftime("%Y-%m-%d %H:%M:%S")
+                }
+                movimientos.append(nuevo)
+                save_github_json(inv_repo, "INVENTARIO_V2.json", inv_token, movimientos, f"Entrada {f_item}")
+                st.success("Ingreso registrado")
+                st.rerun()
+
+    with t_sal:
+        with st.form("form_salida"):
+            c1, c2, c3 = st.columns(3)
+            f_sede = c1.selectbox("Sede Origen", SEDES_INV)
+            f_resp = c2.selectbox("Entrega", RESPONSABLES_INV)
+            f_insp = c3.selectbox("Recibe (Inspector)", inspectores_lista)
+
+            st.markdown("---")
+            c4, c5, c6, c7 = st.columns([1.5, 1.5, 1, 1])
+            f_cat = c4.selectbox("Categoría", list(catalogo.keys()))
+            f_item = c5.selectbox("Producto", list(catalogo[f_cat].keys()))
+            
+            opciones_talla = catalogo[f_cat][f_item].get("opciones_talla", [])
+            f_talla = c6.selectbox("Talla", opciones_talla if opciones_talla else ["N/A"])
+            f_cant = c7.number_input("Cantidad a entregar", min_value=1, step=1)
+            
+            if st.form_submit_button("✅ Procesar Salida"):
+                # Validación de Stock al estilo Flask
+                df_stock = calcular_stock(movimientos, f_sede)
+                talla_val = f_talla if f_talla != "N/A" else "N/A"
                 
-                opciones_talla = catalogo[f_cat][f_item].get("opciones_talla", [])
-                f_talla = c6.selectbox("Talla", opciones_talla if opciones_talla else ["N/A"])
-                f_cant = c7.number_input("Cantidad", min_value=1, step=1)
-                f_obs = st.text_area("Observaciones / Remisión")
-
-                if st.form_submit_button("💾 Guardar Entrada"):
+                match = df_stock[(df_stock["Categoría"] == f_cat) & (df_stock["Ítem"] == f_item) & (df_stock["Talla"] == talla_val)]
+                disponible = match["Stock"].iloc[0] if not match.empty else 0
+                
+                if f_cant > disponible:
+                    st.error(f"❌ No hay suficiente stock. Disponible: {disponible}")
+                else:
                     nuevo = {
-                        "tipo": "ENTRADA", "fecha": str(f_fecha), "sede": f_sede,
-                        "responsable": f_resp, "categoria": f_cat, "item": f_item,
-                        "talla": f_talla if f_talla != "N/A" else None, "cantidad": f_cant,
-                        "observacion": f_obs, "timestamp": datetime.datetime.now(TZ_CO).strftime("%Y-%m-%d %H:%M:%S")
+                        "tipo": "SALIDA", "fecha": str(datetime.date.today()), "sede": f_sede,
+                        "responsable": f_resp, "inspector": f_insp, "categoria": f_cat,
+                        "item": f_item, "talla": f_talla if f_talla != "N/A" else None,
+                        "cantidad": f_cant, "timestamp": datetime.datetime.now(TZ_CO).strftime("%Y-%m-%d %H:%M:%S")
                     }
                     movimientos.append(nuevo)
-                    save_github_json(inv_repo, "INVENTARIO_V2.json", inv_token, movimientos, f"Entrada {f_item}")
-                    st.success("Ingreso registrado")
+                    save_github_json(inv_repo, "INVENTARIO_V2.json", inv_token, movimientos, f"Salida {f_item}")
+                    st.success("Entrega registrada con éxito")
                     st.rerun()
 
-        elif opcion_inv == "➖ Registrar Salida":
-            st.markdown('<p class="section-label">📤 Salida de Mercancía / Asignación</p>', unsafe_allow_html=True)
-            with st.form("form_salida"):
-                c1, c2, c3 = st.columns(3)
-                f_sede = c1.selectbox("Sede Origen", SEDES_INV)
-                f_resp = c2.selectbox("Entrega", RESPONSABLES_INV)
-                f_insp = c3.selectbox("Recibe (Inspector)", inspectores_lista)
+    with t_hist:
+        if movimientos:
+            df_h = pd.DataFrame(movimientos)
+            # Añadir filtros al historial para que sea más útil
+            col_h1, col_h2, col_h3 = st.columns(3)
+            filter_sede = col_h1.selectbox("📍 FILTRAR SEDE", ["TODAS"] + SEDES_INV, key="hist_filter_sede")
+            filter_tipo = col_h2.selectbox("MOVIMIENTO", ["TODOS", "ENTRADA", "SALIDA"], key="hist_filter_tipo")
+            filter_cat  = col_h3.selectbox("CATEGORÍA", ["TODAS"] + list(catalogo.keys()), key="hist_filter_cat")
 
-                st.markdown("---")
-                c4, c5, c6, c7 = st.columns([1.5, 1.5, 1, 1])
-                f_cat = c4.selectbox("Categoría", list(catalogo.keys()))
-                f_item = c5.selectbox("Producto", list(catalogo[f_cat].keys()))
+            filtered_df_h = df_h.copy()
+            if filter_sede != "TODAS":
+                filtered_df_h = filtered_df_h[filtered_df_h["sede"] == filter_sede]
+            if filter_tipo != "TODOS":
+                filtered_df_h = filtered_df_h[filtered_df_h["tipo"] == filter_tipo]
+            if filter_cat != "TODAS":
+                filtered_df_h = filtered_df_h[filtered_df_h["categoria"] == filter_cat]
+
+            st.dataframe(filtered_df_h.sort_values("timestamp", ascending=False), use_container_width=True, hide_index=True)
+        else:
+            st.info("No hay movimientos registrados.")
+
+    with t_conf:
+        st.markdown('<p class="section-label">⚙️ Configuración del Maestro</p>', unsafe_allow_html=True)
+        
+        with st.expander("Ver Catálogo Actual"):
+            st.json(catalogo)
+            
+        st.markdown('<p class="section-label">✨ Nueva Referencia</p>', unsafe_allow_html=True)
+        with st.container(border=True): # Contenedor para agrupar el formulario
+            with st.form("form_config_cat", clear_on_submit=True):
+                c1, c2 = st.columns(2)
                 
-                opciones_talla = catalogo[f_cat][f_item].get("opciones_talla", [])
-                f_talla = c6.selectbox("Talla", opciones_talla if opciones_talla else ["N/A"])
-                f_cant = c7.number_input("Cantidad a entregar", min_value=1, step=1)
+                # Permitir añadir a categorías existentes o crear una nueva
+                existing_categories = list(catalogo.keys())
+                new_category_option = "Crear nueva categoría..."
+                cat_choice = c1.selectbox("Categoría Destino", existing_categories + [new_category_option], key="config_cat_destino")
                 
-                if st.form_submit_button("✅ Procesar Salida"):
-                    # Validación de Stock al estilo Flask
-                    df_stock = calcular_stock(movimientos, f_sede)
-                    talla_val = f_talla if f_talla != "N/A" else "N/A"
-                    
-                    match = df_stock[(df_stock["Categoría"] == f_cat) & (df_stock["Ítem"] == f_item) & (df_stock["Talla"] == talla_val)]
-                    disponible = match["Stock"].iloc[0] if not match.empty else 0
-                    
-                    if f_cant > disponible:
-                        st.error(f"❌ No hay suficiente stock. Disponible: {disponible}")
-                    else:
-                        nuevo = {
-                            "tipo": "SALIDA", "fecha": str(datetime.date.today()), "sede": f_sede,
-                            "responsable": f_resp, "inspector": f_insp, "categoria": f_cat,
-                            "item": f_item, "talla": f_talla if f_talla != "N/A" else None,
-                            "cantidad": f_cant, "timestamp": datetime.datetime.now(TZ_CO).strftime("%Y-%m-%d %H:%M:%S")
+                n_cat = cat_choice
+                if cat_choice == new_category_option:
+                    n_cat = c1.text_input("Nombre de la nueva categoría", key="config_nueva_cat_nombre")
+                    if not n_cat:
+                        st.warning("Por favor, introduce un nombre para la nueva categoría.")
+                        st.stop()
+
+                n_item = c2.text_input("Nombre del Ítem", key="config_item_nombre")
+                n_tallas = st.checkbox("¿Maneja tallas?", key="config_item_tallas")
+                n_opciones = st.text_input("Opciones de Talla (separadas por coma, ej: S,M,L)", disabled=not n_tallas, key="config_item_opciones_talla")
+                
+                if st.form_submit_button("Añadir al Catálogo"):
+                    if not n_item:
+                        st.error("El nombre del ítem es obligatorio.")
+                    elif n_cat not in catalogo:
+                        # Nueva categoría
+                        catalogo[n_cat] = {}
+                        catalogo[n_cat][n_item] = {
+                            "tallas": n_tallas,
+                            "opciones_talla": [x.strip() for x in n_opciones.split(",")] if n_tallas else []
                         }
-                        movimientos.append(nuevo)
-                        save_github_json(inv_repo, "INVENTARIO_V2.json", inv_token, movimientos, f"Salida {f_item}")
-                        st.success("Entrega registrada con éxito")
-                        st.rerun()
-
-        elif opcion_inv == "📜 Historial":
-            st.markdown('<p class="section-label">📜 Bitácora de Movimientos</p>', unsafe_allow_html=True)
-            if movimientos:
-                df_h = pd.DataFrame(movimientos)
-                # Añadir filtros al historial para que sea más útil
-                col_h1, col_h2, col_h3 = st.columns(3)
-                filter_sede = col_h1.selectbox("📍 FILTRAR SEDE", ["TODAS"] + SEDES_INV, key="hist_filter_sede")
-                filter_tipo = col_h2.selectbox("MOVIMIENTO", ["TODOS", "ENTRADA", "SALIDA"], key="hist_filter_tipo")
-                filter_cat  = col_h3.selectbox("CATEGORÍA", ["TODAS"] + list(catalogo.keys()), key="hist_filter_cat")
-
-                filtered_df_h = df_h.copy()
-                if filter_sede != "TODAS":
-                    filtered_df_h = filtered_df_h[filtered_df_h["sede"] == filter_sede]
-                if filter_tipo != "TODOS":
-                    filtered_df_h = filtered_df_h[filtered_df_h["tipo"] == filter_tipo]
-                if filter_cat != "TODAS":
-                    filtered_df_h = filtered_df_h[filtered_df_h["categoria"] == filter_cat]
-
-                st.dataframe(filtered_df_h.sort_values("timestamp", ascending=False), use_container_width=True, hide_index=True)
-            else:
-                st.info("No hay movimientos registrados.")
-
-        elif opcion_inv == "⚙️ Configuración Catálogo":
-            st.markdown('<p class="section-label">⚙️ Configuración del Maestro</p>', unsafe_allow_html=True)
-            
-            with st.expander("Ver Catálogo Actual"):
-                st.json(catalogo)
-                
-            st.markdown('<p class="section-label">✨ Nueva Referencia</p>', unsafe_allow_html=True)
-            with st.container(border=True): # Contenedor para agrupar el formulario
-                with st.form("form_config_cat", clear_on_submit=True):
-                    c1, c2 = st.columns(2)
-                    
-                    # Permitir añadir a categorías existentes o crear una nueva
-                    existing_categories = list(catalogo.keys())
-                    new_category_option = "Crear nueva categoría..."
-                    cat_choice = c1.selectbox("Categoría Destino", existing_categories + [new_category_option], key="config_cat_destino")
-                    
-                    n_cat = cat_choice
-                    if cat_choice == new_category_option:
-                        n_cat = c1.text_input("Nombre de la nueva categoría", key="config_nueva_cat_nombre")
-                        if not n_cat:
-                            st.warning("Por favor, introduce un nombre para la nueva categoría.")
-                            st.stop()
-
-                    n_item = c2.text_input("Nombre del Ítem", key="config_item_nombre")
-                    n_tallas = st.checkbox("¿Maneja tallas?", key="config_item_tallas")
-                    n_opciones = st.text_input("Opciones de Talla (separadas por coma, ej: S,M,L)", disabled=not n_tallas, key="config_item_opciones_talla")
-                    
-                    if st.form_submit_button("Añadir al Catálogo"):
-                        if not n_item:
-                            st.error("El nombre del ítem es obligatorio.")
-                        elif n_cat not in catalogo:
-                            # Nueva categoría
-                            catalogo[n_cat] = {}
-                            catalogo[n_cat][n_item] = {
-                                "tallas": n_tallas,
-                                "opciones_talla": [x.strip() for x in n_opciones.split(",")] if n_tallas else []
-                            }
-                            resp_cat = save_github_json(inv_repo, "CATALOGO_V2.json", inv_token, catalogo, f"Añadida categoría '{n_cat}' y ítem '{n_item}' al catálogo", inv_branch)
-                            if resp_cat.status_code in (200, 201):
-                                st.success(f"Categoría '{n_cat}' y ítem '{n_item}' añadidos correctamente.")
-                                fetch_github_json.clear()
-                                st.rerun()
-                            else:
-                                st.error(f"❌ Error al guardar el catálogo en GitHub: {resp_cat.text}")
-                        elif n_item in catalogo[n_cat]:
-                            st.error(f"El ítem '{n_item}' ya existe en la categoría '{n_cat}'.")
+                        resp_cat = save_github_json(inv_repo, "CATALOGO_V2.json", inv_token, catalogo, f"Añadida categoría '{n_cat}' y ítem '{n_item}' al catálogo", inv_branch)
+                        if resp_cat.status_code in (200, 201):
+                            st.success(f"Categoría '{n_cat}' y ítem '{n_item}' añadidos correctamente.")
+                            fetch_github_json.clear()
+                            st.rerun()
                         else:
-                            # Categoría existente, nuevo ítem
-                            catalogo[n_cat][n_item] = {
-                                "tallas": n_tallas,
-                                "opciones_talla": [x.strip() for x in n_opciones.split(",")] if n_tallas else []
-                            }
-                            resp_cat = save_github_json(inv_repo, "CATALOGO_V2.json", inv_token, catalogo, f"Añadido '{n_item}' a la categoría '{n_cat}'", inv_branch)
-                            if resp_cat.status_code in (200, 201):
-                                st.success(f"Ítem '{n_item}' añadido a la categoría '{n_cat}' correctamente.")
-                                fetch_github_json.clear()
-                                st.rerun()
-                            else:
-                                st.error(f"❌ Error al guardar el catálogo en GitHub: {resp_cat.text}")
+                            st.error(f"❌ Error al guardar el catálogo en GitHub: {resp_cat.text}")
+                    elif n_item in catalogo[n_cat]:
+                        st.error(f"El ítem '{n_item}' ya existe en la categoría '{n_cat}'.")
+                    else:
+                        # Categoría existente, nuevo ítem
+                        catalogo[n_cat][n_item] = {
+                            "tallas": n_tallas,
+                            "opciones_talla": [x.strip() for x in n_opciones.split(",")] if n_tallas else []
+                        }
+                        resp_cat = save_github_json(inv_repo, "CATALOGO_V2.json", inv_token, catalogo, f"Añadido '{n_item}' a la categoría '{n_cat}'", inv_branch)
+                        if resp_cat.status_code in (200, 201):
+                            st.success(f"Ítem '{n_item}' añadido a la categoría '{n_cat}' correctamente.")
+                            fetch_github_json.clear()
+                            st.rerun()
+                        else:
+                            st.error(f"❌ Error al guardar el catálogo en GitHub: {resp_cat.text}")
 
-            st.markdown("### 📐 Agregar talla a ítem existente")
-            # Filtrar solo los ítems que realmente usan tallas
-            items_con_tallas = []
-            for cat, items in catalogo.items():
-                for item_name, item_props in items.items():
-                    if item_props.get("tallas"):
-                        items_con_tallas.append((cat, item_name))
-            
-            if items_con_tallas:
-                with st.container(border=True): # Contenedor para agrupar el formulario
-                    with st.form("form_nueva_talla_v2", clear_on_submit=True):
-                        selected_item_str = st.selectbox(
-                            "Selecciona un ítem para añadir talla",
-                            [f"{cat} → {item_name}" for cat, item_name in items_con_tallas],
-                            key="config_sel_item_talla"
-                        )
-                        new_talla = st.text_input("Nueva talla a añadir", key="config_nueva_talla_input")
-                        
-                        if st.form_submit_button("➕ Añadir Talla"):
-                            if not new_talla.strip():
-                                st.error("Por favor, introduce una talla válida.")
-                            else:
-                                selected_cat, selected_item = selected_item_str.split(" → ")
+        st.markdown("### 📐 Agregar talla a ítem existente")
+        # Filtrar solo los ítems que realmente usan tallas
+        items_con_tallas = []
+        for cat, items in catalogo.items():
+            for item_name, item_props in items.items():
+                if item_props.get("tallas"):
+                    items_con_tallas.append((cat, item_name))
+        
+        if items_con_tallas:
+            with st.container(border=True): # Contenedor para agrupar el formulario
+                with st.form("form_nueva_talla_v2", clear_on_submit=True):
+                    selected_item_str = st.selectbox(
+                        "Selecciona un ítem para añadir talla",
+                        [f"{cat} → {item_name}" for cat, item_name in items_con_tallas],
+                        key="config_sel_item_talla"
+                    )
+                    new_talla = st.text_input("Nueva talla a añadir", key="config_nueva_talla_input")
+                    
+                    if st.form_submit_button("➕ Añadir Talla"):
+                        if not new_talla.strip():
+                            st.error("Por favor, introduce una talla válida.")
+                        else:
+                            selected_cat, selected_item = selected_item_str.split(" → ")
+                            
+                            # Asegurarse de que la lista exista
+                            if "opciones_talla" not in catalogo[selected_cat][selected_item]:
+                                catalogo[selected_cat][selected_item]["opciones_talla"] = []
                                 
-                                # Asegurarse de que la lista exista
-                                if "opciones_talla" not in catalogo[selected_cat][selected_item]:
-                                    catalogo[selected_cat][selected_item]["opciones_talla"] = []
-                                    
-                                if new_talla.strip() in catalogo[selected_cat][selected_item]["opciones_talla"]:
-                                    st.warning(f"La talla '{new_talla.strip()}' ya existe para este ítem.")
+                            if new_talla.strip() in catalogo[selected_cat][selected_item]["opciones_talla"]:
+                                st.warning(f"La talla '{new_talla.strip()}' ya existe para este ítem.")
+                            else:
+                                catalogo[selected_cat][selected_item]["opciones_talla"].append(new_talla.strip())
+                                resp_cat = save_github_json(inv_repo, "CATALOGO_V2.json", inv_token, catalogo, f"Añadida talla '{new_talla}' a '{selected_item}'", inv_branch)
+                                if resp_cat.status_code in (200, 201):
+                                    st.success(f"Talla '{new_talla.strip()}' añadida a '{selected_item}' correctamente.")
+                                    fetch_github_json.clear()
+                                    st.rerun()
                                 else:
-                                    catalogo[selected_cat][selected_item]["opciones_talla"].append(new_talla.strip())
-                                    resp_cat = save_github_json(inv_repo, "CATALOGO_V2.json", inv_token, catalogo, f"Añadida talla '{new_talla}' a '{selected_item}'", inv_branch)
-                                    if resp_cat.status_code in (200, 201):
-                                        st.success(f"Talla '{new_talla.strip()}' añadida a '{selected_item}' correctamente.")
-                                        fetch_github_json.clear()
-                                        st.rerun()
-                                    else:
-                                        st.error(f"❌ Error al guardar el catálogo en GitHub: {resp_cat.text}")
-            else:
-                st.info("No hay ítems configurados para manejar tallas en el catálogo.")
+                                    st.error(f"❌ Error al guardar el catálogo en GitHub: {resp_cat.text}")
+        else:
+            st.info("No hay ítems configurados para manejar tallas en el catálogo.")
+
+
+    st.markdown('</div> <!-- Cierra results-card -->', unsafe_allow_html=True)
+    st.markdown('</div> <!-- Cierra inv-v2-container -->', unsafe_allow_html=True)
+
 
 # ===================================================
 # ✅ TAB — SST
