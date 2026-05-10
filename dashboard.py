@@ -541,40 +541,138 @@ def cargar_usuarios():
     return {}
 
 # ===================================================
-# ✅ INTERFAZ DE INICIO DE SESIÓN (DISEÑO MEJORADO)
+# ✅ INTERFAZ DE INICIO DE SESIÓN (SPLIT SCREEN CORPORATIVO)
 # ===================================================
 if st.session_state.usuario is None:
-    # CSS específico para la tarjeta de Login
-    st.markdown("""
+    import base64
+    import os
+    
+    logo_data = ""
+    if os.path.exists("logo.png"):
+        with open("logo.png", "rb") as f:
+            logo_data = base64.b64encode(f.read()).decode("utf-8")
+
+    st.markdown(f"""
         <style>
-        .login-card {
-            background-color: white;
-            padding: 2rem;
-            border-radius: 15px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            margin-top: 10vh;
-        }
-        .stButton>button {
-            border-radius: 8px;
-            height: 3em;
+        /* Reset de contenedor principal para Full Screen */
+        [data-testid="stHeader"] {{ display: none !important; }}
+        [data-testid="stMainBlockContainer"] {{
+            padding: 0 !important;
+            max-width: 100% !important;
+        }}
+        
+        /* Forzar que las columnas ocupen toda la pantalla */
+        div[data-testid="stHorizontalBlock"] {{
+            height: 100vh;
+            gap: 0 !important;
+        }}
+        
+        /* Mitad Izquierda */
+        div[data-testid="column"]:nth-child(1) {{
+            background-color: #f8fafc;
+            background-image: repeating-linear-gradient(45deg, #f1f5f9 25%, transparent 25%, transparent 75%, #f1f5f9 75%, #f1f5f9), repeating-linear-gradient(45deg, #f1f5f9 25%, #f8fafc 25%, #f8fafc 75%, #f1f5f9 75%, #f1f5f9);
+            background-position: 0 0, 40px 40px;
+            background-size: 80px 80px;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: center !important;
+            align-items: center !important;
+            padding: 0 !important;
+            position: relative;
+        }}
+        
+        /* Mitad Derecha */
+        div[data-testid="column"]:nth-child(2) {{
+            background: linear-gradient(135deg, #1A3820 0%, #39A935 100%);
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: center !important;
+            padding: 4rem 10% !important;
+            color: white;
+            position: relative;
+        }}
+        
+        /* Tarjeta de Login usando el contenedor vertical interno de Streamlit */
+        div[data-testid="column"]:nth-child(1) > div[data-testid="stVerticalBlock"] {{
+            background: white;
+            padding: 3rem 2.5rem;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            width: 80% !important;
+            max-width: 450px !important;
+            margin: auto;
+            position: relative;
+            z-index: 10;
+        }}
+
+        /* Textos Derecha HTML inyectado */
+        .right-title {{
+            font-size: 4rem;
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            color: white;
+            font-family: sans-serif;
+        }}
+        .right-text {{
+            font-size: 1.15rem;
+            line-height: 1.6;
+            color: rgba(255,255,255,0.9);
+            text-align: justify;
+            font-family: sans-serif;
+            margin-bottom: 2rem;
+        }}
+        .chat-bubble {{
+            background: white;
+            color: #1A3820;
+            padding: 1rem 1.5rem;
+            border-radius: 20px 20px 20px 0px;
+            display: inline-block;
             font-weight: bold;
-        }
-        [data-testid="stImage"] {
-            margin-bottom: 20px;
-        }
+            box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+            font-size: 1.1rem;
+        }}
+        
+        /* Logo Circular Sobrepuesto */
+        .floating-logo {{
+            position: absolute;
+            top: 50%;
+            right: -80px;
+            transform: translateY(-50%);
+            width: 160px;
+            height: 160px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            padding: 20px;
+        }}
+        .floating-logo img {{
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }}
+        
+        /* Inputs y Botón */
+        div[data-testid="stTextInput"] label {{
+            color: #334155 !important;
+            font-weight: 600;
+        }}
+        [data-testid="stButton"] button {{
+            height: 3.5rem;
+            border-radius: 10px;
+            font-size: 1.1rem;
+        }}
         </style>
     """, unsafe_allow_html=True)
 
-    _, col_login, _ = st.columns([1, 1.5, 1])
+    col1, col2 = st.columns([1, 1])
 
-    with col_login:
-        st.markdown('<div class="login-card">', unsafe_allow_html=True)
-        
-        # Logo centrado
-        st.image("logo.png", use_container_width=True)
-        
-        st.markdown("<h2 style='text-align: center; color: #2F9331; font-family: sans-serif;'>Bienvenido</h2>", unsafe_allow_html=True)
-        st.markdown("<p style='text-align: center; color: #64748b;'>Ingresa tus credenciales para continuar</p>", unsafe_allow_html=True)
+    with col1:
+        st.markdown("<h3 style='color: #39A935; text-align: center; font-weight: 800; margin-bottom: 1.5rem; letter-spacing: 1px;'>INICIAR SESIÓN</h3>", unsafe_allow_html=True)
         
         usuarios = cargar_usuarios()
         usuario_input = st.text_input("Usuario", placeholder="Ej: Juan Perez")
@@ -585,15 +683,32 @@ if st.session_state.usuario is None:
             if usuario_input in usuarios and pin_input == usuarios[usuario_input]["pin"]:
                 st.session_state.usuario = usuario_input
                 st.session_state.rol = usuarios[usuario_input]["rol"]
-                # Forzamos una limpieza visual antes del rerun
                 st.empty()
                 st.rerun()
             else:
                 st.error("❌ Usuario o PIN incorrectos. Intenta de nuevo.")
-            
-        st.markdown('</div>', unsafe_allow_html=True)
+                
+        # Logo Flotante
+        img_src = f"data:image/png;base64,{logo_data}" if logo_data else ""
+        if img_src:
+            st.markdown(f"""
+                <div class="floating-logo">
+                    <img src="{img_src}" alt="e&c Logo">
+                </div>
+            """, unsafe_allow_html=True)
 
-    # Detenemos la ejecución aquí para que NO intente cargar nada del dashboard si no hay sesión
+    with col2:
+        st.markdown("""
+            <div class="right-title">Bienvenid@</div>
+            <div class="right-text">
+                <b>¿Listo para potenciar la operación de e&c Ingeniería SAS?</b><br><br>
+                A través de nuestro dashboard interactivo, adaptamos la información en tiempo real para brindarte el mejor análisis de desempeño, seguimiento de agendas, métricas operativas y control de SST. Centralizamos tus datos de campo para tomar decisiones eficaces y eficientes.
+            </div>
+            <div class="chat-bubble">
+                <span style='color:#39A935;'>¡Hola!</span> Ingresa tus datos para continuar.
+            </div>
+        """, unsafe_allow_html=True)
+
     st.stop()
 
 # -------------------------------------------------
