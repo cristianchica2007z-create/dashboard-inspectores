@@ -106,40 +106,39 @@ st.markdown("""
     /* =========================================
        NUEVO: HEADER PEGAJOSO (STICKY HEADER)
        ========================================= */
-    /* Ajuste inicial del contenedor para que el sticky funcione bien */
+    /* IMPORTANTE: Para que 'sticky' funcione, los padres no pueden tener 'overflow: hidden' */
+    [data-testid="stAppViewMain"], .main, .block-container {
+        overflow: visible !important;
+    }
+
     div.block-container {
-        padding-top: 1rem !important;
+        padding-top: 2rem !important;
     }
     
-    /* El contenedor que tenga el hook será pegajoso */
-    div[data-testid="stVerticalBlock"]:has(span#sticky-header) {
+    /* Selector más robusto para el contenedor del header */
+    div[data-testid="stVerticalBlock"]:has(#sticky-header) {
         position: sticky !important;
         top: 0px !important;
-        background-color: #ffffff !important;
-        z-index: 999 !important;
-        padding-top: 1rem !important;
-        padding-bottom: 0.5rem !important;
-        margin-bottom: 1rem !important;
-        border-bottom: 1px solid #e2e8f0 !important;
-        box-shadow: 0 4px 10px -2px rgba(0,0,0,0.05) !important;
+        background-color: white !important;
+        z-index: 1000000 !important;
+        padding-top: 10px !important;
+        padding-bottom: 10px !important;
+        border-bottom: 2px solid #2F9331 !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
     }
     
-    /* Las pestañas principales también serán pegajosas debajo del header */
-    div[data-testid="stTabs"] > div[data-baseweb="tab-list"],
+    /* Pestañas pegajosas */
     div[data-testid="stTabs"] > div[role="tablist"] {
         position: sticky !important;
-        top: 135px !important; /* Altura aproximada del header superior */
-        background-color: #ffffff !important;
-        z-index: 998 !important;
-        padding-top: 10px !important;
-        padding-bottom: 5px !important;
-        border-bottom: 2px solid #f1f5f9 !important;
+        top: 140px !important; /* Ajustar según altura del header */
+        background-color: white !important;
+        z-index: 999999 !important;
+        border-bottom: 1px solid #eee !important;
     }
-    
-    /* Ocultar header nativo transparente de Streamlit para evitar solapamiento visual */
+
+    /* Ocultar el header nativo que a veces tapa el nuestro */
     header[data-testid="stHeader"] {
-        background: transparent !important;
-        box-shadow: none !important;
+        display: none !important;
     }
     /* Estilos específicos para la tabla de SST */
     .sst-container {
