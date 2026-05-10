@@ -265,11 +265,21 @@ def load_local_bitacora(path):
             return None
             
         df.columns = [str(c).strip().lower() for c in df.columns]
-        
+
+        # Función para limpiar contratos (quitar .0 y espacios)
+        def clean_contract(c):
+            if pd.isna(c): return ""
+            s = str(c).strip()
+            if s.endswith('.0'): s = s[:-2]
+            return s
+
+        if "contrato" in df.columns:
+            df["contrato"] = df["contrato"].apply(clean_contract)
+            
         # Normalizar prioridad para evitar errores de mayúsculas
         if "prioridad" in df.columns:
             df["prioridad"] = df["prioridad"].astype(str).str.strip().str.capitalize()
-        
+            
         # Pre-procesamiento de nombres e inspectores
         if "inspector" in df.columns:
             df["inspector"] = df["inspector"].astype(str).str.upper().str.strip().str.replace(r"\s+", " ", regex=True)
@@ -1199,12 +1209,22 @@ with tab_operacion:
         
         if not df_prog_zona.empty:
             df_prog_zona.columns = [str(c).strip().upper() for c in df_prog_zona.columns]
+            
+            # Limpiar contratos en programación también
+            def clean_contract_prog(c):
+                if pd.isna(c): return ""
+                s = str(c).strip()
+                if s.endswith('.0'): s = s[:-2]
+                return s
+                
+            df_prog_zona["CONTRATO_CLEAN"] = df_prog_zona["CONTRATO"].apply(clean_contract_prog)
+            
             # Seleccionar solo columnas necesarias y quitar duplicados
-            df_prog_min = df_prog_zona[["CONTRATO", "ZONA", "CARTERA"]].drop_duplicates(subset=["CONTRATO"])
-            df_prog_min["CONTRATO"] = df_prog_min["CONTRATO"].astype(str).str.strip()
+            df_prog_min = df_prog_zona[["CONTRATO_CLEAN", "ZONA"]].drop_duplicates(subset=["CONTRATO_CLEAN"])
             
             # Unir con la bitácora del día
-            df_merged = df2.merge(df_prog_min, left_on="contrato", right_on="CONTRATO", how="left")
+            df_merged = df2.merge(df_prog_min, left_on="contrato", right_on="CONTRATO_CLEAN", how="left")
+
             df_merged["ZONA"] = df_merged["ZONA"].fillna("SIN ZONA")
             
             # Definir Bloque (Prioridad Media) y Cartera (Columna CARTERA no nula)
