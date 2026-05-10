@@ -1303,7 +1303,16 @@ with tab_agendas:
     token = st.secrets["github"]["token"]
     repo = st.secrets["github"]["repo"]
 
-    df = get_processed_agendas_data(repo, token)
+        df = get_processed_agendas_data(repo, token)
+    
+    if not df.empty:
+        ahora_colombia = datetime.datetime.now(ZoneInfo("America/Bogota")).replace(tzinfo=None)
+        
+        # CÁLCULOS GLOBALES PARA KPIs
+        count_final = len(df[df["estado"].str.upper().str.contains("FINALIZAD", na=False)])
+        count_prox = len(df[(df["estado"].str.upper().str.contains("ASIGNAD", na=False)) & (df["fecha de ejecucion"].isna()) & (df["fecha de visita"] > ahora_colombia)])
+        count_alerta = len(df[(df["estado"].str.upper().str.contains("ASIGNAD", na=False)) & (df["prioridad"].str.upper().isin(["ALTA", "CRITICA"])) & (df["estado_alerta"] == "ALERTA")])
+
     
     if not df.empty:
         columnas_base = ["inspector", "contrato", "direccion", "estado", "fecha de visita", "localidad", "detalle de tarea", "estado_alerta"]
@@ -1328,6 +1337,12 @@ with tab_agendas:
                 ["✅ Agendas Finalizadas", "⏳ Próximas Agendas", "🚨 Alerta"],
                 key="nav_agendas_radio"
             )
+            
+            st.markdown("---")
+            st.markdown("### 📊 Resumen")
+            render_kpi("En Alerta", count_alerta, "🚨")
+            render_kpi("Próximas", count_prox, "⏳")
+            render_kpi("Finalizadas", count_final, "✅")
 
         with col_main_age:
           if opcion_age == "✅ Agendas Finalizadas":
