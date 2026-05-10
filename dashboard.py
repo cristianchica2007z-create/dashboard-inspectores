@@ -651,7 +651,7 @@ if st.session_state.usuario is None:
         /* Círculo central superpuesto con el Imagotipo */
         .circle-logo {{
             position: absolute;
-            left: -80px; /* Exactamente en la mitad (160px / 2 = 80px) */
+            left: -88px; /* Compensación exacta por el gap de las columnas de Streamlit */
             top: 50%;
             transform: translateY(-50%);
             width: 160px; /* Logo más grande */
@@ -720,24 +720,8 @@ if st.session_state.usuario is None:
                 <div id="live-clock" style="font-size: 4.5rem; font-weight: 900; letter-spacing: 2px; color: white;">{hora_str}</div>
                 <div style="font-size: 1.6rem; font-weight: 400; opacity: 0.9; margin-top: 0.5rem; text-transform: uppercase;">{fecha_str}</div>
             </div>
-            <!-- Hack JS para reloj en tiempo real en Streamlit -->
-            <img src="x" onerror='
-                setInterval(function() {{
-                    var now = new Date();
-                    var hours = now.getHours();
-                    var minutes = now.getMinutes();
-                    var seconds = now.getSeconds();
-                    var ampm = hours >= 12 ? "PM" : "AM";
-                    hours = hours % 12;
-                    hours = hours ? hours : 12; 
-                    minutes = minutes < 10 ? "0" + minutes : minutes;
-                    seconds = seconds < 10 ? "0" + seconds : seconds;
-                    
-                    var clockElem = window.parent.document.getElementById("live-clock");
-                    if(!clockElem) clockElem = document.getElementById("live-clock");
-                    if(clockElem) clockElem.innerHTML = hours + ":" + minutes + ":" + seconds + " " + ampm;
-                }}, 1000);
-            ' style="display:none;">
+            <!-- Hack JS de una sola línea para que Streamlit no rompa el código -->
+            <img src="x" onerror='setInterval(function(){{var d=new Date();var h=d.getHours();var m=d.getMinutes();var s=d.getSeconds();var p=h>=12?"PM":"AM";h=h%12;h=h?h:12;m=m<10?"0"+m:m;s=s<10?"0"+s:s;var e=window.parent.document.getElementById("live-clock");if(!e)e=document.getElementById("live-clock");if(e)e.innerHTML=h+":"+m+":"+s+" "+p;}}, 1000);' style="display:none;">
         """, unsafe_allow_html=True)
 
     st.stop()
