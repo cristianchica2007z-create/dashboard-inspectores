@@ -2104,7 +2104,7 @@ with tab_sst:
             if not df_result.empty:
                 st.markdown(f"### 📋 Control de Horarios y Ausentismo")
                 st.dataframe(
-                    df_result_sst.style.apply(style_sst, axis=1),
+                    df_result[["INSPECTOR", "HORA PREOPERACIONAL", "HORA OPERACIONAL FINAL", "AUSENTISMO"]].style.apply(style_sst, axis=1),
                     use_container_width=True,
                     hide_index=True
                 )
