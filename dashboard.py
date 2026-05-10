@@ -106,8 +106,8 @@ st.markdown("""
     /* =========================================
        NUEVO: HEADER PEGAJOSO (STICKY HEADER)
        ========================================= */
-    /* IMPORTANTE: Para que 'sticky' funcione, los padres no pueden tener 'overflow: hidden' */
-    [data-testid="stAppViewMain"], .main, .block-container {
+    /* Desbloquear el scroll para que el sticky funcione en Streamlit */
+    html, body, [data-testid="stAppViewMain"], .main, .block-container, [data-testid="stVerticalBlock"] {
         overflow: visible !important;
     }
 
@@ -115,28 +115,29 @@ st.markdown("""
         padding-top: 2rem !important;
     }
     
-    /* Selector más robusto para el contenedor del header */
-    div[data-testid="stVerticalBlock"]:has(#sticky-header) {
+    /* Contenedor del Header */
+    [data-testid="stVerticalBlock"]:has(#sticky-header) {
+        position: -webkit-sticky !important;
         position: sticky !important;
         top: 0px !important;
         background-color: white !important;
-        z-index: 1000000 !important;
-        padding-top: 10px !important;
-        padding-bottom: 10px !important;
-        border-bottom: 2px solid #2F9331 !important;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+        z-index: 999999 !important;
+        padding: 10px 0 !important;
+        border-bottom: 3px solid #2F9331 !important;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
     }
     
-    /* Pestañas pegajosas */
-    div[data-testid="stTabs"] > div[role="tablist"] {
+    /* Pestañas pegajosas (Tab headers) */
+    [data-testid="stTabs"] > div[role="tablist"] {
+        position: -webkit-sticky !important;
         position: sticky !important;
-        top: 140px !important; /* Ajustar según altura del header */
+        top: 145px !important; /* Ajustar según altura real del header */
         background-color: white !important;
-        z-index: 999999 !important;
-        border-bottom: 1px solid #eee !important;
+        z-index: 999998 !important;
+        padding: 5px 0 !important;
     }
 
-    /* Ocultar el header nativo que a veces tapa el nuestro */
+    /* Ocultar header nativo */
     header[data-testid="stHeader"] {
         display: none !important;
     }
