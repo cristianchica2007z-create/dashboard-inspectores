@@ -102,6 +102,45 @@ st.markdown("""
     div[data-testid="stSegmentedControl"] button[aria-checked="true"] p {
         color: white !important;
     }
+    
+    /* =========================================
+       NUEVO: HEADER PEGAJOSO (STICKY HEADER)
+       ========================================= */
+    /* Ajuste inicial del contenedor para que el sticky funcione bien */
+    div.block-container {
+        padding-top: 1rem !important;
+    }
+    
+    /* El contenedor que tenga el hook será pegajoso */
+    div[data-testid="stVerticalBlock"]:has(span#sticky-header) {
+        position: sticky !important;
+        top: 0px !important;
+        background-color: #ffffff !important;
+        z-index: 999 !important;
+        padding-top: 1rem !important;
+        padding-bottom: 0.5rem !important;
+        margin-bottom: 1rem !important;
+        border-bottom: 1px solid #e2e8f0 !important;
+        box-shadow: 0 4px 10px -2px rgba(0,0,0,0.05) !important;
+    }
+    
+    /* Las pestañas principales también serán pegajosas debajo del header */
+    div[data-testid="stTabs"] > div[data-baseweb="tab-list"],
+    div[data-testid="stTabs"] > div[role="tablist"] {
+        position: sticky !important;
+        top: 135px !important; /* Altura aproximada del header superior */
+        background-color: #ffffff !important;
+        z-index: 998 !important;
+        padding-top: 10px !important;
+        padding-bottom: 5px !important;
+        border-bottom: 2px solid #f1f5f9 !important;
+    }
+    
+    /* Ocultar header nativo transparente de Streamlit para evitar solapamiento visual */
+    header[data-testid="stHeader"] {
+        background: transparent !important;
+        box-shadow: none !important;
+    }
     /* Estilos específicos para la tabla de SST */
     .sst-container {
         background-color: #f8fafc;
@@ -789,33 +828,56 @@ info_programacion_meta, _ = fetch_github_json(repo_meta, "PROGRAMACION_INFO.json
 f_bit, u_bit = obtener_texto_meta(info_bitacora_meta)
 f_prog, u_prog = obtener_texto_meta(info_programacion_meta)
 
-# Crear layout superior
-col_meta, col_logout = st.columns([7, 1])
+# ===================================================
+# CONTENEDOR SUPERIOR PEGAJOSO (STICKY)
+# ===================================================
+top_header_container = st.container()
 
-with col_meta:
-    st.markdown(
-        f"""
-        <div style='display: flex; gap: 30px; padding: 5px 15px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; width: fit-content;'>
-            <div style='color: #475569; font-size: 0.85rem; font-family: sans-serif;'>
-                🕓 <span style='color:#2F9331; font-weight:800;'>Bitácora:</span> {f_bit} <span style='color:#94a3b8;'>|</span> 👤 {u_bit}
+with top_header_container:
+    # Hook invisible para CSS
+    st.markdown("<span id='sticky-header'></span>", unsafe_allow_html=True)
+    
+    # Crear layout superior (Metadata y Botón)
+    col_meta, col_logout = st.columns([7, 1])
+    
+    with col_meta:
+        st.markdown(
+            f"""
+            <div style='display: flex; gap: 30px; padding: 5px 15px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; width: fit-content;'>
+                <div style='color: #475569; font-size: 0.85rem; font-family: sans-serif;'>
+                    🕓 <span style='color:#2F9331; font-weight:800;'>Bitácora:</span> {f_bit} <span style='color:#94a3b8;'>|</span> 👤 {u_bit}
+                </div>
+                <div style='color: #475569; font-size: 0.85rem; font-family: sans-serif;'>
+                    📅 <span style='color:#2F9331; font-weight:800;'>Programación:</span> {f_prog} <span style='color:#94a3b8;'>|</span> 👤 {u_prog}
+                </div>
             </div>
-            <div style='color: #475569; font-size: 0.85rem; font-family: sans-serif;'>
-                📅 <span style='color:#2F9331; font-weight:800;'>Programación:</span> {f_prog} <span style='color:#94a3b8;'>|</span> 👤 {u_prog}
-            </div>
-        </div>
-        """, 
-        unsafe_allow_html=True
-    )
-
-with col_logout:
-    if st.button("🚪 Cerrar sesión", use_container_width=True):
-        st.session_state.usuario = None
-        st.session_state.rol = None
-        st.rerun()
-
-st.markdown("<hr style='margin: 5px 0px 20px 0px; border-top: 1px solid #e2e8f0;'>", unsafe_allow_html=True)
-
-# ---------------------------------------------------
+            """, 
+            unsafe_allow_html=True
+        )
+    
+    with col_logout:
+        if st.button("🚪 Cerrar sesión", use_container_width=True):
+            st.session_state.usuario = None
+            st.session_state.rol = None
+            st.rerun()
+            
+    # ---------------------------------------------------
+    # HEADER CON LOGO A LA DERECHA (DENTRO DEL STICKY)
+    # ---------------------------------------------------
+    col_titulo, col_logo = st.columns([8, 2])
+    
+    with col_titulo:
+        st.markdown(
+            "<h1 style='margin-bottom: 0; padding-top: 10px;'>📊 DASHBOARD INSPECTORES E&C</h1>",
+            unsafe_allow_html=True
+        )
+    
+    with col_logo:
+        st.image(
+            "logo.png",
+            use_container_width=True,
+            caption=""
+        )
 
 # ---------------------------------------------------
 # ✅ LISTA MAESTRA DE INSPECTORES
@@ -878,23 +940,6 @@ inspectores_lista = sorted([
     "PELAEZ TATIS GABRIEL ESTEBAN",
     "CHICA RAMIREZ CRISTIAN ALBERTO",
 ])
-# ---------------------------------------------------
-# HEADER CON LOGO A LA DERECHA (CORRECTO)
-# -------------------------------------------------
-col_titulo, col_logo = st.columns([8, 2])
-
-with col_titulo:
-    st.markdown(
-        "<h1 style='margin-bottom: 0;'>📊 DASHBOARD INSPECTORES E&C</h1>",
-        unsafe_allow_html=True
-    )
-
-with col_logo:
-    st.image(
-        "logo.png",
-        use_container_width=True,
-        caption=""
-    )
 # ---------------------------------------------------
 
 # ===================================================
