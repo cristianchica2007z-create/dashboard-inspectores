@@ -285,6 +285,7 @@ def process_adicionales_data(df):
     return df
 
 @st.cache_data(ttl=600)
+@st.cache_data(ttl=600)
 def extract_excel_links(path):
     from openpyxl import load_workbook
     if not os.path.exists(path): return pd.DataFrame()
