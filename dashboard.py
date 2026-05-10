@@ -71,11 +71,11 @@ st.markdown("""
     /* Estilo de Tarjetas Profesionales para KPIs */
     .metric-card {
         background-color: #ffffff;
-        padding: 1.1rem 1rem;
+        padding: 1.5rem 1rem;
         border-radius: 12px;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         border-left: 5px solid #2F9331;
-        margin-bottom: 0.85rem;
+        margin-bottom: 0.9rem;
     }
     .metric-label {
         color: #64748b;
@@ -1187,7 +1187,7 @@ with tab_operacion:
         # ===================================================
         # ✅ DISEÑO DE PESTAÑA: KPIs IZQUIERDA | TABLA DERECHA
         # ===================================================
-        col_kpis, col_main_view = st.columns([1, 4])
+        col_kpis, col_main_view = st.columns([1, 5.5])
     
         with col_kpis:
             st.markdown("### ⭐ KPIs")
@@ -1226,7 +1226,7 @@ with tab_operacion:
             st.dataframe(
                 df_styled,
                 use_container_width=True,
-                height=450, # Alargado un poco más
+                height=500, # Un poco más alto para aprovechar el espacio
                 hide_index=True,
                 column_config={
                     "porcentaje_efectividad": st.column_config.NumberColumn(
@@ -1263,7 +1263,7 @@ with tab_operacion:
                 )
                 df_sin_actividad = df_sin_actividad.sort_values("Supervisor")
         
-                st.dataframe(df_sin_actividad, use_container_width=True, height=200, hide_index=True)
+                st.dataframe(df_sin_actividad, use_container_width=True, height=160, hide_index=True)
             else:
                 pass # Diseño limpio sin mensajes de éxito si no hay inactivos
     
