@@ -606,7 +606,7 @@ if st.session_state.usuario is None:
         /* Mitad Derecha (Texto verde) -> CORRECTO SELECTOR DE STREAMLIT */
         div[data-testid="stColumn"]:nth-of-type(2) {{
             background: linear-gradient(135deg, #1A3820 0%, #39A935 100%) !important;
-            padding: 4rem 3.5rem !important;
+            padding: 4rem 3.5rem 4rem 5rem !important; /* Más espacio a la izquierda para el logo circular */
             display: flex !important;
             flex-direction: column !important;
             justify-content: center !important;
@@ -725,13 +725,15 @@ if st.session_state.usuario is None:
             <div class="circle-logo">
                 <img src="{imago_src}" alt="e&c Imagotipo">
             </div>
-            <div class="right-title" style="font-size: 2.5rem; line-height: 1.2;">SEGUIMIENTO OPERATIVO<br>EJE CAFETERO</div>
-            <div class="right-text" style="margin-top: 2rem; margin-bottom: 3rem;">
+            <div class="right-title" style="font-size: 2.2rem; line-height: 1.2;">SEGUIMIENTO OPERATIVO<br>EJE CAFETERO</div>
+            <div class="right-text" style="margin-top: 2rem; margin-bottom: 2.5rem;">
                 <div style="font-size: 3.5rem; font-weight: 900; letter-spacing: 2px; color: white;">{hora_str}</div>
                 <div style="font-size: 1.5rem; font-weight: 400; opacity: 0.9; margin-top: 0.2rem; text-transform: uppercase;">{fecha_str}</div>
             </div>
-            <div class="chat-bubble">
-                <span style='color:#39A935;'>¡Hola!</span> ¿Necesita Ayuda?
+            <div style="display: flex; justify-content: flex-end;">
+                <div class="chat-bubble">
+                    <span style='color:#39A935;'>¡Hola!</span> ¿Necesita Ayuda?
+                </div>
             </div>
         """, unsafe_allow_html=True)
 
