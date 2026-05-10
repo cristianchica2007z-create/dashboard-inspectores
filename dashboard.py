@@ -637,19 +637,6 @@ if st.session_state.usuario is None:
             position: relative;
             z-index: 5;
         }}
-        .chat-bubble {{
-            background: white;
-            color: #1A3820;
-            padding: 1rem 1.5rem;
-            border-radius: 20px 20px 20px 0px;
-            display: inline-block;
-            font-weight: bold;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.15);
-            font-size: 1.05rem;
-            position: relative;
-            z-index: 5;
-            width: fit-content;
-        }}
 
         /* Logo Completo (Formulario Izquierdo) */
         .login-logo {{
@@ -657,13 +644,13 @@ if st.session_state.usuario is None:
             margin-bottom: 1.5rem;
         }}
         .login-logo img {{
-            width: 180px;
+            width: 280px; /* Logo principal mucho más grande */
         }}
         
         /* Círculo central superpuesto con el Imagotipo */
         .circle-logo {{
             position: absolute;
-            left: -100px; /* Más desplazado a la izquierda según solicitud */
+            left: -80px; /* Exactamente en la mitad (160px / 2 = 80px) */
             top: 50%;
             transform: translateY(-50%);
             width: 160px; /* Logo más grande */
@@ -728,14 +715,9 @@ if st.session_state.usuario is None:
                 <img src="{imago_src}" alt="e&c Imagotipo">
             </div>
             <div class="right-title" style="font-size: 2.8rem; line-height: 1.3;">SEGUIMIENTO OPERATIVO<br>EJE CAFETERO</div>
-            <div class="right-text" style="margin-top: 1rem; margin-bottom: 2.5rem;">
+            <div class="right-text" style="margin-top: 1rem;">
                 <div style="font-size: 4.5rem; font-weight: 900; letter-spacing: 2px; color: white;">{hora_str}</div>
                 <div style="font-size: 1.6rem; font-weight: 400; opacity: 0.9; margin-top: 0.5rem; text-transform: uppercase;">{fecha_str}</div>
-            </div>
-            <div style="display: flex; justify-content: center; width: 100%;">
-                <div class="chat-bubble">
-                    <span style='color:#39A935;'>¡Hola!</span> ¿Necesita Ayuda?
-                </div>
             </div>
         """, unsafe_allow_html=True)
 
