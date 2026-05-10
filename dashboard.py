@@ -115,7 +115,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # -------------------------------------------------
-# ✅ FUNCIONES DE CACHÉ (MEJORA DE RENDIMIENTO)
+# ✅ FUNCIONES DE CACHÉ. (MEJORA DE RENDIMIENTO)
 # -------------------------------------------------
 
 @st.cache_data(ttl=600)  # Cache por 10 minutos para datos de GitHub
