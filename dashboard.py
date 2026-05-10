@@ -142,6 +142,8 @@ def get_processed_agendas_data(repo, token):
         
     df["grupo"] = df["grupo"].astype(str).str.upper().str.strip()
     df = df[df["grupo"].isin(["INSP-CALDAS", "INSP-RIS"])].copy()
+    if "prioridad" in df.columns:
+        df = df[df["prioridad"].astype(str).str.upper().str.strip() == "ALTA"].copy()
     
     df["fecha de visita"] = pd.to_datetime(df["fecha de visita"], errors="coerce")
     df["fecha de ejecucion"] = pd.to_datetime(df["fecha de ejecucion"], errors="coerce")
@@ -1316,7 +1318,7 @@ with tab_agendas:
         # CÁLCULOS GLOBALES PARA KPIs
         count_final = len(df[df["estado"].str.upper().str.contains("FINALIZAD", na=False)])
         count_prox = len(df[(df["estado"].str.upper().str.contains("ASIGNAD", na=False)) & (df["fecha de ejecucion"].isna()) & (df["fecha de visita"] > ahora_colombia)])
-        count_alerta = len(df[(df["estado"].str.upper().str.contains("ASIGNAD", na=False)) & (df["prioridad"].str.upper().isin(["ALTA", "CRITICA"])) & (df["estado_alerta"] == "ALERTA")])
+        count_alerta = len(df[(df["estado"].str.upper().str.contains("ASIGNAD", na=False)) & (df["prioridad"].str.upper() == "ALTA") & (df["estado_alerta"] == "ALERTA")])
 
     if not df.empty:
         columnas_base = ["inspector", "contrato", "direccion", "estado", "fecha de visita", "localidad", "detalle de tarea", "estado_alerta"]
@@ -1405,7 +1407,7 @@ with tab_agendas:
 
           elif opcion_age == "🚨 Alerta":
             st.markdown("### 🚨 ALERTA")
-            df_alerta_raw = df[(df["estado"].str.upper().str.contains("ASIGNAD", na=False)) & (df["prioridad"].str.upper().isin(["ALTA", "CRITICA"])) & (df["estado_alerta"] == "ALERTA")].copy()
+            df_alerta_raw = df[(df["estado"].str.upper().str.contains("ASIGNAD", na=False)) & (df["prioridad"].str.upper() == "ALTA") & (df["estado_alerta"] == "ALERTA")].copy()
             render_agendas_alerta_fragment(df_alerta_raw, grupos_validos, columnas_base)
     else:
         st.info("No se pudo cargar la bitácora desde GitHub para agendas.")
