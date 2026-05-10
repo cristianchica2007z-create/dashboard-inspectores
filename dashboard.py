@@ -1211,8 +1211,6 @@ with tab_operacion:
             ]
             columnas_disponibles = [c for c in columnas_tabla if c in df_tabla.columns]
     
-            st.write("") # Espacio para bajar la tabla
-            st.write("") # Espacio para bajar la tabla
             st.markdown("### 📋 Tabla de inspecciones del día")
     
             # Aplicar estilos: Centrar todo menos inspector y aplicar colores a estado
@@ -1226,7 +1224,7 @@ with tab_operacion:
             st.dataframe(
                 df_styled,
                 use_container_width=True,
-                height=500, # Un poco más alto para aprovechar el espacio
+                height=540, # Alargado una fila más (aprox +40px)
                 hide_index=True,
                 column_config={
                     "porcentaje_efectividad": st.column_config.NumberColumn(
@@ -1240,6 +1238,7 @@ with tab_operacion:
             # 🚨 INSPECTORES SIN ACTIVIDAD (MOVIDO AQUÍ)
             # ---------------------------------------------------
             st.write("") # Espacio adicional
+            st.write("") # Espacio adicional (bajar una fila más)
             st.markdown("### 🚨 Inspectores sin actividad registrada")
         
             inspectores_con_actividad = set(df2["inspector"].str.upper().str.strip().unique())
