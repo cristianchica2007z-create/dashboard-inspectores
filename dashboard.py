@@ -1224,7 +1224,7 @@ with tab_operacion:
             st.dataframe(
                 df_styled,
                 use_container_width=True,
-                height=645,
+                height=400, # Acortado para dar espacio
                 hide_index=True,
                 column_config={
                     "porcentaje_efectividad": st.column_config.NumberColumn(
@@ -1233,6 +1233,37 @@ with tab_operacion:
                     )
                 }
             )
+
+            # ---------------------------------------------------
+            # 🚨 INSPECTORES SIN ACTIVIDAD (MOVIDO AQUÍ)
+            # ---------------------------------------------------
+            st.markdown("### 🚨 Inspectores sin actividad registrada")
+        
+            inspectores_con_actividad = set(df2["inspector"].str.upper().str.strip().unique())
+        
+            inspectores_del_filtro = [
+                insp for insp in inspectores_lista
+                if SUPERVISORES_DICT.get(insp.upper(), "SIN SUPERVISOR") in supervisores_sel
+            ]
+        
+            inspectores_sin_actividad = [
+                insp for insp in inspectores_del_filtro
+                if insp.upper().strip() not in inspectores_con_actividad
+            ]
+        
+            if inspectores_sin_actividad:
+                df_sin_actividad = pd.DataFrame({
+                    "Inspector": inspectores_sin_actividad
+                })
+                df_sin_actividad["Supervisor"] = df_sin_actividad["Inspector"].apply(
+                    lambda x: SUPERVISORES_DICT.get(x.upper(), "SIN SUPERVISOR")
+                )
+                df_sin_actividad = df_sin_actividad.sort_values("Supervisor")
+        
+                st.error(f"🚨 {len(inspectores_sin_actividad)} inspector(es) sin actividad")
+                st.dataframe(df_sin_actividad, use_container_width=True, height=200)
+            else:
+                st.success("✅ Todo el personal con actividad.")
     
         # ---------------------------------------------------
         # 📝 INFORME DE DESEMPEÑO DEL DÍA
@@ -1274,36 +1305,7 @@ with tab_operacion:
                     st.markdown(f"🛣️ **Promedio de recorrido más extenso:** {max_rec_insp} ({max_rec_val})")
                     st.markdown(f"🕓 **Más tiempo promedio por tarea:** {max_task_insp} ({max_task_val})")
     
-        # ===================================================
-        # 🚨 INSPECTORES SIN ACTIVIDAD EN LA FECHA
-        # ===================================================
-        st.markdown("### 🚨 Inspectores sin actividad registrada")
-    
-        inspectores_con_actividad = set(df2["inspector"].str.upper().str.strip().unique())
-    
-        inspectores_del_filtro = [
-            insp for insp in inspectores_lista
-            if SUPERVISORES_DICT.get(insp.upper(), "SIN SUPERVISOR") in supervisores_sel
-        ]
-    
-        inspectores_sin_actividad = [
-            insp for insp in inspectores_del_filtro
-            if insp.upper().strip() not in inspectores_con_actividad
-        ]
-    
-        if inspectores_sin_actividad:
-            df_sin_actividad = pd.DataFrame({
-                "Inspector": inspectores_sin_actividad
-            })
-            df_sin_actividad["Supervisor"] = df_sin_actividad["Inspector"].apply(
-                lambda x: SUPERVISORES_DICT.get(x.upper(), "SIN SUPERVISOR")
-            )
-            df_sin_actividad = df_sin_actividad.sort_values("Supervisor")
-    
-            st.error(f"🚨 {len(inspectores_sin_actividad)} inspector(es) sin actividad registrada para {fecha_sel}")
-            st.dataframe(df_sin_actividad, use_container_width=True)
-        else:
-            st.success("✅ Todos los inspectores tienen actividad registrada para esta fecha.")
+
     
         # ===================================================
         # 📊 Producción por inspector (órdenes efectivas)
