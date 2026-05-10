@@ -695,7 +695,7 @@ if st.session_state.usuario is None:
                 </div>
             """, unsafe_allow_html=True)
             
-        st.markdown("<h3 style='color: #2F9331; text-align: center; font-weight: 800; margin-bottom: 1.5rem; letter-spacing: 1px;'>CUENTAS RECIENTES</h3>", unsafe_allow_html=True)
+        st.markdown("<h3 style='color: #2F9331; text-align: center; font-weight: 800; margin-bottom: 1.5rem; letter-spacing: 1px;'>DASHBOARD EJE CAFETERO</h3>", unsafe_allow_html=True)
         
         usuarios = cargar_usuarios()
         usuario_input = st.text_input("Usuario", placeholder="Ej: Juan Perez")
@@ -715,14 +715,20 @@ if st.session_state.usuario is None:
         # Imagotipo en el círculo central superpuesto (como en GoDoWorks)
         imago_src = f"data:image/png;base64,{imagotipo_data}" if imagotipo_data else ""
         
+        # Fecha y hora dinámica en español
+        meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
+        ahora_co = datetime.datetime.now(TZ_CO)
+        fecha_str = f"{ahora_co.day} de {meses[ahora_co.month - 1]} del {ahora_co.year}"
+        hora_str = ahora_co.strftime("%I:%M %p")
+        
         st.markdown(f"""
             <div class="circle-logo">
                 <img src="{imago_src}" alt="e&c Imagotipo">
             </div>
-            <div class="right-title">Bienvenid@</div>
-            <div class="right-text">
-                <b>¿Listo para potenciar la operación de e&c Ingeniería SAS?</b><br><br>
-                A través de nuestro dashboard interactivo, adaptamos la información de calle en tiempo real y la convertimos en indicadores de gestión para aumentar la productividad y la eficiencia.
+            <div class="right-title" style="font-size: 2.5rem; line-height: 1.2;">SEGUIMIENTO OPERATIVO<br>EJE CAFETERO</div>
+            <div class="right-text" style="margin-top: 2rem; margin-bottom: 3rem;">
+                <div style="font-size: 3.5rem; font-weight: 900; letter-spacing: 2px; color: white;">{hora_str}</div>
+                <div style="font-size: 1.5rem; font-weight: 400; opacity: 0.9; margin-top: 0.2rem; text-transform: uppercase;">{fecha_str}</div>
             </div>
             <div class="chat-bubble">
                 <span style='color:#39A935;'>¡Hola!</span> ¿Necesita Ayuda?
