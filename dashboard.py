@@ -104,48 +104,34 @@ st.markdown("""
     }
     
     /* =========================================
-       NUEVO: HEADER INMOVILIZADO (FIXED HEADER)
+       RESTAURACIÓN DE DISEÑO (HEADER NORMAL)
        ========================================= */
-    /* Empujar el contenido hacia abajo para que no quede debajo del header fijo */
     .block-container {
-        padding-top: 180px !important;
-        overflow: visible !important;
+        padding-top: 2rem !important;
     }
     
-    [data-testid="stAppViewMain"], .main {
-        overflow: visible !important;
-    }
-
-    /* Forzar que el contenedor del header sea FIJO */
+    /* Intento de Sticky suave solo para el contenedor del header si el navegador lo permite */
     div[data-testid="stVerticalBlock"]:has(#sticky-header) {
-        position: fixed !important;
-        top: 0 !important;
-        left: 0 !important;
-        right: 0 !important;
-        width: 100% !important;
-        height: 170px !important;
-        background-color: white !important;
-        z-index: 999999 !important;
-        padding: 10px 5% !important;
-        border-bottom: 3px solid #2F9331 !important;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
-        display: flex !important;
-        flex-direction: column !important;
-        justify-content: center !important;
-    }
-
-    /* Pestañas pegajosas debajo del header fijo */
-    div[data-testid="stTabs"] > div[role="tablist"] {
+        position: -webkit-sticky !important;
         position: sticky !important;
-        top: 170px !important; /* Justo donde termina el header fijo */
-        z-index: 999998 !important;
+        top: 0px !important;
+        z-index: 999 !important;
         background-color: white !important;
-        padding: 5px 0 !important;
+        padding-bottom: 10px !important;
+        border-bottom: 2px solid #2F9331 !important;
     }
 
-    /* Ocultar header nativo de Streamlit */
+    /* Pestañas pegajosas */
+    div[data-testid="stTabs"] > div[role="tablist"] {
+        position: -webkit-sticky !important;
+        position: sticky !important;
+        top: 130px !important;
+        z-index: 998 !important;
+        background-color: white !important;
+    }
+
     header[data-testid="stHeader"] {
-        display: none !important;
+        background: rgba(255, 255, 255, 0.8) !important;
     }
     /* Estilos específicos para la tabla de SST */
     .sst-container {
