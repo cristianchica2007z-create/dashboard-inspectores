@@ -1237,8 +1237,6 @@ with tab_operacion:
             # ---------------------------------------------------
             # 🚨 INSPECTORES SIN ACTIVIDAD (MOVIDO AQUÍ)
             # ---------------------------------------------------
-            st.write("") # Espacio adicional
-            st.write("") # Espacio adicional (bajar una fila más)
             st.markdown("### 🚨 Inspectores sin actividad registrada")
         
             inspectores_con_actividad = set(df2["inspector"].str.upper().str.strip().unique())
