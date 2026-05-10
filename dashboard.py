@@ -1384,7 +1384,7 @@ with tab_agendas:
             else:
                 st.dataframe(df_prox[columnas_base].sort_values("fecha de visita"), use_container_width=True)
 
-                    elif opcion_age == "🚨 Alerta":
+          elif opcion_age == "🚨 Alerta":
             st.markdown("### 🚨 ALERTA")
             df_alerta_raw = df[(df["estado"].str.upper().str.contains("ASIGNAD", na=False)) & (df["prioridad"].str.upper().isin(["ALTA", "CRITICA"])) & (df["estado_alerta"] == "ALERTA")].copy()
             render_agendas_alerta_fragment(df_alerta_raw, grupos_validos, columnas_base)
