@@ -1727,69 +1727,59 @@ with tab_inv_v2:
         ])
 
     # El layout principal de la pestaña
-    col_nav, col_main = st.columns([1.2, 4.8])
+    col_nav, col_main = st.columns([1.5, 4.5])
     
     with col_nav:
         st.markdown('''
             <style>
-                /* Contenedor principal de los radio buttons (usando :has para ser exactos y robustos) */
-                div[data-testid="stRadio"]:has(p:contains("📊 Stock Actual")) {
-                    background-color: #0c3e66 !important; /* Azul oscuro como la imagen */
-                    padding: 20px 10px !important;
+                /* Fondo azul oscuro para toda la columna */
+                div[data-testid="stVerticalBlock"]:has(.my-custom-sidebar) {
+                    background-color: #0c3e66 !important;
+                    padding-top: 20px !important;
+                    padding-bottom: 20px !important;
                     border-radius: 12px !important;
                     box-shadow: 2px 2px 10px rgba(0,0,0,0.1) !important;
-                    margin-top: 5px !important;
                 }
-                
-                /* Ocultar el círculo nativo de forma segura */
-                div[data-testid="stRadio"]:has(p:contains("📊 Stock Actual")) div[role="radiogroup"] label > div:first-child {
-                    opacity: 0 !important;
-                    width: 0px !important;
-                    margin: 0 !important;
-                    padding: 0 !important;
-                }
-                
-                /* Estilo de los "botones" del menú */
-                div[data-testid="stRadio"]:has(p:contains("📊 Stock Actual")) div[role="radiogroup"] label {
+                /* Botones base transparentes */
+                div[data-testid="stVerticalBlock"]:has(.my-custom-sidebar) .stButton > button {
                     background-color: transparent !important;
-                    padding: 12px 15px !important;
-                    margin-bottom: 5px !important;
-                    border-radius: 8px !important;
-                    cursor: pointer !important;
-                    transition: all 0.3s ease !important;
-                    display: flex !important;
-                    align-items: center !important;
-                }
-                
-                /* Texto blanco */
-                div[data-testid="stRadio"]:has(p:contains("📊 Stock Actual")) div[role="radiogroup"] label p {
                     color: white !important;
-                    font-size: 1.05rem !important;
-                    font-weight: 500 !important;
-                    margin: 0 !important;
+                    border: none !important;
+                    justify-content: flex-start !important;
+                    padding: 10px 20px !important;
+                    border-radius: 0 !important;
+                    box-shadow: none !important;
                 }
-                
-                /* Hover effect */
-                div[data-testid="stRadio"]:has(p:contains("📊 Stock Actual")) div[role="radiogroup"] label:hover {
+                div[data-testid="stVerticalBlock"]:has(.my-custom-sidebar) .stButton > button:hover {
                     background-color: rgba(255, 255, 255, 0.1) !important;
                 }
-                
-                /* Activo effect */
-                div[data-testid="stRadio"]:has(p:contains("📊 Stock Actual")) div[aria-checked="true"] label {
+                /* Botón activo (primary) */
+                div[data-testid="stVerticalBlock"]:has(.my-custom-sidebar) .stButton > button[kind="primaryFormSubmit"],
+                div[data-testid="stVerticalBlock"]:has(.my-custom-sidebar) .stButton > button[kind="primary"] {
                     background-color: rgba(255, 255, 255, 0.2) !important;
                     border-left: 4px solid #3b82f6 !important;
-                    border-top-left-radius: 0px !important;
-                    border-bottom-left-radius: 0px !important;
                 }
             </style>
+            <div class="my-custom-sidebar">
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <h3 style="color: white; margin: 0; font-size: 1.1rem;">E&C INGENIERÍA</h3>
+                    <p style="color: #cbd5e1; font-size: 0.8rem; margin: 0;">Módulo de Inventario</p>
+                </div>
+                <p style="color: #94a3b8; font-size: 0.75rem; padding-left: 20px; margin-bottom: 5px; font-weight: bold; letter-spacing: 1px;">OPCIONES</p>
+            </div>
         ''', unsafe_allow_html=True)
         
-        opcion_inv = st.radio(
-            "Navegación", 
-            ["📊 Stock Actual", "➕ Registrar Entrada", "➖ Registrar Salida", "📜 Historial", "⚙️ Configuración Catálogo"],
-            label_visibility="collapsed"
-        )
-        
+        if "inv_page" not in st.session_state:
+            st.session_state.inv_page = "📊 Stock Actual"
+            
+        def set_inv_page(page):
+            st.session_state.inv_page = page
+            
+        pages = ["📊 Stock Actual", "➕ Registrar Entrada", "➖ Registrar Salida", "📜 Historial", "⚙️ Configuración Catálogo"]
+        for p in pages:
+            t = "primary" if st.session_state.inv_page == p else "secondary"
+            st.button(p, key=f"sidebar_btn_{p}", on_click=set_inv_page, args=(p,), use_container_width=True, type=t)
+            
     with col_main:
         # Filtros arriba a la derecha, para no empujar la columna izquierda hacia abajo!
         st.markdown('''
@@ -1806,14 +1796,14 @@ with tab_inv_v2:
         st.markdown('<div class="results-card">', unsafe_allow_html=True)
 
     
-        if opcion_inv == "📊 Stock Actual":
+        if st.session_state.inv_page == "📊 Stock Actual":
             df_stock = calcular_stock(movimientos, sede_global)
             if not df_stock.empty:
                 st.dataframe(df_stock.sort_values(["Categoría", "Stock"]), use_container_width=True, hide_index=True)
             else:
                 st.info("No hay inventario registrado en esta sede.")
             
-        elif opcion_inv == "➕ Registrar Entrada":
+        elif st.session_state.inv_page == "➕ Registrar Entrada":
             with st.container():
                 st.markdown('<p class="section-label">📥 Ingreso de Mercancía</p>', unsafe_allow_html=True)
                 c1, c2, c3 = st.columns(3)
@@ -1843,7 +1833,7 @@ with tab_inv_v2:
                     st.success("Ingreso registrado")
                     st.rerun()
 
-        elif opcion_inv == "➖ Registrar Salida":
+        elif st.session_state.inv_page == "➖ Registrar Salida":
             with st.container():
                 st.markdown('<p class="section-label">📤 Salida de Mercancía / Asignación</p>', unsafe_allow_html=True)
                 c1, c2, c3 = st.columns(3)
@@ -1882,7 +1872,7 @@ with tab_inv_v2:
                         st.success("Entrega registrada con éxito")
                         st.rerun()
 
-        elif opcion_inv == "📜 Historial":
+        elif st.session_state.inv_page == "📜 Historial":
             if movimientos:
                 df_h = pd.DataFrame(movimientos)
                 # Añadir filtros al historial para que sea más útil
@@ -1903,7 +1893,7 @@ with tab_inv_v2:
             else:
                 st.info("No hay movimientos registrados.")
 
-        elif opcion_inv == "⚙️ Configuración Catálogo":
+        elif st.session_state.inv_page == "⚙️ Configuración Catálogo":
             st.markdown('<p class="section-label">⚙️ Configuración del Maestro</p>', unsafe_allow_html=True)
         
             with st.expander("Ver Catálogo Actual"):
