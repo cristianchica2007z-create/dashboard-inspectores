@@ -104,35 +104,46 @@ st.markdown("""
     }
     
     /* =========================================
-       NUEVO: HEADER PEGAJOSO (STICKY HEADER) - INTENTO FINAL
+       NUEVO: HEADER INMOVILIZADO (FIXED HEADER)
        ========================================= */
-    /* Desactivar cualquier restricción de scroll en los padres */
-    [data-testid="stAppViewMain"], .main, .block-container {
+    /* Empujar el contenido hacia abajo para que no quede debajo del header fijo */
+    .block-container {
+        padding-top: 180px !important;
+        overflow: visible !important;
+    }
+    
+    [data-testid="stAppViewMain"], .main {
         overflow: visible !important;
     }
 
-    /* Forzar que el contenedor del header sea pegajoso */
-    div[data-testid="stVerticalBlockBorderWrapper"]:has(#sticky-header),
+    /* Forzar que el contenedor del header sea FIJO */
     div[data-testid="stVerticalBlock"]:has(#sticky-header) {
-        position: -webkit-sticky !important;
-        position: sticky !important;
+        position: fixed !important;
         top: 0 !important;
-        z-index: 999999 !important;
-        background-color: white !important;
+        left: 0 !important;
+        right: 0 !important;
         width: 100% !important;
-        padding: 10px 0 !important;
+        height: 170px !important;
+        background-color: white !important;
+        z-index: 999999 !important;
+        padding: 10px 5% !important;
         border-bottom: 3px solid #2F9331 !important;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
     }
 
-    /* Forzar que las pestañas sean pegajosas debajo del header */
+    /* Pestañas pegajosas debajo del header fijo */
     div[data-testid="stTabs"] > div[role="tablist"] {
-        position: -webkit-sticky !important;
         position: sticky !important;
-        top: 130px !important; /* Altura aproximada del header */
+        top: 170px !important; /* Justo donde termina el header fijo */
         z-index: 999998 !important;
         background-color: white !important;
+        padding: 5px 0 !important;
     }
 
+    /* Ocultar header nativo de Streamlit */
     header[data-testid="stHeader"] {
         display: none !important;
     }
