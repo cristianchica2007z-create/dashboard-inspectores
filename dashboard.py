@@ -1227,7 +1227,8 @@ def render_agendas_alerta_fragment(df_alerta_raw, grupos_validos, columnas_base)
             on_select="rerun",
             key="tabla_agendas_alerta_fragment",
             hide_index=True,
-            selection_mode="single-row"
+            selection_mode="single-row",
+            height=600
         )
         st.error(f"🚨 TOTAL ALERTAS: {len(df_alerta)}")
 
@@ -1382,7 +1383,7 @@ with tab_agendas:
             if df_final.empty:
                 st.info("✅ No hay agendas finalizadas con esos filtros.")
             else:
-                st.dataframe(df_final[columnas_base[:-1] + ["inicio_tarea"]].sort_values("fecha de visita"), use_container_width=True)
+                st.dataframe(df_final[columnas_base[:-1] + ["inicio_tarea"]].sort_values("fecha de visita"), use_container_width=True, height=600)
 
           elif opcion_age == "⏳ Próximas Agendas":
             st.markdown("### ⏳ Agendas próximas (no iniciadas)")
@@ -1403,7 +1404,7 @@ with tab_agendas:
             if df_prox.empty:
                 st.info("✅ No hay agendas próximas.")
             else:
-                st.dataframe(df_prox[columnas_base].sort_values("fecha de visita"), use_container_width=True)
+                st.dataframe(df_prox[columnas_base].sort_values("fecha de visita"), use_container_width=True, height=600)
 
           elif opcion_age == "🚨 Alerta":
             st.markdown("### 🚨 ALERTA")
