@@ -290,6 +290,8 @@ def load_local_bitacora(path):
         # Conversión de Fechas y Horas una sola vez
         if "fecha de ejecucion" in df.columns:
             df["fecha"] = pd.to_datetime(df["fecha de ejecucion"], errors="coerce").dt.date
+        if "fecha de visita" in df.columns:
+            df["fecha_visita"] = pd.to_datetime(df["fecha de visita"], errors="coerce").dt.date
             
         # Parseo de horas (simplificado)
         for col in ["hora inicio", "hora inicio de recorrido", "hora final"]:
@@ -1931,8 +1933,22 @@ with tab_operacion:
             # Filtro más flexible para grupos operativos
             df = df[df["grupo"].str.contains("INSP-CALDAS|INSP-RIS", na=False)]
     
-            # ===================================================
-            # VALIDAR COLUMNAS NECESARIAS
+        # ===================================================
+        # 📅 FILTRO DE FECHA (NUEVO)
+        # ===================================================
+        opc_fechas_asig = sorted(df["fecha_visita"].dropna().unique(), reverse=True)
+        if opc_fechas_asig:
+            with st.container(border=True):
+                col_d = st.columns([1.5, 4])[0]
+                with col_d:
+                    fecha_sel_asig = st.selectbox("📅 Seleccionar Fecha de Operación:", opc_fechas_asig, key="tab5_fecha_sel")
+            # Reducir universo al día seleccionado (programado o ejecutado ese día)
+            df = df[(df["fecha_visita"] == fecha_sel_asig) | (df["fecha"] == fecha_sel_asig)].copy()
+        else:
+            st.warning("⚠️ No se detectaron fechas de visita en la bitácora.")
+
+        # ===================================================
+        # VALIDAR COLUMNAS NECESARIAS
         # ===================================================
         columnas_requeridas = ["inspector", "estado", "prioridad", "grupo"]
         for col in columnas_requeridas:
