@@ -1938,12 +1938,17 @@ with tab_operacion:
         # ===================================================
         opc_fechas_asig = sorted(df["fecha_visita"].dropna().unique(), reverse=True)
         if opc_fechas_asig:
+            # Intentar pre-seleccionar la fecha de hoy si existe en la lista
+            hoy = datetime.datetime.now(TZ_CO).date()
+            idx_hoy = opc_fechas_asig.index(hoy) if hoy in opc_fechas_asig else 0
+            
             with st.container(border=True):
                 col_d = st.columns([1.5, 4])[0]
                 with col_d:
-                    fecha_sel_asig = st.selectbox("📅 Seleccionar Fecha de Operación:", opc_fechas_asig, key="tab5_fecha_sel")
-            # Reducir universo al día seleccionado (programado o ejecutado ese día)
-            df = df[(df["fecha_visita"] == fecha_sel_asig) | (df["fecha"] == fecha_sel_asig)].copy()
+                    fecha_sel_asig = st.selectbox("📅 Seleccionar Fecha de Operación:", opc_fechas_asig, index=idx_hoy, key="tab5_fecha_sel")
+            
+            # Filtrar estrictamente por fecha de visita para evitar ver órdenes de otros días
+            df = df[df["fecha_visita"] == fecha_sel_asig].copy()
         else:
             st.warning("⚠️ No se detectaron fechas de visita en la bitácora.")
 
