@@ -59,26 +59,60 @@ def process_bitacora(df):
     df = df.copy()
     df.columns = [str(c).strip().lower() for c in df.columns]
 
+    # Filtro de Grupos Operativos (Incluir todos los de inspección)
+    if "grupo" in df.columns:
+        df["grupo"] = df["grupo"].astype(str).str.upper().str.strip()
+        # Permitir todos los grupos que empiecen por INSP o sean SUPERVISIONES
+        mask = df["grupo"].str.startswith("INSP", na=False) | (df["grupo"] == "SUPERVISIONES")
+        df = df[mask].copy()
+
     if "contrato" in df.columns:
         df["contrato"] = df["contrato"].apply(clean_contract)
+        
+    # Excluir Cierres Administrativos
+    if "cierre" in df.columns:
+        df = df[~df["cierre"].astype(str).str.upper().str.contains("ADMINISTRATIVO", na=False)].copy()
         
     if "prioridad" in df.columns:
         df["prioridad"] = df["prioridad"].astype(str).str.strip().str.capitalize()
         
     if "inspector" in df.columns:
         df["inspector"] = df["inspector"].astype(str).str.upper().str.strip().str.replace(r"\s+", " ", regex=True)
-        
-    df["supervisor"] = df["inspector"].map(SUPERVISORES_DICT).fillna("SIN SUPERVISOR")
+    
+    # Mapeo Inteligente de Supervisores (Priorizar Excel si existe)
+    if "supervisor" in df.columns:
+        df["supervisor"] = df["supervisor"].astype(str).str.strip().str.upper().replace("NAN", "SIN SUPERVISOR")
+    else:
+        def get_supervisor(name):
+            if not name or pd.isna(name): return "SIN SUPERVISOR"
+            name = str(name).upper().strip()
+            if name in SUPERVISORES_DICT:
+                return SUPERVISORES_DICT[name]
+            for k, v in SUPERVISORES_DICT.items():
+                if k in name or name in k:
+                    return v
+            return "SIN SUPERVISOR"
+        df["supervisor"] = df["inspector"].apply(get_supervisor)
     
     if "fecha de ejecucion" in df.columns:
         df["fecha"] = pd.to_datetime(df["fecha de ejecucion"], errors="coerce").dt.date
+        # Eliminar filas donde la fecha es inválida para evitar errores de comparación
+        df = df.dropna(subset=["fecha"]).copy()
         
     for col in ["hora inicio", "hora inicio de recorrido", "hora final"]:
         if col in df.columns:
-            df[col + "_parsed"] = pd.to_datetime(df[col].astype(str), errors='coerce').dt.time
+            # Mantener como Timestamp (datetime64) para soportar agregaciones (min/max/mean)
+            # .dt.time devuelve objetos 'time' que no se llevan bien con NaNs en agregaciones
+            df[col + "_parsed"] = pd.to_datetime(df[col].astype(str), errors='coerce')
 
     if "tiempo de tarea" in df.columns:
-        df["tiempo_tarea_td"] = pd.to_timedelta(df["tiempo de tarea"].astype(str), errors="coerce")
+        def parse_duration(x):
+            if pd.isna(x): return pd.NaT
+            if isinstance(x, (int, float)):
+                # Excel almacena duraciones como fracciones de día
+                return pd.to_timedelta(x, unit='D')
+            return pd.to_timedelta(str(x), errors="coerce")
+        df["tiempo_tarea_td"] = df["tiempo de tarea"].apply(parse_duration)
 
     # 1. Marcación de Efectiva
     if "cierre" in df.columns:
@@ -91,11 +125,10 @@ def process_bitacora(df):
         def calc_recorrido(row):
             hi = row.get("hora inicio_parsed")
             hr = row.get("hora inicio de recorrido_parsed")
-            if not isinstance(hi, datetime.time) or not isinstance(hr, datetime.time):
+            if pd.isna(hi) or pd.isna(hr):
                 return pd.NaT
-            dt_hi = datetime.datetime.combine(datetime.date.today(), hi)
-            dt_hr = datetime.datetime.combine(datetime.date.today(), hr)
-            return dt_hi - dt_hr if dt_hi >= dt_hr else pd.NaT
+            # Ya son Timestamps, podemos restar directamente
+            return hi - hr if hi >= hr else pd.NaT
         df["tiempo_recorrido_td"] = df.apply(calc_recorrido, axis=1)
     else:
         df["tiempo_recorrido_td"] = pd.NaT
@@ -103,8 +136,10 @@ def process_bitacora(df):
     # 3. Puntualidad
     hora_oficial = datetime.time(7, 30)
     def calc_estado(h):
-        if not isinstance(h, datetime.time): return "SIN INICIO"
-        h1 = datetime.datetime.combine(datetime.date.today(), h)
+        if pd.isna(h): return "SIN INICIO"
+        # h es un Timestamp
+        h_time = h.time()
+        h1 = datetime.datetime.combine(datetime.date.today(), h_time)
         h2 = datetime.datetime.combine(datetime.date.today(), hora_oficial)
         m = int((h1 - h2).total_seconds() / 60)
         if m <= 0: return "Puntual"
