@@ -290,8 +290,11 @@ def load_local_bitacora(path):
         # Conversión de Fechas y Horas una sola vez
         if "fecha de ejecucion" in df.columns:
             df["fecha"] = pd.to_datetime(df["fecha de ejecucion"], errors="coerce").dt.date
-        if "fecha de visita" in df.columns:
-            df["fecha_visita"] = pd.to_datetime(df["fecha de visita"], errors="coerce").dt.date
+        
+        # Buscar la columna de fecha de visita de forma flexible
+        col_visita = next((c for c in df.columns if "visita" in c), None)
+        if col_visita:
+            df["fecha_visita"] = pd.to_datetime(df[col_visita], errors="coerce").dt.date
             
         # Parseo de horas (simplificado)
         for col in ["hora inicio", "hora inicio de recorrido", "hora final"]:
