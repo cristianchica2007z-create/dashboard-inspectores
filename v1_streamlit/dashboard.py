@@ -25,7 +25,7 @@ TZ_UTC = datetime.timezone.utc
 
 def obtener_texto_meta(info_dict):
     """Procesa el diccionario de metadata para mostrar fecha y usuario."""
-    if not info_dict or "ultima_actualizacion" not in info_dict:
+    if not isinstance(info_dict, dict) or "ultima_actualizacion" not in info_dict:
         return "—", "—"
     try:
         fecha_utc = datetime.datetime.strptime(
@@ -166,6 +166,31 @@ st.markdown("""
 # -------------------------------------------------
 token = st.secrets.get("github", {}).get("token", "")
 repo = st.secrets.get("github", {}).get("repo", "cristianchica2007z-create/dashboard-inspectores")
+
+# --- WRAPPERS DE COMPATIBILIDAD ---
+def safe_pills(label, options, **kwargs):
+    """Usa st.pills si está disponible, sino cae a multiselect."""
+    if hasattr(st, "pills"):
+        return st.pills(label, options, **kwargs)
+    return st.multiselect(label, options, default=kwargs.get("default", []))
+
+def safe_segmented_control(label, options, **kwargs):
+    """Usa st.segmented_control si está disponible, sino cae a selectbox."""
+    if hasattr(st, "segmented_control"):
+        return st.segmented_control(label, options, **kwargs)
+    return st.selectbox(label, options, index=options.index(kwargs.get("default")) if kwargs.get("default") in options else 0)
+
+def safe_style_map(styler, func, subset=None):
+    """Aplica colores de forma compatible con Pandas viejo y nuevo."""
+    if hasattr(styler, "map"):
+        return styler.map(func, subset=subset)
+    return styler.applymap(func, subset=subset)
+
+def safe_set_properties(styler, props, subset=None):
+    """Asegura que set_properties no falle si el subset es inválido."""
+    try:
+        return styler.set_properties(**props, subset=subset)
+    except: return styler
 
 def preprocess_bitacora(df):
     """Lógica unificada para limpiar y pre-calcular columnas de la bitácora."""
@@ -1085,7 +1110,7 @@ with tab_operacion:
             opc_insps = sorted(df_base_fecha["inspector"].unique())
     
             with col_f2:
-                supervisores_sel = st.pills("👥 Supervisores:", opc_sups, selection_mode="multi", default=opc_sups, key=f"pills_sup_{fecha_sel}")
+                supervisores_sel = safe_pills("👥 Supervisores:", opc_sups, selection_mode="multi", default=opc_sups, key=f"pills_sup_{fecha_sel}")
     
             with col_f3:
                 with st.popover("🔍 Seleccionar Inspectores", use_container_width=True):
