@@ -166,8 +166,8 @@ st.markdown("""
 # -------------------------------------------------
 # ✅ CONFIGURACIÓN DE CONEXIÓN GITHUB
 # -------------------------------------------------
-token = st.secrets.get("github", {}).get("token", "")
-repo = st.secrets.get("github", {}).get("repo", "")
+token = st.secrets.get("github", {}).get("token", "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")
+repo = st.secrets.get("github", {}).get("repo", "cristianchica2007z-create/dashboard-inspectores")
 
 if not token or not repo:
     st.error("❌ Error: No se encontraron las credenciales de GitHub en los Secrets. Por favor, configúralas en el panel de Streamlit Cloud.")
