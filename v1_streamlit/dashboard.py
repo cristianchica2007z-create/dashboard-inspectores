@@ -826,20 +826,8 @@ if st.session_state.usuario is None:
 # ===================================================
 # ✅ MOSTRAR METADATA DE ACTUALIZACIÓN (GLOBAL) Y CERRAR SESIÓN
 # ===================================================
-def obtener_texto_meta(info_dict):
-    if not info_dict or "ultima_actualizacion" not in info_dict:
-        return "—", "—"
-    try:
-        fecha_utc = datetime.datetime.strptime(
-            info_dict.get("ultima_actualizacion"), "%Y-%m-%d %H:%M:%S"
-        ).replace(tzinfo=TZ_UTC)
-        fecha_col = fecha_utc.astimezone(TZ_CO)
-        return fecha_col.strftime("%Y-%m-%d %I:%M %p"), info_dict.get("usuario_actualizo", "—")
-    except:
-        return "—", "—"
-
-token_meta = st.secrets["github"]["token"]
-repo_meta = st.secrets["github"]["repo"]
+token_meta = token
+repo_meta = repo
 
 # Leer info de ambos archivos desde GitHub
 info_bitacora_meta, _ = fetch_github_json(repo_meta, "BITACORA_INFO.json", token_meta)
@@ -1718,10 +1706,7 @@ with tab_operacion:
         # ======================================================
         # CARGAR Y PROCESAR DATOS (CON CACHÉ PARA VELOCIDAD)
         # ======================================================
-        token = st.secrets["github"]["token"]
-        repo = st.secrets["github"]["repo"]
-    
-        df = get_processed_agendas_data(repo, token)
+        df = get_processed_agendas_data(repo_meta, token_meta)
         
         if not df.empty:
             ahora_colombia = datetime.datetime.now(TZ_CO).replace(tzinfo=None)
@@ -2459,9 +2444,7 @@ with tab_subir:
         if st.button("🚀 Actualizar Bitácora", use_container_width=True, key="btn_bit_global"):
             if archivo_bit:
                 with st.spinner("Sincronizando con GitHub..."):
-                    token = st.secrets["github"]["token"]
-                    repo = st.secrets["github"]["repo"]
-                    branch = st.secrets["github"].get("branch", "main")
+                    branch = "main"
                     
                     # 1. Subir el archivo Excel a GitHub
                     content_bin = archivo_bit.read()
