@@ -1792,7 +1792,7 @@ with tab_operacion:
                         if st.checkbox(i, value=True, key=f"fin_inicio_{i}"):
                             inicios_sel.append(i)
     
-                df_final = df[df["estado"].str.upper().str.contains("FINALIZAD", na=False)].copy()
+                df_final = df_age[df_age["estado"].str.upper().str.contains("FINALIZAD", na=False)].copy()
                 if zonas_sel:
                     df_final = df_final[df_final["grupo"].isin(zonas_sel)]
     
@@ -1813,10 +1813,10 @@ with tab_operacion:
     
               elif opcion_age == "⏳ Próximas Agendas":
                 st.markdown("### ⏳ Agendas próximas (no iniciadas)")
-                df_prox_raw = df[
-                    (df["estado"].str.upper().str.contains("ASIGNAD", na=False)) & 
-                    (df["fecha de ejecucion"].isna()) & 
-                    (df["fecha de visita"] > ahora_colombia)
+                df_prox_raw = df_age[
+                    (df_age["estado"].str.upper().str.contains("ASIGNAD", na=False)) & 
+                    (df_age["fecha de ejecucion"].isna()) & 
+                    (df_age["fecha de visita"] > ahora_colombia)
                 ].copy()
                 
                 zonas_sel = []
