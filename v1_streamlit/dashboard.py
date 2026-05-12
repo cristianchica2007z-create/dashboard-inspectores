@@ -11,17 +11,10 @@ import io
 # -------------------------------------------------
 # ✅ GESTIÓN ROBUSTA DE ZONAS HORARIAS
 # -------------------------------------------------
-
-# -------------------------------------------------
-# ✅ GESTIÓN ROBUSTA DE ZONAS HORARIAS (FIX PARA LINEA 991)
-# -------------------------------------------------
 try:
     from zoneinfo import ZoneInfo
 except ImportError:
-    try:
-        from backports.zoneinfo import ZoneInfo
-    except ImportError:
-        ZoneInfo = None # Fallback total
+    from backports.zoneinfo import ZoneInfo
 
 def obtener_tz_segura(nombre_zona):
     try: return ZoneInfo(nombre_zona)
@@ -173,6 +166,9 @@ st.markdown("""
 # -------------------------------------------------
 token = st.secrets.get("github", {}).get("token", "")
 repo = st.secrets.get("github", {}).get("repo", "cristianchica2007z-create/dashboard-inspectores")
+
+if not token or not repo:
+    st.warning("⚠️ Configura el 'token' de GitHub en los Secrets de Streamlit Cloud para ver datos en vivo.")
 
 # -------------------------------------------------
 # ✅ FUNCIONES DE CACHÉ. (MEJORA DE RENDIMIENTO)
@@ -980,23 +976,16 @@ inspectores_lista = sorted([
 # CARGA ÚNICA DE BITÁCORA (BASE GLOBAL)
 # ===================================================
 with st.spinner("🔄 Sincronizando datos con el servidor... Un momento por favor"):
-    df_bitacora_base = pd.DataFrame()
+    # 1. Intentar cargar desde GitHub (Ideal para Streamlit Cloud)
+    df_bitacora_base, _ = fetch_github_excel(repo, "BITACORA.xlsx", token)
     
-    # 1. Intentar cargar desde GitHub si hay token
-    if token:
-        df_bitacora_base, _ = fetch_github_excel(repo, "BITACORA.xlsx", token)
-    
-    # 2. Si falla GitHub o no hay token, buscar el archivo local en múltiples rutas
+    # 2. Si falla GitHub (token expirado o sin red), intentar localmente
     if df_bitacora_base.empty:
-        rutas_posibles = ["BITACORA.xlsx", os.path.join("v1_streamlit", "BITACORA.xlsx")]
-        for r in rutas_posibles:
-            if os.path.exists(r):
-                archivo_bitacora = r
-                df_bitacora_base = load_local_bitacora(r)
-                break
+        archivo_bitacora = "BITACORA.xlsx" if os.path.exists("BITACORA.xlsx") else os.path.join("v1_streamlit", "BITACORA.xlsx")
+        df_bitacora_base = load_local_bitacora(archivo_bitacora)
     
     if df_bitacora_base is None or df_bitacora_base.empty:
-        st.error("❌ No se encontró el archivo BITACORA.xlsx. Verifica que el archivo esté en la raíz o en v1_streamlit.")
+        st.error("❌ No se encontró el archivo BITACORA.xlsx en GitHub ni localmente.")
         st.stop()
     
     # Extraer links una sola vez aquí para evitar lentitud en el Tab 2
@@ -1114,6 +1103,10 @@ with tab_operacion:
         # Agrupación diaria, puntualidad y estado
         # ===================================================
     
+        # Inicializar variables de KPI para evitar NameError si falla el proceso
+        hora_prom_ini = hora_prom_fin = tiempo_prom_str = prom_recorrido_global = "—"
+        total_ordenes = total_efectivas = porcentaje = 0
+
         # ---------------------------------------------------
         # AGRUPACIÓN DIARIA POR INSPECTOR (ESTABLE)
         # ---------------------------------------------------
@@ -1742,19 +1735,21 @@ with tab_operacion:
         # ======================================================
         # CARGAR Y PROCESAR DATOS (CON CACHÉ PARA VELOCIDAD)
         # ======================================================
-        df = get_processed_agendas_data(repo_meta, token_meta)
+        df_age = get_processed_agendas_data(repo_meta, token_meta)
         
-        if not df.empty:
+        # Inicializar contadores para evitar NameError
+        count_final = count_prox = count_alerta = 0
+        ahora_colombia = ahora_colombia_global
+        
+        if not df_age.empty:
             ahora_colombia = datetime.datetime.now(TZ_CO).replace(tzinfo=None)
-            
             # CÁLCULOS GLOBALES PARA KPIs
-            count_final = len(df[df["estado"].str.upper().str.contains("FINALIZAD", na=False)])
-            count_prox = len(df[(df["estado"].str.upper().str.contains("ASIGNAD", na=False)) & (df["fecha de ejecucion"].isna()) & (df["fecha de visita"] > ahora_colombia)])
-            count_alerta = len(df[(df["estado"].str.upper().str.contains("ASIGNAD", na=False)) & (df["prioridad"].str.upper() == "ALTA") & (df["estado_alerta"] == "ALERTA")])
+            count_final = len(df_age[df_age["estado"].str.upper().str.contains("FINALIZAD", na=False)])
+            count_prox = len(df_age[(df_age["estado"].str.upper().str.contains("ASIGNAD", na=False)) & (df_age["fecha de ejecucion"].isna()) & (df_age["fecha de visita"] > ahora_colombia)])
+            count_alerta = len(df_age[(df_age["estado"].str.upper().str.contains("ASIGNAD", na=False)) & (df_age["prioridad"].str.upper() == "ALTA") & (df_age["estado_alerta"] == "ALERTA")])
     
-        if not df.empty:
+        if not df_age.empty:
             columnas_base = ["inspector", "contrato", "direccion", "estado", "fecha de visita", "localidad", "detalle de tarea", "estado_alerta"]
-            ahora_colombia = datetime.datetime.now(TZ_CO).replace(tzinfo=None)
             grupos_validos = ["INSP-CALDAS", "INSP-RIS"]
     
             # --- LAYOUT CON MENÚ LATERAL ---
@@ -1839,7 +1834,7 @@ with tab_operacion:
     
               elif opcion_age == "🚨 Alerta":
                 st.markdown("### 🚨 ALERTA")
-                df_alerta_raw = df[(df["estado"].str.upper().str.contains("ASIGNAD", na=False)) & (df["prioridad"].str.upper() == "ALTA") & (df["estado_alerta"] == "ALERTA")].copy()
+                df_alerta_raw = df_age[(df_age["estado"].str.upper().str.contains("ASIGNAD", na=False)) & (df_age["prioridad"].str.upper() == "ALTA") & (df_age["estado_alerta"] == "ALERTA")].copy()
                 render_agendas_alerta_fragment(df_alerta_raw, grupos_validos, columnas_base)
         else:
             st.info("No se pudo cargar la bitácora desde GitHub para agendas.")
@@ -1972,7 +1967,6 @@ with tab_operacion:
         # ===================================================
         # 📅 FILTRO DE FECHA (NUEVO)
         # ===================================================
-        fecha_sel_asig = None
         if "fecha_visita" in df.columns:
             # Asegurar que solo comparamos fechas para evitar errores de tipo en el ordenamiento
             todas_las_fechas = pd.to_datetime(df["fecha_visita"], errors="coerce").dt.date.dropna().unique()
@@ -1989,8 +1983,7 @@ with tab_operacion:
                         fecha_sel_asig = st.selectbox("📅 Seleccionar Fecha de Operación:", opc_fechas_asig, index=idx_hoy, key="tab5_fecha_sel")
                 
                 # Filtrar estrictamente por fecha de visita para evitar ver órdenes de otros días
-                if fecha_sel_asig:
-                    df = df[pd.to_datetime(df["fecha_visita"]).dt.date == fecha_sel_asig].copy()
+                df = df[pd.to_datetime(df["fecha_visita"]).dt.date == fecha_sel_asig].copy()
             else:
                 st.warning("⚠️ No se detectaron fechas de visita válidas en la bitácora.")
         else:
