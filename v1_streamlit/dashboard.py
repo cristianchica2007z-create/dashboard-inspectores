@@ -1972,6 +1972,7 @@ with tab_operacion:
         # ===================================================
         # 📅 FILTRO DE FECHA (NUEVO)
         # ===================================================
+        fecha_sel_asig = None
         if "fecha_visita" in df.columns:
             # Asegurar que solo comparamos fechas para evitar errores de tipo en el ordenamiento
             todas_las_fechas = pd.to_datetime(df["fecha_visita"], errors="coerce").dt.date.dropna().unique()
@@ -1988,7 +1989,8 @@ with tab_operacion:
                         fecha_sel_asig = st.selectbox("📅 Seleccionar Fecha de Operación:", opc_fechas_asig, index=idx_hoy, key="tab5_fecha_sel")
                 
                 # Filtrar estrictamente por fecha de visita para evitar ver órdenes de otros días
-                df = df[pd.to_datetime(df["fecha_visita"]).dt.date == fecha_sel_asig].copy()
+                if fecha_sel_asig:
+                    df = df[pd.to_datetime(df["fecha_visita"]).dt.date == fecha_sel_asig].copy()
             else:
                 st.warning("⚠️ No se detectaron fechas de visita válidas en la bitácora.")
         else:
