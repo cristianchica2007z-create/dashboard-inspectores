@@ -4,19 +4,21 @@ import os
 import plotly.express as px
 import json
 import datetime
+import base64
+import requests
+import io
+
+# -------------------------------------------------
+# ✅ GESTIÓN ROBUSTA DE ZONAS HORARIAS
+# -------------------------------------------------
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    from backports.zoneinfo import ZoneInfo
 
 def obtener_tz_segura(nombre_zona):
-    """Carga una zona horaria de forma robusta, incluso si falta la DB en el sistema."""
-    try:
-        from zoneinfo import ZoneInfo
-        return ZoneInfo(nombre_zona)
-    except Exception:
-        try:
-            from backports.zoneinfo import ZoneInfo
-            return ZoneInfo(nombre_zona)
-        except Exception:
-            # Fallback a UTC-5 (Bogotá) si todo lo demás falla
-            return datetime.timezone(datetime.timedelta(hours=-5))
+    try: return ZoneInfo(nombre_zona)
+    except: return datetime.timezone(datetime.timedelta(hours=-5))
 
 TZ_CO = obtener_tz_segura("America/Bogota")
 TZ_UTC = datetime.timezone.utc
@@ -33,10 +35,6 @@ def obtener_texto_meta(info_dict):
         return fecha_col.strftime("%Y-%m-%d %I:%M %p"), info_dict.get("usuario_actualizo", "—")
     except:
         return "—", "—"
-
-import base64
-import requests
-import io
 
 # Importar lógica modularizada
 import core_logic
@@ -175,6 +173,9 @@ if not token or not repo:
 # -------------------------------------------------
 # ✅ FUNCIONES DE CACHÉ. (MEJORA DE RENDIMIENTO)
 # -------------------------------------------------
+
+# Variable global de tiempo para evitar NameErrors en los tabs
+ahora_colombia_global = datetime.datetime.now(TZ_CO).replace(tzinfo=None)
 
 def get_processed_agendas_data(repo, token):
     df_raw, _ = fetch_github_excel(repo, "BITACORA.xlsx", token)
