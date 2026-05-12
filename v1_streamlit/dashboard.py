@@ -166,8 +166,11 @@ st.markdown("""
 # -------------------------------------------------
 # ✅ CONFIGURACIÓN DE CONEXIÓN GITHUB
 # -------------------------------------------------
-token = st.secrets.get("github", {}).get("token", "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")
-repo = st.secrets.get("github", {}).get("repo", "cristianchica2007z-create/dashboard-inspectores")
+token = st.secrets.get("github", {}).get("token", "")
+repo = st.secrets.get("github", {}).get("repo", "")
+
+if not token or not repo:
+    st.error("❌ Error: No se encontraron las credenciales de GitHub en los Secrets. Por favor, configúralas en el panel de Streamlit Cloud.")
 
 # -------------------------------------------------
 # ✅ FUNCIONES DE CACHÉ. (MEJORA DE RENDIMIENTO)
@@ -1835,10 +1838,10 @@ with tab_operacion:
         st.subheader("🏭 Seguimiento de Adicionales")
     
         # --- CONFIGURACIÓN DE PERSISTENCIA EN GITHUB ---
-        token_ad = st.secrets["github"]["token"]
-        repo_ad = st.secrets["github"]["repo"]
-        branch_ad = st.secrets["github"].get("branch", "main")
-        nombre_archivo_git = "PROGRAMACION.xlsx"
+        token_ad = token
+        repo_ad = repo
+        branch_ad = "main"
+        nombre_archivo_prog = "PROGRAMACION.xlsx"
     
         # --- SECCIÓN PARA ACTUALIZAR EL ARCHIVO (Sincronizado con GitHub) ---
         with st.expander("⬆️ Actualizar Base de Datos de Programación"):
@@ -1852,7 +1855,7 @@ with tab_operacion:
                     contenido_bin = archivo_nuevo.read()
                     contenido_b64_ad = base64.b64encode(contenido_bin).decode("utf-8")
                     
-                    url_ad = f"https://api.github.com/repos/{repo_ad}/contents/{nombre_archivo_git}"
+                    url_ad = f"https://api.github.com/repos/{repo_ad}/contents/{nombre_archivo_prog}"
                     headers_ad = {"Authorization": f"Bearer {token_ad}", "Accept": "application/vnd.github+json"}
                     
                     # Obtener el SHA actual para permitir el reemplazo (evita conflictos de versión)
@@ -1896,7 +1899,7 @@ with tab_operacion:
                     st.warning("⚠️ Por favor selecciona un archivo antes de intentar guardar.")
     
         # --- CARGA DEL ARCHIVO DESDE GITHUB (Datos compartidos) ---
-        df_p, _ = fetch_github_excel(repo_ad, nombre_archivo_git, token_ad, branch_ad)
+        df_p, _ = fetch_github_excel(repo_ad, nombre_archivo_prog, token_ad, branch_ad)
         
         # Procesamiento cacheado para mayor velocidad
         df_p = process_adicionales_data(df_p)
