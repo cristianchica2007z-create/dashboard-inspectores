@@ -4,10 +4,22 @@ import os
 import plotly.express as px
 import json
 import datetime
-try:
-    from zoneinfo import ZoneInfo
-except ImportError:
-    from backports.zoneinfo import ZoneInfo
+
+def obtener_tz_segura(nombre_zona):
+    """Carga una zona horaria de forma robusta, incluso si falta la DB en el sistema."""
+    try:
+        from zoneinfo import ZoneInfo
+        return ZoneInfo(nombre_zona)
+    except Exception:
+        try:
+            from backports.zoneinfo import ZoneInfo
+            return ZoneInfo(nombre_zona)
+        except Exception:
+            # Fallback a UTC-5 (Bogotá) si todo lo demás falla
+            return datetime.timezone(datetime.timedelta(hours=-5))
+
+TZ_CO = obtener_tz_segura("America/Bogota")
+TZ_UTC = datetime.timezone.utc
 import base64
 import requests
 import io
@@ -18,8 +30,6 @@ import core_logic
 # ---------------------------------------------------
 # ✅ CONSTANTES GLOBALES
 # ---------------------------------------------------
-TZ_CO = ZoneInfo("America/Bogota")
-TZ_UTC = ZoneInfo("UTC")
 GRUPOS_OPERATIVOS = ["INSP-CALDAS", "INSP-RIS"]
 CODIGOS_ADICIONALES = ["12163", "12164", "10793", "12170", "10842", "10772", "10445"]
 
@@ -1947,10 +1957,13 @@ with tab_operacion:
         # 📅 FILTRO DE FECHA (NUEVO)
         # ===================================================
         if "fecha_visita" in df.columns:
-            opc_fechas_asig = sorted(df["fecha_visita"].dropna().unique(), reverse=True)
+            # Asegurar que solo comparamos fechas para evitar errores de tipo en el ordenamiento
+            todas_las_fechas = pd.to_datetime(df["fecha_visita"], errors="coerce").dt.date.dropna().unique()
+            opc_fechas_asig = sorted(list(todas_las_fechas), reverse=True)
+            
             if opc_fechas_asig:
                 # Intentar pre-seleccionar la fecha de hoy si existe en la lista
-                hoy = datetime.datetime.now(TZ_CO).date()
+                hoy = datetime.datetime.now(TZ_CO).date() if isinstance(TZ_CO, datetime.tzinfo) else datetime.date.today()
                 idx_hoy = opc_fechas_asig.index(hoy) if hoy in opc_fechas_asig else 0
                 
                 with st.container(border=True):
@@ -1959,7 +1972,7 @@ with tab_operacion:
                         fecha_sel_asig = st.selectbox("📅 Seleccionar Fecha de Operación:", opc_fechas_asig, index=idx_hoy, key="tab5_fecha_sel")
                 
                 # Filtrar estrictamente por fecha de visita para evitar ver órdenes de otros días
-                df = df[df["fecha_visita"] == fecha_sel_asig].copy()
+                df = df[pd.to_datetime(df["fecha_visita"]).dt.date == fecha_sel_asig].copy()
             else:
                 st.warning("⚠️ No se detectaron fechas de visita válidas en la bitácora.")
         else:
