@@ -4,7 +4,10 @@ import os
 import plotly.express as px
 import json
 import datetime
-from zoneinfo import ZoneInfo
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    from backports.zoneinfo import ZoneInfo
 import base64
 import requests
 import io
@@ -139,8 +142,12 @@ st.markdown("""
 # -------------------------------------------------
 # ✅ CONFIGURACIÓN DE CONEXIÓN GITHUB
 # -------------------------------------------------
-token = st.secrets["github"]["token"]
-repo = st.secrets["github"]["repo"]
+try:
+    token = st.secrets["github"]["token"]
+    repo = st.secrets["github"]["repo"]
+except Exception:
+    st.error("❌ Error: No se encontraron las credenciales de GitHub en st.secrets.")
+    st.stop()
 
 # -------------------------------------------------
 # ✅ FUNCIONES DE CACHÉ. (MEJORA DE RENDIMIENTO)
@@ -290,6 +297,8 @@ def load_local_bitacora(path):
         # Conversión de Fechas y Horas una sola vez
         if "fecha de ejecucion" in df.columns:
             df["fecha"] = pd.to_datetime(df["fecha de ejecucion"], errors="coerce").dt.date
+        if "fecha de visita" in df.columns:
+            df["fecha_visita"] = pd.to_datetime(df["fecha de visita"], errors="coerce").dt.date
         
         # Buscar la columna de fecha de visita de forma flexible
         col_visita = next((c for c in df.columns if "visita" in c), None)
@@ -1939,21 +1948,26 @@ with tab_operacion:
         # ===================================================
         # 📅 FILTRO DE FECHA (NUEVO)
         # ===================================================
-        opc_fechas_asig = sorted(df["fecha_visita"].dropna().unique(), reverse=True)
-        if opc_fechas_asig:
-            # Intentar pre-seleccionar la fecha de hoy si existe en la lista
-            hoy = datetime.datetime.now(TZ_CO).date()
-            idx_hoy = opc_fechas_asig.index(hoy) if hoy in opc_fechas_asig else 0
-            
-            with st.container(border=True):
-                col_d = st.columns([1.5, 4])[0]
-                with col_d:
-                    fecha_sel_asig = st.selectbox("📅 Seleccionar Fecha de Operación:", opc_fechas_asig, index=idx_hoy, key="tab5_fecha_sel")
-            
-            # Filtrar estrictamente por fecha de visita para evitar ver órdenes de otros días
-            df = df[df["fecha_visita"] == fecha_sel_asig].copy()
+        if "fecha_visita" in df.columns:
+            opc_fechas_asig = sorted(df["fecha_visita"].dropna().unique(), reverse=True)
+            if opc_fechas_asig:
+                # Intentar pre-seleccionar la fecha de hoy si existe en la lista
+                hoy = datetime.datetime.now(TZ_CO).date()
+                idx_hoy = opc_fechas_asig.index(hoy) if hoy in opc_fechas_asig else 0
+                
+                with st.container(border=True):
+                    col_d = st.columns([1.5, 4])[0]
+                    with col_d:
+                        fecha_sel_asig = st.selectbox("📅 Seleccionar Fecha de Operación:", opc_fechas_asig, index=idx_hoy, key="tab5_fecha_sel")
+                
+                # Filtrar estrictamente por fecha de visita para evitar ver órdenes de otros días
+                df = df[df["fecha_visita"] == fecha_sel_asig].copy()
+            else:
+                st.warning("⚠️ No se detectaron fechas de visita válidas en la bitácora.")
+                st.stop()
         else:
-            st.warning("⚠️ No se detectaron fechas de visita en la bitácora.")
+            st.error("❌ No se encontró la columna 'Fecha de Visita' necesaria para filtrar por día.")
+            st.stop()
 
         # ===================================================
         # VALIDAR COLUMNAS NECESARIAS
