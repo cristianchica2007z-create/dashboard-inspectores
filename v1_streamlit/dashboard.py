@@ -175,6 +175,19 @@ def preprocess_bitacora(df):
     # Normalizar nombres de columnas a minúsculas para evitar KeyErrors
     df.columns = [str(c).strip().lower() for c in df.columns]
 
+    # Mapeo de nombres de columnas comunes para mayor robustez
+    mapping = {
+        'nombre_inspector': 'inspector', 'nombre del inspector': 'inspector', 'técnico': 'inspector',
+        'estado_orden': 'estado', 'fase': 'estado',
+        'municipio': 'localidad', 'ciudad': 'localidad',
+        'resultado_visita': 'cierre', 'tipo_cierre': 'cierre',
+        'nro_contrato': 'contrato', 'id_contrato': 'contrato',
+        'urgencia': 'prioridad'
+    }
+    for old_col, new_col in mapping.items():
+        if old_col in df.columns and new_col not in df.columns:
+            df.rename(columns={old_col: new_col}, inplace=True)
+
     # Limpiar contratos
     def clean_contract(c):
         if pd.isna(c): return ""
