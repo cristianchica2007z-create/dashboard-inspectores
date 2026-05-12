@@ -1740,6 +1740,8 @@ with tab_operacion:
         # Inicializar contadores para evitar NameError
         count_final = count_prox = count_alerta = 0
         ahora_colombia = ahora_colombia_global
+        columnas_base = ["inspector", "contrato", "direccion", "estado", "fecha de visita", "localidad", "detalle de tarea", "estado_alerta"]
+        grupos_validos = ["INSP-CALDAS", "INSP-RIS"]
         
         if not df_age.empty:
             ahora_colombia = datetime.datetime.now(TZ_CO).replace(tzinfo=None)
@@ -1748,10 +1750,7 @@ with tab_operacion:
             count_prox = len(df_age[(df_age["estado"].str.upper().str.contains("ASIGNAD", na=False)) & (df_age["fecha de ejecucion"].isna()) & (df_age["fecha de visita"] > ahora_colombia)])
             count_alerta = len(df_age[(df_age["estado"].str.upper().str.contains("ASIGNAD", na=False)) & (df_age["prioridad"].str.upper() == "ALTA") & (df_age["estado_alerta"] == "ALERTA")])
     
-        if not df_age.empty:
-            columnas_base = ["inspector", "contrato", "direccion", "estado", "fecha de visita", "localidad", "detalle de tarea", "estado_alerta"]
-            grupos_validos = ["INSP-CALDAS", "INSP-RIS"]
-    
+        if True: # Permitir renderizar el layout aunque esté vacío para evitar NameErrors
             # --- LAYOUT CON MENÚ LATERAL ---
             col_nav_age, col_main_age = st.columns([1.2, 4])
     
