@@ -1447,7 +1447,7 @@ with tab_operacion:
                 return f"color: {color}; font-weight: bold;"
 
             st.dataframe(
-                df_efectividad_zona.style.map(color_pct, subset=["Efectividad Bloque (%)"]),
+                safe_style_map(df_efectividad_zona.style, color_pct, subset=["Efectividad Bloque (%)"]),
                 use_container_width=True,
                 hide_index=True
             )
@@ -1564,7 +1564,7 @@ with tab_operacion:
             
             opc_sups = sorted(df_m["supervisor"].unique())
             with c2:
-                sups_sel = st.pills("👥 Supervisores:", opc_sups, selection_mode="multi", default=opc_sups, key="m_sup_pills")
+                sups_sel = safe_pills("👥 Supervisores:", opc_sups, selection_mode="multi", default=opc_sups, key="m_sup_pills")
             with c3:
                 opc_insps = sorted(df_m[df_m["supervisor"].isin(sups_sel)]["inspector"].unique())
                 with st.popover("🔍 Inspectores", use_container_width=True):
@@ -2058,13 +2058,13 @@ with tab_operacion:
             opc_prioridades = sorted(df_asignadas["prioridad"].dropna().unique())
     
             with col_f1:
-                grupos_sel = st.pills("📍 Grupo", opc_grupos, selection_mode="multi", default=opc_grupos, key="tab5_grupo_pills")
+                grupos_sel = safe_pills("📍 Grupo", opc_grupos, selection_mode="multi", default=opc_grupos, key="tab5_grupo_pills")
             with col_f2:
-                estados_sel = st.pills("📊 Estado", opc_estados, selection_mode="multi", default=opc_estados, key="tab5_estado_pills")
+                estados_sel = safe_pills("📊 Estado", opc_estados, selection_mode="multi", default=opc_estados, key="tab5_estado_pills")
             with col_f3:
-                prioridades_sel = st.pills("⚡ Prioridad", opc_prioridades, selection_mode="multi", default=opc_prioridades, key="tab5_prio_pills")
+                prioridades_sel = safe_pills("⚡ Prioridad", opc_prioridades, selection_mode="multi", default=opc_prioridades, key="tab5_prio_pills")
             with col_f4:
-                ver_por = st.segmented_control("📈 Ver por:", ["Prioridad", "Estado"], default="Prioridad", key="tab5_ver_por_seg")
+                ver_por = safe_segmented_control("📈 Ver por:", ["Prioridad", "Estado"], default="Prioridad", key="tab5_ver_por_seg")
                 col_agrupar = ver_por.lower()
     
         # Aplicar todos los filtros al final para evitar reinicios de widgets
@@ -2386,7 +2386,7 @@ with tab_sst:
 
             with col_f2:
                 opc_sups_sst = sorted(df_base_sst["supervisor"].unique())
-                supervisores_sel_sst = st.pills("👥 Supervisores:", opc_sups_sst, selection_mode="multi", default=opc_sups_sst, key="sst_sup_pills")
+                supervisores_sel_sst = safe_pills("👥 Supervisores:", opc_sups_sst, selection_mode="multi", default=opc_sups_sst, key="sst_sup_pills")
 
         if not supervisores_sel_sst:
             st.warning("⚠️ Selecciona al menos un supervisor para ver los datos de SST.")
