@@ -152,18 +152,13 @@ st.markdown("""
 # -------------------------------------------------
 # ✅ CONFIGURACIÓN DE CONEXIÓN GITHUB
 # -------------------------------------------------
-try:
-    token = st.secrets["github"]["token"]
-    repo = st.secrets["github"]["repo"]
-except Exception:
-    st.error("❌ Error: No se encontraron las credenciales de GitHub en st.secrets.")
-    st.stop()
+token = st.secrets.get("github", {}).get("token", "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")
+repo = st.secrets.get("github", {}).get("repo", "cristianchica2007z-create/dashboard-inspectores")
 
 # -------------------------------------------------
 # ✅ FUNCIONES DE CACHÉ. (MEJORA DE RENDIMIENTO)
 # -------------------------------------------------
 
-@st.cache_data(ttl=300)
 def get_processed_agendas_data(repo, token):
     df_raw, _ = fetch_github_excel(repo, "BITACORA.xlsx", token)
     if df_raw.empty:
