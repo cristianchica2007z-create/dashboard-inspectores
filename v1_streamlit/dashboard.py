@@ -11,10 +11,17 @@ import io
 # -------------------------------------------------
 # ✅ GESTIÓN ROBUSTA DE ZONAS HORARIAS
 # -------------------------------------------------
+
+# -------------------------------------------------
+# ✅ GESTIÓN ROBUSTA DE ZONAS HORARIAS (FIX PARA LINEA 991)
+# -------------------------------------------------
 try:
     from zoneinfo import ZoneInfo
 except ImportError:
-    from backports.zoneinfo import ZoneInfo
+    try:
+        from backports.zoneinfo import ZoneInfo
+    except ImportError:
+        ZoneInfo = None # Fallback total
 
 def obtener_tz_segura(nombre_zona):
     try: return ZoneInfo(nombre_zona)
@@ -164,11 +171,8 @@ st.markdown("""
 # -------------------------------------------------
 # ✅ CONFIGURACIÓN DE CONEXIÓN GITHUB
 # -------------------------------------------------
-token = st.secrets.get("github", {}).get("token", "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")
+token = st.secrets.get("github", {}).get("token", "")
 repo = st.secrets.get("github", {}).get("repo", "cristianchica2007z-create/dashboard-inspectores")
-
-if not token or not repo:
-    st.error("❌ Error: No se encontraron las credenciales de GitHub en los Secrets. Por favor, configúralas en el panel de Streamlit Cloud.")
 
 # -------------------------------------------------
 # ✅ FUNCIONES DE CACHÉ. (MEJORA DE RENDIMIENTO)
@@ -976,16 +980,23 @@ inspectores_lista = sorted([
 # CARGA ÚNICA DE BITÁCORA (BASE GLOBAL)
 # ===================================================
 with st.spinner("🔄 Sincronizando datos con el servidor... Un momento por favor"):
-    # 1. Intentar cargar desde GitHub (Ideal para Streamlit Cloud)
-    df_bitacora_base, _ = fetch_github_excel(repo, "BITACORA.xlsx", token)
+    df_bitacora_base = pd.DataFrame()
     
-    # 2. Si falla GitHub (token expirado o sin red), intentar localmente
+    # 1. Intentar cargar desde GitHub si hay token
+    if token:
+        df_bitacora_base, _ = fetch_github_excel(repo, "BITACORA.xlsx", token)
+    
+    # 2. Si falla GitHub o no hay token, buscar el archivo local en múltiples rutas
     if df_bitacora_base.empty:
-        archivo_bitacora = "BITACORA.xlsx" if os.path.exists("BITACORA.xlsx") else os.path.join("v1_streamlit", "BITACORA.xlsx")
-        df_bitacora_base = load_local_bitacora(archivo_bitacora)
+        rutas_posibles = ["BITACORA.xlsx", os.path.join("v1_streamlit", "BITACORA.xlsx")]
+        for r in rutas_posibles:
+            if os.path.exists(r):
+                archivo_bitacora = r
+                df_bitacora_base = load_local_bitacora(r)
+                break
     
     if df_bitacora_base is None or df_bitacora_base.empty:
-        st.error("❌ No se encontró el archivo BITACORA.xlsx en GitHub ni localmente.")
+        st.error("❌ No se encontró el archivo BITACORA.xlsx. Verifica que el archivo esté en la raíz o en v1_streamlit.")
         st.stop()
     
     # Extraer links una sola vez aquí para evitar lentitud en el Tab 2
