@@ -153,8 +153,6 @@ except Exception:
 # ✅ FUNCIONES DE CACHÉ. (MEJORA DE RENDIMIENTO)
 # -------------------------------------------------
 
-@st.cache_data(ttl=600)  # Cache por 10 minutos para datos de GitHub
-
 @st.cache_data(ttl=300)
 def get_processed_agendas_data(repo, token):
     df_raw, _ = fetch_github_excel(repo, "BITACORA.xlsx", token)
@@ -1964,10 +1962,8 @@ with tab_operacion:
                 df = df[df["fecha_visita"] == fecha_sel_asig].copy()
             else:
                 st.warning("⚠️ No se detectaron fechas de visita válidas en la bitácora.")
-                st.stop()
         else:
             st.error("❌ No se encontró la columna 'Fecha de Visita' necesaria para filtrar por día.")
-            st.stop()
 
         # ===================================================
         # VALIDAR COLUMNAS NECESARIAS
