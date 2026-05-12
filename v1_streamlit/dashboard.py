@@ -608,8 +608,9 @@ if st.session_state.usuario is not None:
     st.session_state.last_activity = ahora
 
 def cargar_usuarios():
-    if os.path.exists("USUARIOS.json"):
-        with open("USUARIOS.json", "r", encoding="utf-8") as f:
+    path_users = "USUARIOS.json" if os.path.exists("USUARIOS.json") else os.path.join("v1_streamlit", "USUARIOS.json")
+    if os.path.exists(path_users):
+        with open(path_users, "r", encoding="utf-8") as f:
             return json.load(f)
     return {}
 
@@ -621,14 +622,16 @@ if st.session_state.usuario is None:
     import os
     
     logo_data = ""
-    if os.path.exists("logo.png"):
-        with open("logo.png", "rb") as f:
+    path_l = "logo.png" if os.path.exists("logo.png") else os.path.join("v1_streamlit", "logo.png")
+    if os.path.exists(path_l):
+        with open(path_l, "rb") as f:
             logo_data = base64.b64encode(f.read()).decode("utf-8")
             
     # Intentar cargar el imagotipo si el usuario lo subió
     imagotipo_data = ""
-    if os.path.exists("E&C IMAGOTIPO VER VERDE.png"):
-        with open("E&C IMAGOTIPO VER VERDE.png", "rb") as f:
+    path_i = "E&C IMAGOTIPO VER VERDE.png" if os.path.exists("E&C IMAGOTIPO VER VERDE.png") else os.path.join("v1_streamlit", "E&C IMAGOTIPO VER VERDE.png")
+    if os.path.exists(path_i):
+        with open(path_i, "rb") as f:
             imagotipo_data = base64.b64encode(f.read()).decode("utf-8")
     else:
         imagotipo_data = logo_data  # Fallback si no está
@@ -895,8 +898,9 @@ with top_header_container:
         )
     
     with col_logo:
+        path_logo_header = "logo.png" if os.path.exists("logo.png") else os.path.join("v1_streamlit", "logo.png")
         st.image(
-            "logo.png",
+            path_logo_header,
             use_container_width=True,
             caption=""
         )
@@ -968,13 +972,16 @@ inspectores_lista = sorted([
 # CARGA ÚNICA DE BITÁCORA (BASE GLOBAL)
 # ===================================================
 with st.spinner("🔄 Sincronizando datos con el servidor... Un momento por favor"):
-    archivo_bitacora = "BITACORA.xlsx"
+    # 1. Intentar cargar desde GitHub (Ideal para Streamlit Cloud)
+    df_bitacora_base, _ = fetch_github_excel(repo, "BITACORA.xlsx", token)
     
-    # Carga base de datos
-    df_bitacora_base = load_local_bitacora(archivo_bitacora)
+    # 2. Si falla GitHub (token expirado o sin red), intentar localmente
+    if df_bitacora_base.empty:
+        archivo_bitacora = "BITACORA.xlsx" if os.path.exists("BITACORA.xlsx") else os.path.join("v1_streamlit", "BITACORA.xlsx")
+        df_bitacora_base = load_local_bitacora(archivo_bitacora)
     
-    if df_bitacora_base is None:
-        st.error("❌ No se encontró el archivo BITACORA.xlsx.")
+    if df_bitacora_base is None or df_bitacora_base.empty:
+        st.error("❌ No se encontró el archivo BITACORA.xlsx en GitHub ni localmente.")
         st.stop()
     
     # Extraer links una sola vez aquí para evitar lentitud en el Tab 2
