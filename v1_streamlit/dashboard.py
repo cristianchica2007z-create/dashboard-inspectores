@@ -2539,7 +2539,10 @@ with tab_subir:
                         
                         st.success("✅ Bitácora actualizada y sincronizada para todos los usuarios.")
                         fetch_github_excel.clear()
-                        load_local_bitacora.clear()
+                        # Solo limpiar si el atributo existe para evitar AttributeError
+                        if hasattr(load_local_bitacora, "clear"):
+                            load_local_bitacora.clear()
+                        
                         extract_excel_links.clear()
                         st.rerun()
                     else:
