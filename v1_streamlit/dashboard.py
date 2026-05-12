@@ -167,6 +167,95 @@ st.markdown("""
 token = st.secrets.get("github", {}).get("token", "")
 repo = st.secrets.get("github", {}).get("repo", "cristianchica2007z-create/dashboard-inspectores")
 
+def preprocess_bitacora(df):
+    """Lógica unificada para limpiar y pre-calcular columnas de la bitácora."""
+    if df is None or df.empty:
+        return pd.DataFrame()
+        
+    # Normalizar nombres de columnas a minúsculas para evitar KeyErrors
+    df.columns = [str(c).strip().lower() for c in df.columns]
+
+    # Limpiar contratos
+    def clean_contract(c):
+        if pd.isna(c): return ""
+        s = str(c).strip()
+        if s.endswith('.0'): s = s[:-2]
+        return s
+    if "contrato" in df.columns:
+        df["contrato"] = df["contrato"].apply(clean_contract)
+            
+    # Normalizar prioridad
+    if "prioridad" in df.columns:
+        df["prioridad"] = df["prioridad"].astype(str).str.strip().str.capitalize()
+            
+    # Pre-procesamiento de inspectores y supervisores
+    if "inspector" in df.columns:
+        df["inspector"] = df["inspector"].astype(str).str.upper().str.strip().str.replace(r"\s+", " ", regex=True)
+        df["supervisor"] = df["inspector"].map(SUPERVISORES_DICT).fillna("SIN SUPERVISOR")
+        
+    # Conversión de Fechas
+    if "fecha de ejecucion" in df.columns:
+        df["fecha"] = pd.to_datetime(df["fecha de ejecucion"], errors="coerce").dt.date
+        
+    # Fecha de visita flexible
+    col_visita = next((c for c in df.columns if "visita" in c), None)
+    if col_visita:
+        df["fecha_visita"] = pd.to_datetime(df[col_visita], errors="coerce").dt.date
+            
+    # Parseo de horas
+    for col in ["hora inicio", "hora inicio de recorrido", "hora final"]:
+        if col in df.columns:
+            df[col + "_parsed"] = pd.to_datetime(df[col].astype(str), errors='coerce').dt.time
+
+    if "tiempo de tarea" in df.columns:
+        df["tiempo_tarea_td"] = pd.to_timedelta(df["tiempo de tarea"].astype(str), errors="coerce")
+
+    # Marcar órdenes efectivas
+    valores_efectivos = ["INSPECCIONADA", "INSPECCIONADA CON DEFECTO NO CRITICO", "INSPECCIONADA CON DEFECTO CRITICO", "CERTIFICADA", "CERTIFICADA CON NOVEDAD"]
+    if "cierre" in df.columns:
+        df["efectiva"] = df["cierre"].isin(valores_efectivos)
+    else:
+        df["efectiva"] = False
+            
+    # Tiempos de recorrido
+    if "hora inicio_parsed" in df.columns and "hora inicio de recorrido_parsed" in df.columns:
+        def calc_recorrido(row):
+            hi, hr = row.get("hora inicio_parsed"), row.get("hora inicio de recorrido_parsed")
+            if not isinstance(hi, datetime.time) or not isinstance(hr, datetime.time): return pd.NaT
+            dt_hi = datetime.datetime.combine(datetime.date.today(), hi)
+            dt_hr = datetime.datetime.combine(datetime.date.today(), hr)
+            return dt_hi - dt_hr if dt_hi >= dt_hr else pd.NaT
+        df["tiempo_recorrido_td"] = df.apply(calc_recorrido, axis=1)
+    else:
+        df["tiempo_recorrido_td"] = pd.NaT
+            
+    # Decimales para promedios de horas
+    def to_dec(h):
+        if not isinstance(h, datetime.time): return None
+        return h.hour + h.minute / 60.0 + h.second / 3600.0
+    if "hora inicio_parsed" in df.columns:
+        df["ini_dec_tmp"] = df["hora inicio_parsed"].apply(to_dec)
+    if "hora final_parsed" in df.columns:
+        df["fin_dec_tmp"] = df["hora final_parsed"].apply(to_dec)
+            
+    # Cálculo de puntualidad
+    hora_oficial = datetime.time(7, 30)
+    def calc_tarde(h):
+        if not isinstance(h, datetime.time): return None
+        h1, h2 = datetime.datetime.combine(datetime.date.today(), h), datetime.datetime.combine(datetime.date.today(), hora_oficial)
+        return int((h1 - h2).total_seconds() / 60)
+            
+    if "hora inicio_parsed" in df.columns:
+        df["minutos_tarde"] = df["hora inicio_parsed"].apply(calc_tarde)
+        def calc_estado_p(m):
+            if m is None or pd.isna(m): return "SIN INICIO"
+            if m <= 0: return "Puntual"
+            if m <= 15: return "Tarde"
+            return "Muy tarde"
+        df["estado_puntualidad"] = df["minutos_tarde"].apply(calc_estado_p)
+
+    return df
+
 if not token or not repo:
     st.warning("⚠️ Configura el 'token' de GitHub en los Secrets de Streamlit Cloud para ver datos en vivo.")
 
@@ -284,115 +373,11 @@ def save_github_json(repo, path, token, data, message, branch="main"):
         
     return requests.put(url, headers=headers, json=payload)
 
-@st.cache_data(ttl=600)
 def load_local_bitacora(path):
-    if os.path.exists(path):
-        try:
-            df = pd.read_excel(path)
-        except Exception:
-            return None
-            
-        df.columns = [str(c).strip().lower() for c in df.columns]
-
-        # Función para limpiar contratos (quitar .0 y espacios)
-        def clean_contract(c):
-            if pd.isna(c): return ""
-            s = str(c).strip()
-            if s.endswith('.0'): s = s[:-2]
-            return s
-
-        if "contrato" in df.columns:
-            df["contrato"] = df["contrato"].apply(clean_contract)
-            
-        # Normalizar prioridad para evitar errores de mayúsculas
-        if "prioridad" in df.columns:
-            df["prioridad"] = df["prioridad"].astype(str).str.strip().str.capitalize()
-            
-        # Pre-procesamiento de nombres e inspectores
-        if "inspector" in df.columns:
-            df["inspector"] = df["inspector"].astype(str).str.upper().str.strip().str.replace(r"\s+", " ", regex=True)
-            
-        # Mapeo de supervisores usando la constante global
-        df["supervisor"] = df["inspector"].map(SUPERVISORES_DICT).fillna("SIN SUPERVISOR")
-        
-        # Conversión de Fechas y Horas una sola vez
-        if "fecha de ejecucion" in df.columns:
-            df["fecha"] = pd.to_datetime(df["fecha de ejecucion"], errors="coerce").dt.date
-        if "fecha de visita" in df.columns:
-            df["fecha_visita"] = pd.to_datetime(df["fecha de visita"], errors="coerce").dt.date
-        
-        # Buscar la columna de fecha de visita de forma flexible
-        col_visita = next((c for c in df.columns if "visita" in c), None)
-        if col_visita:
-            df["fecha_visita"] = pd.to_datetime(df[col_visita], errors="coerce").dt.date
-            
-        # Parseo de horas (simplificado)
-        for col in ["hora inicio", "hora inicio de recorrido", "hora final"]:
-            if col in df.columns:
-                df[col + "_parsed"] = pd.to_datetime(df[col].astype(str), errors='coerce').dt.time
-
-        if "tiempo de tarea" in df.columns:
-            df["tiempo_tarea_td"] = pd.to_timedelta(df["tiempo de tarea"].astype(str), errors="coerce")
-
-        # --- PRE-CÁLCULOS GLOBALES PARA RENDIMIENTO ---
-        import datetime
-        
-        # 1. Efectiva
-        valores_efectivos = [
-            "INSPECCIONADA",
-            "INSPECCIONADA CON DEFECTO NO CRITICO",
-            "INSPECCIONADA CON DEFECTO CRITICO",
-            "CERTIFICADA",
-            "CERTIFICADA CON NOVEDAD"
-        ]
-        if "cierre" in df.columns:
-            df["efectiva"] = df["cierre"].isin(valores_efectivos)
-        else:
-            df["efectiva"] = False
-            
-        # 2. Tiempos (solo si existen las columnas parseadas)
-        if "hora inicio_parsed" in df.columns and "hora inicio de recorrido_parsed" in df.columns:
-            def calc_recorrido(row):
-                hi = row.get("hora inicio_parsed")
-                hr = row.get("hora inicio de recorrido_parsed")
-                if not isinstance(hi, datetime.time) or not isinstance(hr, datetime.time):
-                    return pd.NaT
-                dt_hi = datetime.datetime.combine(datetime.date.today(), hi)
-                dt_hr = datetime.datetime.combine(datetime.date.today(), hr)
-                return dt_hi - dt_hr if dt_hi >= dt_hr else pd.NaT
-            df["tiempo_recorrido_td"] = df.apply(calc_recorrido, axis=1)
-        else:
-            df["tiempo_recorrido_td"] = pd.NaT
-            
-        # 3. Decimales (útil para promedios rápidos)
-        def to_dec(h):
-            if not isinstance(h, datetime.time): return None
-            return h.hour + h.minute / 60.0 + h.second / 3600.0
-            
-        if "hora inicio_parsed" in df.columns:
-            df["ini_dec_tmp"] = df["hora inicio_parsed"].apply(to_dec)
-        if "hora final_parsed" in df.columns:
-            df["fin_dec_tmp"] = df["hora final_parsed"].apply(to_dec)
-            
-        # 4. Puntualidad (minutos tarde)
-        hora_oficial = datetime.time(7, 30)
-        def calc_tarde(h):
-            if not isinstance(h, datetime.time): return None
-            h1 = datetime.datetime.combine(datetime.date.today(), h)
-            h2 = datetime.datetime.combine(datetime.date.today(), hora_oficial)
-            return int((h1 - h2).total_seconds() / 60)
-            
-        if "hora inicio_parsed" in df.columns:
-            df["minutos_tarde"] = df["hora inicio_parsed"].apply(calc_tarde)
-            def calc_estado(m):
-                if m is None or pd.isna(m): return "SIN INICIO"
-                if m <= 0: return "Puntual"
-                if m <= 15: return "Tarde"
-                return "Muy tarde"
-            df["estado_puntualidad"] = df["minutos_tarde"].apply(calc_estado)
-
-        return df
-    return None
+    try:
+        df = pd.read_excel(path)
+        return preprocess_bitacora(df)
+    except: return None
 
 
 @st.cache_data(ttl=300)
@@ -976,17 +961,21 @@ inspectores_lista = sorted([
 # CARGA ÚNICA DE BITÁCORA (BASE GLOBAL)
 # ===================================================
 with st.spinner("🔄 Sincronizando datos con el servidor... Un momento por favor"):
-    df_bitacora_base = pd.DataFrame()
     # Definir ruta de respaldo local siempre para evitar NameError
     archivo_bitacora = "BITACORA.xlsx" if os.path.exists("BITACORA.xlsx") else os.path.join("v1_streamlit", "BITACORA.xlsx")
+    df_raw = pd.DataFrame()
     
     # 1. Intentar cargar desde GitHub
     if token:
-        df_bitacora_base, _ = fetch_github_excel(repo, "BITACORA.xlsx", token)
+        df_raw, _ = fetch_github_excel(repo, "BITACORA.xlsx", token)
     
     # 2. Si falla GitHub, cargar el archivo local
-    if df_bitacora_base.empty:
-        df_bitacora_base = load_local_bitacora(archivo_bitacora)
+    if df_raw.empty:
+        if os.path.exists(archivo_bitacora):
+            df_raw = pd.read_excel(archivo_bitacora)
+    
+    # 3. Procesamiento unificado
+    df_bitacora_base = preprocess_bitacora(df_raw)
     
     if df_bitacora_base is None or df_bitacora_base.empty:
         st.error("❌ No se encontró la base de datos BITACORA.xlsx.")
@@ -1248,17 +1237,20 @@ with tab_operacion:
         if not df_prog_zona.empty:
             df_prog_zona.columns = [str(c).strip().upper() for c in df_prog_zona.columns]
             
-            # Limpiar contratos en programación también
-            def clean_contract_prog(c):
-                if pd.isna(c): return ""
-                s = str(c).strip()
-                if s.endswith('.0'): s = s[:-2]
-                return s
+            if "CONTRATO" in df_prog_zona.columns and "ZONA" in df_prog_zona.columns:
+                # Limpiar contratos en programación también
+                def clean_contract_prog(c):
+                    if pd.isna(c): return ""
+                    s = str(c).strip()
+                    if s.endswith('.0'): s = s[:-2]
+                    return s
+                    
+                df_prog_zona["CONTRATO_CLEAN"] = df_prog_zona["CONTRATO"].apply(clean_contract_prog)
                 
-            df_prog_zona["CONTRATO_CLEAN"] = df_prog_zona["CONTRATO"].apply(clean_contract_prog)
-            
-            # Seleccionar solo columnas necesarias y quitar duplicados
-            df_prog_min = df_prog_zona[["CONTRATO_CLEAN", "ZONA"]].drop_duplicates(subset=["CONTRATO_CLEAN"])
+                # Seleccionar solo columnas necesarias y quitar duplicados
+                df_prog_min = df_prog_zona[["CONTRATO_CLEAN", "ZONA"]].drop_duplicates(subset=["CONTRATO_CLEAN"])
+            else:
+                df_prog_min = pd.DataFrame(columns=["CONTRATO_CLEAN", "ZONA"])
             
             # Unir con la bitácora del día
             df_merged = df2.merge(df_prog_min, left_on="contrato", right_on="CONTRATO_CLEAN", how="left")
