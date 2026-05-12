@@ -976,20 +976,24 @@ inspectores_lista = sorted([
 # CARGA ÚNICA DE BITÁCORA (BASE GLOBAL)
 # ===================================================
 with st.spinner("🔄 Sincronizando datos con el servidor... Un momento por favor"):
-    # 1. Intentar cargar desde GitHub (Ideal para Streamlit Cloud)
-    df_bitacora_base, _ = fetch_github_excel(repo, "BITACORA.xlsx", token)
+    df_bitacora_base = pd.DataFrame()
+    # Definir ruta de respaldo local siempre para evitar NameError
+    archivo_bitacora = "BITACORA.xlsx" if os.path.exists("BITACORA.xlsx") else os.path.join("v1_streamlit", "BITACORA.xlsx")
     
-    # 2. Si falla GitHub (token expirado o sin red), intentar localmente
+    # 1. Intentar cargar desde GitHub
+    if token:
+        df_bitacora_base, _ = fetch_github_excel(repo, "BITACORA.xlsx", token)
+    
+    # 2. Si falla GitHub, cargar el archivo local
     if df_bitacora_base.empty:
-        archivo_bitacora = "BITACORA.xlsx" if os.path.exists("BITACORA.xlsx") else os.path.join("v1_streamlit", "BITACORA.xlsx")
         df_bitacora_base = load_local_bitacora(archivo_bitacora)
     
     if df_bitacora_base is None or df_bitacora_base.empty:
-        st.error("❌ No se encontró el archivo BITACORA.xlsx en GitHub ni localmente.")
+        st.error("❌ No se encontró la base de datos BITACORA.xlsx.")
         st.stop()
     
-    # Extraer links una sola vez aquí para evitar lentitud en el Tab 2
-    df_links_global = extract_excel_links(archivo_bitacora)
+    # Extraer links solo si el archivo físico existe (para evitar errores en la nube)
+    df_links_global = extract_excel_links(archivo_bitacora) if os.path.exists(archivo_bitacora) else pd.DataFrame()
 
 # ✅ CREAR PESTAÑAS
 # ---------------------------------------------------
