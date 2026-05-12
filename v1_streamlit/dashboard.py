@@ -191,7 +191,7 @@ def get_processed_agendas_data(repo, token):
     df["fecha de visita"] = pd.to_datetime(df["fecha de visita"], errors="coerce")
     df["fecha de ejecucion"] = pd.to_datetime(df["fecha de ejecucion"], errors="coerce")
     
-    ahora_colombia = datetime.datetime.now(ZoneInfo("America/Bogota")).replace(tzinfo=None)
+    ahora_colombia = datetime.datetime.now(TZ_CO).replace(tzinfo=None)
     
     # Cruce con Programación
     df_prog_aux, _ = fetch_github_excel(repo, "PROGRAMACION.xlsx", token)
@@ -1729,7 +1729,7 @@ with tab_operacion:
         df = get_processed_agendas_data(repo, token)
         
         if not df.empty:
-            ahora_colombia = datetime.datetime.now(ZoneInfo("America/Bogota")).replace(tzinfo=None)
+            ahora_colombia = datetime.datetime.now(TZ_CO).replace(tzinfo=None)
             
             # CÁLCULOS GLOBALES PARA KPIs
             count_final = len(df[df["estado"].str.upper().str.contains("FINALIZAD", na=False)])
@@ -1738,7 +1738,7 @@ with tab_operacion:
     
         if not df.empty:
             columnas_base = ["inspector", "contrato", "direccion", "estado", "fecha de visita", "localidad", "detalle de tarea", "estado_alerta"]
-            ahora_colombia = datetime.datetime.now(ZoneInfo("America/Bogota")).replace(tzinfo=None)
+            ahora_colombia = datetime.datetime.now(TZ_CO).replace(tzinfo=None)
             grupos_validos = ["INSP-CALDAS", "INSP-RIS"]
     
             # --- LAYOUT CON MENÚ LATERAL ---
