@@ -20,6 +20,20 @@ def obtener_tz_segura(nombre_zona):
 
 TZ_CO = obtener_tz_segura("America/Bogota")
 TZ_UTC = datetime.timezone.utc
+
+def obtener_texto_meta(info_dict):
+    """Procesa el diccionario de metadata para mostrar fecha y usuario."""
+    if not info_dict or "ultima_actualizacion" not in info_dict:
+        return "—", "—"
+    try:
+        fecha_utc = datetime.datetime.strptime(
+            info_dict.get("ultima_actualizacion"), "%Y-%m-%d %H:%M:%S"
+        ).replace(tzinfo=TZ_UTC)
+        fecha_col = fecha_utc.astimezone(TZ_CO)
+        return fecha_col.strftime("%Y-%m-%d %I:%M %p"), info_dict.get("usuario_actualizo", "—")
+    except:
+        return "—", "—"
+
 import base64
 import requests
 import io
