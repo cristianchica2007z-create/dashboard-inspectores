@@ -285,6 +285,8 @@ def save_github_json(repo, path, token, data, message, branch="main"):
         
     return requests.put(url, headers=headers, json=payload)
 
+global preprocess_bitacora
+
 def load_local_bitacora(path):
     try:
         df = pd.read_excel(path)
