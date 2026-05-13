@@ -1949,8 +1949,13 @@ with tab_operacion:
                 col_agrupar = ver_por.lower()
     
         # Aplicar todos los filtros al final para evitar reinicios de widgets
-        df_finalizados_base = df[df["grupo"].isin(grupos_sel)] if grupos_sel else df
-        if grupos_sel: df_asignadas = df_asignadas[df_asignadas["grupo"].isin(grupos_sel)]
+        # Inicialización garantizada para evitar NameError
+        df_finalizados_base = df.copy()
+        
+        if grupos_sel:
+            df_finalizados_base = df_finalizados_base[df_finalizados_base["grupo"].isin(grupos_sel)]
+            df_asignadas = df_asignadas[df_asignadas["grupo"].isin(grupos_sel)]
+            
         if estados_sel: df_asignadas = df_asignadas[df_asignadas["estado"].isin(estados_sel)]
         if prioridades_sel: df_asignadas = df_asignadas[df_asignadas["prioridad"].isin(prioridades_sel)]
     
