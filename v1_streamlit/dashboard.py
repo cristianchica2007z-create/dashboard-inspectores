@@ -1862,6 +1862,10 @@ with tab_operacion:
     with tab_asignadas:
         st.markdown("## 📌 Órdenes ASIGNADAS")
     
+        # Inicialización defensiva para asegurar que df_finalizados_base siempre esté definida.
+        # Esto previene NameError si alguna lógica anterior no la asigna.
+        df_finalizados_base = pd.DataFrame()
+
         # ===================================================
         # VALIDAR Y CARGAR BITÁCORA LOCAL
         # ===================================================
@@ -1949,9 +1953,6 @@ with tab_operacion:
                 col_agrupar = ver_por.lower()
     
         # Aplicar todos los filtros al final para evitar reinicios de widgets
-        # Inicialización garantizada para evitar NameError
-        df_finalizados_base = df.copy()
-        
         if grupos_sel:
             df_finalizados_base = df_finalizados_base[df_finalizados_base["grupo"].isin(grupos_sel)]
             df_asignadas = df_asignadas[df_asignadas["grupo"].isin(grupos_sel)]
