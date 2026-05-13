@@ -1855,23 +1855,16 @@ with tab_operacion:
     with tab_asignadas:
         st.markdown("## 📌 Órdenes ASIGNADAS")
     
-        # 1. Carga y preparación inicial de datos
+        # 1. Preparación de datos (Igual a Seguimiento Diario)
         df = df_bitacora_base.copy()
         estados_carga_regex = "Asignad|En Camino|Iniciada"
         
-        # Garantizamos que las variables existan desde el inicio para evitar NameError
-        df_asignadas = pd.DataFrame()
-        df_finalizados_base = pd.DataFrame()
-
-        # 2. Filtro de Grupos Operativos
+        # 2. Filtro de Grupos
         if "grupo" in df.columns:
             df["grupo"] = df["grupo"].astype(str).str.upper().str.strip()
             df = df[df["grupo"].str.contains("INSP-CALDAS|INSP-RIS", na=False)].copy()
-        else:
-            st.error("❌ No se encontró la columna 'grupo' necesaria para filtrar por grupos operativos.")
-            st.stop()
 
-        # 3. Filtro de Fecha de Operación
+        # 3. Filtro de Fecha
         fecha_sel_asig = None
         if "fecha_visita" in df.columns:
             todas_las_fechas = pd.to_datetime(df["fecha_visita"], errors="coerce").dt.date.dropna().unique()
@@ -1882,34 +1875,26 @@ with tab_operacion:
                 idx_hoy = opc_fechas_asig.index(hoy) if hoy in opc_fechas_asig else 0
                 
                 with st.container(border=True):
-                    col_d = st.columns([2, 4])[0]
+                    col_d = st.columns([1.5, 4])[0]
                     with col_d:
                         fecha_sel_asig = st.selectbox("📅 Seleccionar Fecha de Operación:", opc_fechas_asig, index=idx_hoy, key="tab5_fecha_sel")
                 
                 df = df[pd.to_datetime(df["fecha_visita"]).dt.date == fecha_sel_asig].copy()
-            else:
-                st.warning("⚠️ No hay fechas válidas en la bitácora para los grupos seleccionados.")
-                st.stop()
-        else:
-            st.error("❌ No se encontró la columna 'Fecha de Visita' necesaria para filtrar por día.")
-            st.stop()
-
-        # 4. Definir subconjuntos de trabajo (Garantiza que df_asignadas exista antes de los filtros)
+        
+        # 4. Definición de DataFrames de trabajo
+        # Esto garantiza que df_asignadas exista ANTES de llegar a los filtros
         df_asignadas = df[df["estado"].astype(str).str.contains(estados_carga_regex, case=False, na=False)].copy()
         df_finalizados_base = df.copy()
 
-        if df_asignadas.empty:
-            st.info("✅ No hay órdenes ASIGNADAS pendientes para la fecha seleccionada.")
-            st.stop()
-        
-        # 5. Interfaz de Filtros
+        # 5. Filtros de Interfaz
         st.markdown("### 🔎 Filtros")
         with st.container(border=True):
             col_f1, col_f2, col_f3, col_f4 = st.columns([0.8, 1.2, 1.2, 1])
     
-            opc_grupos = sorted(df_asignadas["grupo"].dropna().unique())
-            opc_estados = sorted(df_asignadas["estado"].dropna().unique())
-            opc_prioridades = sorted(df_asignadas["prioridad"].dropna().unique())
+            # Opciones basadas en df_asignadas (que ya definimos arriba)
+            opc_grupos = sorted(df_asignadas["grupo"].dropna().unique()) if not df_asignadas.empty else []
+            opc_estados = sorted(df_asignadas["estado"].dropna().unique()) if not df_asignadas.empty else []
+            opc_prioridades = sorted(df_asignadas["prioridad"].dropna().unique()) if not df_asignadas.empty else []
     
             with col_f1:
                 grupos_sel = st.pills("📍 Grupo", opc_grupos, selection_mode="multi", default=opc_grupos, key="tab5_grupo_pills")
@@ -1921,86 +1906,42 @@ with tab_operacion:
                 ver_por = st.segmented_control("📈 Ver por:", ["Prioridad", "Estado"], default="Prioridad", key="tab5_ver_por_seg")
                 col_agrupar = ver_por.lower() if ver_por else "prioridad"
     
-        # 6. Aplicar filtros de la interfaz
+        # 6. Aplicar Filtros Seleccionados
         if grupos_sel:
             df_finalizados_base = df_finalizados_base[df_finalizados_base["grupo"].isin(grupos_sel)]
             df_asignadas = df_asignadas[df_asignadas["grupo"].isin(grupos_sel)]
         if estados_sel: df_asignadas = df_asignadas[df_asignadas["estado"].isin(estados_sel)]
         if prioridades_sel: df_asignadas = df_asignadas[df_asignadas["prioridad"].isin(prioridades_sel)]
 
-        if df_asignadas.empty:
-            st.info("✅ No hay órdenes ASIGNADAS con los filtros seleccionados.")
-            st.stop()
-        
-        # 7. Lógica de disponibilidad
-        insp_con_asig = set(df_finalizados_base[df_finalizados_base["estado"].astype(str).str.contains(estados_carga_regex, case=False, na=False)]["inspector"].unique())
-        insp_con_fin = set(df_finalizados_base[df_finalizados_base["estado"].astype(str).str.contains("Finalizad", case=False, na=False)]["inspector"].unique())
-        inspectores_finalizados = insp_con_fin - insp_con_asig
-    
-        # ===================================================
-        # 8. Gráfica de Carga de Trabajo
-        # ===================================================
-        df_prio = df_asignadas.groupby(["inspector", col_agrupar]).size().reset_index(name="cantidad")
-    
-        if inspectores_finalizados:
-            df_terminados = pd.DataFrame({
-                "inspector": list(inspectores_finalizados),
-                col_agrupar: "TERMINÓ OBRA",
-                "cantidad": 0
-            })
-            df_prio = pd.concat([df_prio, df_terminados], ignore_index=True)
-    
-        orden_inspectores = (
-            df_prio.groupby("inspector")["cantidad"].sum()
-            .sort_values(ascending=False).index.tolist()
-        )
-    
-        color_map = {
-            # Prioridades
-            "Alta": "#dc3545",        # 🔴 rojo
-            "Media": "#ffc107",       # 🟡 amarillo
-            "Baja": "#7cd992",        # 🟢 verde claro
-            "Critica": "#fd7e14",     # 🟠 naranja
-            "Prioridad": "#6f4e37",    # 🟤 café
-            
-            "60 Meses": "#6f42c1",        # 🟣 morado
-            "Segunda visita": "#ff8c00",   # 🟠 naranja
-    
-            # Estados
-            "Asignada": "#3498db", "En Camino": "#e67e22", "Iniciada": "#9b59b6",
-    
-            # Disponibilidad
-            "TERMINÓ OBRA": "#28a745"      # 🟢 verde (disponible)
-        }
-    
-        fig = px.bar(
-            df_prio,
-            y="inspector",
-            x="cantidad",
-            color=col_agrupar,
-            orientation="h",
-            category_orders={"inspector": orden_inspectores},
-            color_discrete_map=color_map,
-            text="cantidad",
-            title="Órdenes ASIGNADAS por inspector (según filtros)"
-        )
-    
-        fig.update_traces(
-            textposition="inside",
-            textfont_size=16
-        )
-    
-        fig.update_layout(
-            barmode="stack",
-            xaxis_title="Cantidad de órdenes ASIGNADAS",
-            yaxis_title="Inspector",
-            legend_title=ver_por,
-            height=700
-        )
-    
-        st.plotly_chart(fig, use_container_width=True)
-    
-    
+        # 7. Visualización (Gráfica)
+        if not df_asignadas.empty:
+            # Lógica de disponibilidad
+            insp_con_asig = set(df_finalizados_base[df_finalizados_base["estado"].astype(str).str.contains(estados_carga_regex, case=False, na=False)]["inspector"].unique())
+            insp_con_fin = set(df_finalizados_base[df_finalizados_base["estado"].astype(str).str.contains("Finalizad", case=False, na=False)]["inspector"].unique())
+            inspectores_finalizados = insp_con_fin - insp_con_asig
+
+            df_prio = df_asignadas.groupby(["inspector", col_agrupar]).size().reset_index(name="cantidad")
+
+            if inspectores_finalizados:
+                df_terminados = pd.DataFrame({"inspector": list(inspectores_finalizados), col_agrupar: "TERMINÓ OBRA", "cantidad": 0})
+                df_prio = pd.concat([df_prio, df_terminados], ignore_index=True)
+
+            orden_inspectores = df_prio.groupby("inspector")["cantidad"].sum().sort_values(ascending=False).index.tolist()
+
+            fig = px.bar(
+                df_prio, y="inspector", x="cantidad", color=col_agrupar,
+                orientation="h", category_orders={"inspector": orden_inspectores},
+                color_discrete_map={
+                    "Alta": "#dc3545", "Media": "#ffc107", "Baja": "#7cd992", "Critica": "#fd7e14",
+                    "Asignada": "#3498db", "En Camino": "#e67e22", "Iniciada": "#9b59b6",
+                    "TERMINÓ OBRA": "#28a745"
+                },
+                text="cantidad", title="Órdenes ASIGNADAS por inspector"
+            )
+            fig.update_layout(barmode="stack", height=700)
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("✅ No hay órdenes ASIGNADAS para mostrar.")
     # ===================================================
     # ✅ TAB — INVENTARIO V2.
     # ===================================================
