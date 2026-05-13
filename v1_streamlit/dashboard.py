@@ -627,7 +627,7 @@ if st.session_state.usuario is not None:
     ahora = datetime.datetime.now()
     segundos_inactivo = (ahora - st.session_state.last_activity).total_seconds()
     
-    if segundos_inactivo > 1800:  # 1800 segundos = 30 minutos
+    if segundos_inactivo > 28800:  # 28800 segundos = 8 horas (para unas 3 veces al día)
         st.session_state.usuario = None
         st.session_state.rol = None
         st.warning("⚠️ Sesión cerrada por inactividad (30 minutos).")
