@@ -1855,6 +1855,7 @@ with tab_operacion:
     with tab_asignadas:
         st.markdown("## 📌 Órdenes ASIGNADAS")
     
+        # Start with a copy of the base bitacora
         df = df_bitacora_base.copy()
         # 1. Preparación de datos base
         df_asig_base = df_bitacora_base.copy()
@@ -1863,6 +1864,8 @@ with tab_operacion:
         # ===================================================
         # ✅ FILTRAR SOLO GRUPOS PERMITIDOS
         # ===================================================
+
+        # 1. FILTRAR SOLO GRUPOS PERMITIDOS (early filter to ensure df is clean)
         if "grupo" in df.columns:
             df["grupo"] = df["grupo"].astype(str).str.upper().str.strip()
             df = df[df["grupo"].str.contains("INSP-CALDAS|INSP-RIS", na=False)]
@@ -1870,6 +1873,10 @@ with tab_operacion:
         df_asignadas = pd.DataFrame()
         df_finalizados_base = pd.DataFrame()
     
+            df = df[df["grupo"].str.contains("INSP-CALDAS|INSP-RIS", na=False)].copy() # Use .copy() to avoid SettingWithCopyWarning
+
+        # 2. FILTRAR POR FECHA DE OPERACIÓN
+        fecha_sel_asig = None
         if "fecha_visita" in df.columns:
             todas_las_fechas = pd.to_datetime(df["fecha_visita"], errors="coerce").dt.date.dropna().unique()
         # 2. Filtrado por Grupos Permitidos
@@ -1899,8 +1906,11 @@ with tab_operacion:
                 df_asig_base = df_asig_base[pd.to_datetime(df_asig_base["fecha_visita"]).dt.date == fecha_sel_asig].copy()
             else:
                 st.warning("⚠️ No se detectaron fechas de visita válidas en la bitácora.")
+                st.warning("⚠️ No se detectaron fechas de visita válidas en la bitácora para los grupos seleccionados.")
+                st.stop() # Stop if no valid dates after group filter
         else:
             st.error("❌ No se encontró la columna 'Fecha de Visita' necesaria para filtrar por día.")
+            st.stop() # Stop if critical column is missing
 
         # ===================================================
         # FILTRAR ÓRDENES EN PROCESO (Asignadas, En Camino, Iniciadas)
@@ -1911,13 +1921,21 @@ with tab_operacion:
             .astype(str)
             .str.contains(estados_carga_regex, case=False, na=False)
         ].copy()
+        df_finalizados_base = df.copy() # This is the base for finalizados logic
+
+        if df_asignadas.empty:
+            st.info("✅ No hay órdenes ASIGNADAS pendientes para esta fecha y filtros iniciales.")
+            st.stop()
+
         # ===================================================
         # VALIDAR COLUMNAS NECESARIAS
         # ===================================================
         columnas_requeridas = ["inspector", "estado", "prioridad", "grupo"]
         for col in columnas_requeridas:
             if col not in df.columns:
+            if col not in df.columns: # Check against the current df
                 st.error(f"❌ Falta la columna requerida: {col}")
+                st.stop() # Stop if critical column is missing
         # ===================================================
         # ================= FILTROS =================
         # ===================================================
@@ -1955,6 +1973,7 @@ with tab_operacion:
         # Aplicar filtros
         df_finalizados_base = df.copy() # Initialize df_finalizados_base from the date-filtered df
         # 6. Aplicar filtros finales
+        # Aplicar filtros finales
         if grupos_sel:
             df_finalizados_base = df_finalizados_base[df_finalizados_base["grupo"].isin(grupos_sel)]
             df_asignadas = df_asignadas[df_asignadas["grupo"].isin(grupos_sel)]
@@ -1963,6 +1982,7 @@ with tab_operacion:
 
         if df_asignadas.empty:
             st.info("✅ No hay órdenes ASIGNADAS en la bitácora.")
+            st.stop() # Stop if no data after all filters
         # Identificar inspectores que ya terminaron (Tienen 'Finalizada' y NO tienen carga activa)
         # en los grupos seleccionados para identificar disponibilidad
         # 7. Lógica de disponibilidad (Inspectores que terminaron obra)
