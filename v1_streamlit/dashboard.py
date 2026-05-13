@@ -764,7 +764,7 @@ with top_header_container:
     st.markdown("<span id='sticky-header'></span>", unsafe_allow_html=True)
     
     # Crear layout superior (Metadata y Botón)
-    col_meta, col_logout = st.columns([7, 1])
+    col_meta, col_refresh, col_logout = st.columns([6, 1, 1])
     
     with col_meta:
         st.markdown(
@@ -787,15 +787,11 @@ with top_header_container:
             st.session_state.rol = None
             st.rerun()
 
-    with col_logout_refresh:
+    with col_refresh:
         if st.button("🔄 Actualizar Datos", use_container_width=True):
             # Limpiar todas las cachés relevantes para forzar la recarga de datos
             fetch_github_excel.clear()
             fetch_github_json.clear()
-            # Algunas funciones de procesamiento no tienen .clear() si no son @st.cache_data
-            # Si no hay datos, esto forzará una recarga desde la fuente (GitHub o local)
-            # load_local_bitacora.clear() # Se limpia si tiene caché
-            # extract_excel_links.clear() # Se limpia si tiene caché
             st.rerun()
             
     # ---------------------------------------------------
