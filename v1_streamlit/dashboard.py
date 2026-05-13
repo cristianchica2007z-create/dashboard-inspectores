@@ -1856,6 +1856,9 @@ with tab_operacion:
         st.markdown("## 📌 Órdenes ASIGNADAS")
     
         df = df_bitacora_base.copy()
+        # 1. Preparación de datos base
+        df_asig_base = df_bitacora_base.copy()
+        estados_carga_regex = "Asignad|En Camino|Iniciada"
         
         # ===================================================
         # ✅ FILTRAR SOLO GRUPOS PERMITIDOS
@@ -1863,9 +1866,20 @@ with tab_operacion:
         if "grupo" in df.columns:
             df["grupo"] = df["grupo"].astype(str).str.upper().str.strip()
             df = df[df["grupo"].str.contains("INSP-CALDAS|INSP-RIS", na=False)]
+        # Inicialización de variables para evitar NameError
+        df_asignadas = pd.DataFrame()
+        df_finalizados_base = pd.DataFrame()
     
         if "fecha_visita" in df.columns:
             todas_las_fechas = pd.to_datetime(df["fecha_visita"], errors="coerce").dt.date.dropna().unique()
+        # 2. Filtrado por Grupos Permitidos
+        if "grupo" in df_asig_base.columns:
+            df_asig_base["grupo"] = df_asig_base["grupo"].astype(str).str.upper().str.strip()
+            df_asig_base = df_asig_base[df_asig_base["grupo"].str.contains("INSP-CALDAS|INSP-RIS", na=False)]
+    
+        # 3. Filtrado por Fecha de Operación
+        if "fecha_visita" in df_asig_base.columns:
+            todas_las_fechas = pd.to_datetime(df_asig_base["fecha_visita"], errors="coerce").dt.date.dropna().unique()
             opc_fechas_asig = sorted(list(todas_las_fechas), reverse=True)
             
             if opc_fechas_asig:
@@ -1877,9 +1891,12 @@ with tab_operacion:
                     col_d = st.columns([1.5, 4])[0]
                     with col_d:
                         fecha_sel_asig = st.selectbox("📅 Seleccionar Fecha de Operación:", opc_fechas_asig, index=idx_hoy, key="tab5_fecha_sel")
+                    f_col1 = st.columns([1.5, 4])[0]
+                    fecha_sel_asig = f_col1.selectbox("📅 Seleccionar Fecha de Operación:", opc_fechas_asig, index=idx_hoy, key="tab5_fecha_sel")
                 
                 # Filtrar estrictamente por fecha de visita para evitar ver órdenes de otros días
                 df = df[pd.to_datetime(df["fecha_visita"]).dt.date == fecha_sel_asig].copy()
+                df_asig_base = df_asig_base[pd.to_datetime(df_asig_base["fecha_visita"]).dt.date == fecha_sel_asig].copy()
             else:
                 st.warning("⚠️ No se detectaron fechas de visita válidas en la bitácora.")
         else:
@@ -1904,6 +1921,15 @@ with tab_operacion:
         # ===================================================
         # ================= FILTROS =================
         # ===================================================
+        # 4. Crear subconjuntos de trabajo
+        df_asignadas = df_asig_base[df_asig_base["estado"].astype(str).str.contains(estados_carga_regex, case=False, na=False)].copy()
+        df_finalizados_base = df_asig_base.copy()
+
+        if df_asignadas.empty:
+            st.info("✅ No hay órdenes ASIGNADAS pendientes para esta fecha.")
+            st.stop()
+
+        # 5. Interfaz de Filtros
         st.markdown("### 🔎 Filtros")
     
         # -------- PANEL DE FILTROS TIPO "BOX" - LÓGICA ESTABLE --------
@@ -1911,6 +1937,7 @@ with tab_operacion:
             col_f1, col_f2, col_f3, col_f4 = st.columns([0.8, 1.2, 1.2, 1])
     
             # Opciones estables basadas en el conjunto inicial de órdenes
+
             opc_grupos = sorted(df_asignadas["grupo"].dropna().unique())
             opc_estados = sorted(df_asignadas["estado"].dropna().unique())
             opc_prioridades = sorted(df_asignadas["prioridad"].dropna().unique())
@@ -1927,6 +1954,7 @@ with tab_operacion:
     
         # Aplicar filtros
         df_finalizados_base = df.copy() # Initialize df_finalizados_base from the date-filtered df
+        # 6. Aplicar filtros finales
         if grupos_sel:
             df_finalizados_base = df_finalizados_base[df_finalizados_base["grupo"].isin(grupos_sel)]
             df_asignadas = df_asignadas[df_asignadas["grupo"].isin(grupos_sel)]
@@ -1937,6 +1965,7 @@ with tab_operacion:
             st.info("✅ No hay órdenes ASIGNADAS en la bitácora.")
         # Identificar inspectores que ya terminaron (Tienen 'Finalizada' y NO tienen carga activa)
         # en los grupos seleccionados para identificar disponibilidad
+        # 7. Lógica de disponibilidad (Inspectores que terminaron obra)
         insp_con_asig = set(df_finalizados_base[df_finalizados_base["estado"].astype(str).str.contains(estados_carga_regex, case=False, na=False)]["inspector"].unique())
         insp_con_fin = set(df_finalizados_base[df_finalizados_base["estado"].astype(str).str.contains("Finalizad", case=False, na=False)]["inspector"].unique())
         inspectores_finalizados = insp_con_fin - insp_con_asig
