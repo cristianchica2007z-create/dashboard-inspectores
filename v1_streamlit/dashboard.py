@@ -25,7 +25,7 @@ TZ_UTC = datetime.timezone.utc
 
 def obtener_texto_meta(info_dict):
     """Procesa el diccionario de metadata para mostrar fecha y usuario."""
-    if not isinstance(info_dict, dict) or "ultima_actualizacion" not in info_dict:
+    if not info_dict or "ultima_actualizacion" not in info_dict:
         return "—", "—"
     try:
         fecha_utc = datetime.datetime.strptime(
@@ -168,132 +168,6 @@ token = st.secrets.get("github", {}).get("token", "")
 repo = st.secrets.get("github", {}).get("repo", "cristianchica2007z-create/dashboard-inspectores")
 
 # --- WRAPPERS DE COMPATIBILIDAD ---
-def safe_pills(label, options, **kwargs):
-    """Usa st.pills si está disponible, sino cae a multiselect."""
-    if hasattr(st, "pills"):
-        return st.pills(label, options, **kwargs)
-    return st.multiselect(label, options, default=kwargs.get("default", []))
-
-def safe_segmented_control(label, options, **kwargs):
-    """Usa st.segmented_control si está disponible, sino cae a selectbox."""
-    if hasattr(st, "segmented_control"):
-        return st.segmented_control(label, options, **kwargs)
-    return st.selectbox(label, options, index=options.index(kwargs.get("default")) if kwargs.get("default") in options else 0)
-
-def safe_style_map(styler, func, subset=None):
-    """Aplica colores de forma compatible con Pandas viejo y nuevo."""
-    if hasattr(styler, "map"):
-        return styler.map(func, subset=subset)
-    return styler.applymap(func, subset=subset)
-
-def safe_set_properties(styler, props, subset=None):
-    """Asegura que set_properties no falle si el subset es inválido."""
-    try:
-        return styler.set_properties(**props, subset=subset)
-    except: return styler
-
-def preprocess_bitacora(df):
-    """Lógica unificada para limpiar y pre-calcular columnas de la bitácora."""
-    if df is None or df.empty:
-        return pd.DataFrame()
-        
-    # Normalizar nombres de columnas a minúsculas para evitar KeyErrors
-    df.columns = [str(c).strip().lower() for c in df.columns]
-
-    # Mapeo de nombres de columnas comunes para mayor robustez
-    mapping = {
-        'nombre_inspector': 'inspector', 'nombre del inspector': 'inspector', 'técnico': 'inspector',
-        'estado_orden': 'estado', 'fase': 'estado',
-        'municipio': 'localidad', 'ciudad': 'localidad',
-        'resultado_visita': 'cierre', 'tipo_cierre': 'cierre',
-        'nro_contrato': 'contrato', 'id_contrato': 'contrato',
-        'urgencia': 'prioridad'
-    }
-    for old_col, new_col in mapping.items():
-        if old_col in df.columns and new_col not in df.columns:
-            df.rename(columns={old_col: new_col}, inplace=True)
-
-    # Limpiar contratos
-    def clean_contract(c):
-        if pd.isna(c): return ""
-        s = str(c).strip()
-        if s.endswith('.0'): s = s[:-2]
-        return s
-    if "contrato" in df.columns:
-        df["contrato"] = df["contrato"].apply(clean_contract)
-            
-    # Normalizar prioridad
-    if "prioridad" in df.columns:
-        df["prioridad"] = df["prioridad"].astype(str).str.strip().str.capitalize()
-            
-    # Pre-procesamiento de inspectores y supervisores
-    if "inspector" in df.columns:
-        df["inspector"] = df["inspector"].astype(str).str.upper().str.strip().str.replace(r"\s+", " ", regex=True)
-        df["supervisor"] = df["inspector"].map(SUPERVISORES_DICT).fillna("SIN SUPERVISOR")
-        
-    # Conversión de Fechas
-    if "fecha de ejecucion" in df.columns:
-        df["fecha"] = pd.to_datetime(df["fecha de ejecucion"], errors="coerce").dt.date
-        
-    # Fecha de visita flexible
-    col_visita = next((c for c in df.columns if "visita" in c), None)
-    if col_visita:
-        df["fecha_visita"] = pd.to_datetime(df[col_visita], errors="coerce").dt.date
-            
-    # Parseo de horas
-    for col in ["hora inicio", "hora inicio de recorrido", "hora final"]:
-        if col in df.columns:
-            df[col + "_parsed"] = pd.to_datetime(df[col].astype(str), errors='coerce').dt.time
-
-    if "tiempo de tarea" in df.columns:
-        df["tiempo_tarea_td"] = pd.to_timedelta(df["tiempo de tarea"].astype(str), errors="coerce")
-
-    # Marcar órdenes efectivas
-    valores_efectivos = ["INSPECCIONADA", "INSPECCIONADA CON DEFECTO NO CRITICO", "INSPECCIONADA CON DEFECTO CRITICO", "CERTIFICADA", "CERTIFICADA CON NOVEDAD"]
-    if "cierre" in df.columns:
-        df["efectiva"] = df["cierre"].isin(valores_efectivos)
-    else:
-        df["efectiva"] = False
-            
-    # Tiempos de recorrido
-    if "hora inicio_parsed" in df.columns and "hora inicio de recorrido_parsed" in df.columns:
-        def calc_recorrido(row):
-            hi, hr = row.get("hora inicio_parsed"), row.get("hora inicio de recorrido_parsed")
-            if not isinstance(hi, datetime.time) or not isinstance(hr, datetime.time): return pd.NaT
-            dt_hi = datetime.datetime.combine(datetime.date.today(), hi)
-            dt_hr = datetime.datetime.combine(datetime.date.today(), hr)
-            return dt_hi - dt_hr if dt_hi >= dt_hr else pd.NaT
-        df["tiempo_recorrido_td"] = df.apply(calc_recorrido, axis=1)
-    else:
-        df["tiempo_recorrido_td"] = pd.NaT
-            
-    # Decimales para promedios de horas
-    def to_dec(h):
-        if not isinstance(h, datetime.time): return None
-        return h.hour + h.minute / 60.0 + h.second / 3600.0
-    if "hora inicio_parsed" in df.columns:
-        df["ini_dec_tmp"] = df["hora inicio_parsed"].apply(to_dec)
-    if "hora final_parsed" in df.columns:
-        df["fin_dec_tmp"] = df["hora final_parsed"].apply(to_dec)
-            
-    # Cálculo de puntualidad
-    hora_oficial = datetime.time(7, 30)
-    def calc_tarde(h):
-        if not isinstance(h, datetime.time): return None
-        h1, h2 = datetime.datetime.combine(datetime.date.today(), h), datetime.datetime.combine(datetime.date.today(), hora_oficial)
-        return int((h1 - h2).total_seconds() / 60)
-            
-    if "hora inicio_parsed" in df.columns:
-        df["minutos_tarde"] = df["hora inicio_parsed"].apply(calc_tarde)
-        def calc_estado_p(m):
-            if m is None or pd.isna(m): return "SIN INICIO"
-            if m <= 0: return "Puntual"
-            if m <= 15: return "Tarde"
-            return "Muy tarde"
-        df["estado_puntualidad"] = df["minutos_tarde"].apply(calc_estado_p)
-
-    return df
-
 if not token or not repo:
     st.warning("⚠️ Configura el 'token' de GitHub en los Secrets de Streamlit Cloud para ver datos en vivo.")
 
@@ -627,7 +501,7 @@ if st.session_state.usuario is not None:
     ahora = datetime.datetime.now()
     segundos_inactivo = (ahora - st.session_state.last_activity).total_seconds()
     
-    if segundos_inactivo > 28800:  # 28800 segundos = 8 horas (para unas 3 veces al día)
+    if segundos_inactivo > 1800:  # 1800 segundos = 30 minutos
         st.session_state.usuario = None
         st.session_state.rol = None
         st.warning("⚠️ Sesión cerrada por inactividad (30 minutos).")
@@ -912,6 +786,17 @@ with top_header_container:
             st.session_state.usuario = None
             st.session_state.rol = None
             st.rerun()
+
+    with col_logout_refresh:
+        if st.button("🔄 Actualizar Datos", use_container_width=True):
+            # Limpiar todas las cachés relevantes para forzar la recarga de datos
+            fetch_github_excel.clear()
+            fetch_github_json.clear()
+            # Algunas funciones de procesamiento no tienen .clear() si no son @st.cache_data
+            # Si no hay datos, esto forzará una recarga desde la fuente (GitHub o local)
+            # load_local_bitacora.clear() # Se limpia si tiene caché
+            # extract_excel_links.clear() # Se limpia si tiene caché
+            st.rerun()
             
     # ---------------------------------------------------
     # HEADER CON LOGO A LA DERECHA (DENTRO DEL STICKY)
@@ -1110,7 +995,7 @@ with tab_operacion:
             opc_insps = sorted(df_base_fecha["inspector"].unique())
     
             with col_f2:
-                supervisores_sel = safe_pills("👥 Supervisores:", opc_sups, selection_mode="multi", default=opc_sups, key=f"pills_sup_{fecha_sel}")
+                supervisores_sel = st.pills("👥 Supervisores:", opc_sups, selection_mode="multi", default=opc_sups, key=f"pills_sup_{fecha_sel}")
     
             with col_f3:
                 with st.popover("🔍 Seleccionar Inspectores", use_container_width=True):
@@ -1447,7 +1332,7 @@ with tab_operacion:
                 return f"color: {color}; font-weight: bold;"
 
             st.dataframe(
-                safe_style_map(df_efectividad_zona.style, color_pct, subset=["Efectividad Bloque (%)"]),
+                df_efectividad_zona.style.map(color_pct, subset=["Efectividad Bloque (%)"]),
                 use_container_width=True,
                 hide_index=True
             )
@@ -1564,7 +1449,7 @@ with tab_operacion:
             
             opc_sups = sorted(df_m["supervisor"].unique())
             with c2:
-                sups_sel = safe_pills("👥 Supervisores:", opc_sups, selection_mode="multi", default=opc_sups, key="m_sup_pills")
+                sups_sel = st.pills("👥 Supervisores:", opc_sups, selection_mode="multi", default=opc_sups, key="m_sup_pills")
             with c3:
                 opc_insps = sorted(df_m[df_m["supervisor"].isin(sups_sel)]["inspector"].unique())
                 with st.popover("🔍 Inspectores", use_container_width=True):
@@ -2058,13 +1943,13 @@ with tab_operacion:
             opc_prioridades = sorted(df_asignadas["prioridad"].dropna().unique())
     
             with col_f1:
-                grupos_sel = safe_pills("📍 Grupo", opc_grupos, selection_mode="multi", default=opc_grupos, key="tab5_grupo_pills")
+                grupos_sel = st.pills("📍 Grupo", opc_grupos, selection_mode="multi", default=opc_grupos, key="tab5_grupo_pills")
             with col_f2:
-                estados_sel = safe_pills("📊 Estado", opc_estados, selection_mode="multi", default=opc_estados, key="tab5_estado_pills")
+                estados_sel = st.pills("📊 Estado", opc_estados, selection_mode="multi", default=opc_estados, key="tab5_estado_pills")
             with col_f3:
-                prioridades_sel = safe_pills("⚡ Prioridad", opc_prioridades, selection_mode="multi", default=opc_prioridades, key="tab5_prio_pills")
+                prioridades_sel = st.pills("⚡ Prioridad", opc_prioridades, selection_mode="multi", default=opc_prioridades, key="tab5_prio_pills")
             with col_f4:
-                ver_por = safe_segmented_control("📈 Ver por:", ["Prioridad", "Estado"], default="Prioridad", key="tab5_ver_por_seg")
+                ver_por = st.segmented_control("📈 Ver por:", ["Prioridad", "Estado"], default="Prioridad", key="tab5_ver_por_seg")
                 col_agrupar = ver_por.lower()
     
         # Aplicar todos los filtros al final para evitar reinicios de widgets
@@ -2386,7 +2271,7 @@ with tab_sst:
 
             with col_f2:
                 opc_sups_sst = sorted(df_base_sst["supervisor"].unique())
-                supervisores_sel_sst = safe_pills("👥 Supervisores:", opc_sups_sst, selection_mode="multi", default=opc_sups_sst, key="sst_sup_pills")
+                supervisores_sel_sst = st.pills("👥 Supervisores:", opc_sups_sst, selection_mode="multi", default=opc_sups_sst, key="sst_sup_pills")
 
         if not supervisores_sel_sst:
             st.warning("⚠️ Selecciona al menos un supervisor para ver los datos de SST.")
@@ -2539,10 +2424,7 @@ with tab_subir:
                         
                         st.success("✅ Bitácora actualizada y sincronizada para todos los usuarios.")
                         fetch_github_excel.clear()
-                        # Solo limpiar si el atributo existe para evitar AttributeError
-                        if hasattr(load_local_bitacora, "clear"):
-                            load_local_bitacora.clear()
-                        
+                        load_local_bitacora.clear()
                         extract_excel_links.clear()
                         st.rerun()
                     else:
