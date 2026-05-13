@@ -1886,16 +1886,21 @@ with tab_operacion:
             st.error("❌ No se encontró la columna 'Fecha de Visita' necesaria para filtrar por día.")
 
         # ===================================================
+        # FILTRAR ÓRDENES EN PROCESO (Asignadas, En Camino, Iniciadas)
+        # ===================================================
+        estados_carga_regex = "Asignad|En Camino|Iniciada"
+        df_asignadas = df[
+            df["estado"]
+            .astype(str)
+            .str.contains(estados_carga_regex, case=False, na=False)
+        ].copy()
+        # ===================================================
         # VALIDAR COLUMNAS NECESARIAS
         # ===================================================
         columnas_requeridas = ["inspector", "estado", "prioridad", "grupo"]
         for col in columnas_requeridas:
             if col not in df.columns:
                 st.error(f"❌ Falta la columna requerida: {col}")
-    
-        if df_asignadas.empty:
-            st.info("✅ No hay órdenes ASIGNADAS en la bitácora.")
-    
         # ===================================================
         # ================= FILTROS =================
         # ===================================================
@@ -1920,12 +1925,16 @@ with tab_operacion:
                 ver_por = st.segmented_control("📈 Ver por:", ["Prioridad", "Estado"], default="Prioridad", key="tab5_ver_por_seg")
                 col_agrupar = ver_por.lower()
     
-        # Aplicar filtros (Definiendo la variable base antes de su uso)
-        df_finalizados_base = df[df["grupo"].isin(grupos_sel)] if grupos_sel else df
-        if grupos_sel: df_asignadas = df_asignadas[df_asignadas["grupo"].isin(grupos_sel)]
+        # Aplicar filtros
+        df_finalizados_base = df.copy() # Initialize df_finalizados_base from the date-filtered df
+        if grupos_sel:
+            df_finalizados_base = df_finalizados_base[df_finalizados_base["grupo"].isin(grupos_sel)]
+            df_asignadas = df_asignadas[df_asignadas["grupo"].isin(grupos_sel)]
         if estados_sel: df_asignadas = df_asignadas[df_asignadas["estado"].isin(estados_sel)]
         if prioridades_sel: df_asignadas = df_asignadas[df_asignadas["prioridad"].isin(prioridades_sel)]
-    
+
+        if df_asignadas.empty:
+            st.info("✅ No hay órdenes ASIGNADAS en la bitácora.")
         # Identificar inspectores que ya terminaron (Tienen 'Finalizada' y NO tienen carga activa)
         # en los grupos seleccionados para identificar disponibilidad
         insp_con_asig = set(df_finalizados_base[df_finalizados_base["estado"].astype(str).str.contains(estados_carga_regex, case=False, na=False)]["inspector"].unique())
