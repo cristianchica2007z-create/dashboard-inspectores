@@ -763,8 +763,8 @@ with top_header_container:
     # Hook invisible para CSS
     st.markdown("<span id='sticky-header'></span>", unsafe_allow_html=True)
     
-    # Crear layout superior (Metadata y Botón)
-    col_meta, col_refresh, col_logout = st.columns([6, 1, 1])
+    # Crear layout superior (Metadata y Botón de cierre de sesión)
+    col_meta, col_logout = st.columns([7, 1])
     
     with col_meta:
         st.markdown(
@@ -785,13 +785,6 @@ with top_header_container:
         if st.button("🚪 Cerrar sesión", use_container_width=True):
             st.session_state.usuario = None
             st.session_state.rol = None
-            st.rerun()
-
-    with col_refresh:
-        if st.button("🔄 Actualizar Datos", use_container_width=True):
-            # Limpiar todas las cachés relevantes para forzar la recarga de datos
-            fetch_github_excel.clear()
-            fetch_github_json.clear()
             st.rerun()
             
     # ---------------------------------------------------
@@ -1862,28 +1855,16 @@ with tab_operacion:
     with tab_asignadas:
         st.markdown("## 📌 Órdenes ASIGNADAS")
     
-        # ===================================================
-        # VALIDAR Y CARGAR BITÁCORA LOCAL
-        # ===================================================
-        archivo_bitacora = "BITACORA.xlsx"
-    
         df = df_bitacora_base.copy()
-        
-        # Definir subconjuntos y regex ANTES de usarlos en los filtros (Evita NameError)
-        estados_carga_regex = "Asignad|En Camino|Iniciada"
-        df_asignadas = df[df["estado"].astype(str).str.contains(estados_carga_regex, case=False, na=False)].copy()
-        df_finalizados_base = df.copy()
         
         # ===================================================
         # ✅ FILTRAR SOLO GRUPOS PERMITIDOS
         # ===================================================
         if "grupo" in df.columns:
             df["grupo"] = df["grupo"].astype(str).str.upper().str.strip()
-            # Filtro más flexible para grupos operativos
             df = df[df["grupo"].str.contains("INSP-CALDAS|INSP-RIS", na=False)]
     
         if "fecha_visita" in df.columns:
-            # Asegurar que solo comparamos fechas para evitar errores de tipo en el ordenamiento
             todas_las_fechas = pd.to_datetime(df["fecha_visita"], errors="coerce").dt.date.dropna().unique()
             opc_fechas_asig = sorted(list(todas_las_fechas), reverse=True)
             
@@ -1939,11 +1920,9 @@ with tab_operacion:
                 ver_por = st.segmented_control("📈 Ver por:", ["Prioridad", "Estado"], default="Prioridad", key="tab5_ver_por_seg")
                 col_agrupar = ver_por.lower()
     
-        # Aplicar todos los filtros al final para evitar reinicios de widgets
-        if grupos_sel:
-            df_finalizados_base = df_finalizados_base[df_finalizados_base["grupo"].isin(grupos_sel)]
-            df_asignadas = df_asignadas[df_asignadas["grupo"].isin(grupos_sel)]
-            
+        # Aplicar filtros (Definiendo la variable base antes de su uso)
+        df_finalizados_base = df[df["grupo"].isin(grupos_sel)] if grupos_sel else df
+        if grupos_sel: df_asignadas = df_asignadas[df_asignadas["grupo"].isin(grupos_sel)]
         if estados_sel: df_asignadas = df_asignadas[df_asignadas["estado"].isin(estados_sel)]
         if prioridades_sel: df_asignadas = df_asignadas[df_asignadas["prioridad"].isin(prioridades_sel)]
     
