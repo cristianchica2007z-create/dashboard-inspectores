@@ -1862,10 +1862,6 @@ with tab_operacion:
     with tab_asignadas:
         st.markdown("## 📌 Órdenes ASIGNADAS")
     
-        # Inicialización defensiva para asegurar que df_finalizados_base siempre esté definida.
-        # Esto previene NameError si alguna lógica anterior no la asigna.
-        df_finalizados_base = pd.DataFrame()
-
         # ===================================================
         # VALIDAR Y CARGAR BITÁCORA LOCAL
         # ===================================================
@@ -1873,18 +1869,19 @@ with tab_operacion:
     
         df = df_bitacora_base.copy()
         
+        # Definir subconjuntos y regex ANTES de usarlos en los filtros (Evita NameError)
+        estados_carga_regex = "Asignad|En Camino|Iniciada"
+        df_asignadas = df[df["estado"].astype(str).str.contains(estados_carga_regex, case=False, na=False)].copy()
+        df_finalizados_base = df.copy()
+        
         # ===================================================
         # ✅ FILTRAR SOLO GRUPOS PERMITIDOS
         # ===================================================
         if "grupo" in df.columns:
             df["grupo"] = df["grupo"].astype(str).str.upper().str.strip()
-    
             # Filtro más flexible para grupos operativos
             df = df[df["grupo"].str.contains("INSP-CALDAS|INSP-RIS", na=False)]
     
-        # ===================================================
-        # 📅 FILTRO DE FECHA (NUEVO)
-        # ===================================================
         if "fecha_visita" in df.columns:
             # Asegurar que solo comparamos fechas para evitar errores de tipo en el ordenamiento
             todas_las_fechas = pd.to_datetime(df["fecha_visita"], errors="coerce").dt.date.dropna().unique()
@@ -1914,16 +1911,6 @@ with tab_operacion:
         for col in columnas_requeridas:
             if col not in df.columns:
                 st.error(f"❌ Falta la columna requerida: {col}")
-    
-        # ===================================================
-        # FILTRAR ÓRDENES EN PROCESO (Asignadas, En Camino, Iniciadas)
-        # ===================================================
-        estados_carga_regex = "Asignad|En Camino|Iniciada"
-        df_asignadas = df[
-            df["estado"]
-            .astype(str)
-            .str.contains(estados_carga_regex, case=False, na=False)
-        ].copy()
     
         if df_asignadas.empty:
             st.info("✅ No hay órdenes ASIGNADAS en la bitácora.")
