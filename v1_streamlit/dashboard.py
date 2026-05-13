@@ -1855,42 +1855,25 @@ with tab_operacion:
     with tab_asignadas:
         st.markdown("## 📌 Órdenes ASIGNADAS")
     
-        # Start with a copy of the base bitacora
-        df = df_bitacora_base.copy()
         # 1. Preparación de datos base
-        df_asig_base = df_bitacora_base.copy()
+        df = df_bitacora_base.copy()
         estados_carga_regex = "Asignad|En Camino|Iniciada"
         
-        # ===================================================
-        # ✅ FILTRAR SOLO GRUPOS PERMITIDOS
-        # ===================================================
-
-        # 1. FILTRAR SOLO GRUPOS PERMITIDOS (early filter to ensure df is clean)
+        # 2. FILTRAR SOLO GRUPOS PERMITIDOS (early filter to ensure df is clean)
         if "grupo" in df.columns:
             df["grupo"] = df["grupo"].astype(str).str.upper().str.strip()
             df = df[df["grupo"].str.contains("INSP-CALDAS|INSP-RIS", na=False)]
-        # Inicialización de variables para evitar NameError
-        df_asignadas = pd.DataFrame()
-        df_finalizados_base = pd.DataFrame()
-    
-            df = df[df["grupo"].str.contains("INSP-CALDAS|INSP-RIS", na=False)].copy() # Use .copy() to avoid SettingWithCopyWarning
+        else:
+            st.error("❌ No se encontró la columna 'grupo' necesaria para filtrar por grupos operativos.")
+            st.stop()
 
-        # 2. FILTRAR POR FECHA DE OPERACIÓN
+        # 3. FILTRAR POR FECHA DE OPERACIÓN
         fecha_sel_asig = None
         if "fecha_visita" in df.columns:
             todas_las_fechas = pd.to_datetime(df["fecha_visita"], errors="coerce").dt.date.dropna().unique()
-        # 2. Filtrado por Grupos Permitidos
-        if "grupo" in df_asig_base.columns:
-            df_asig_base["grupo"] = df_asig_base["grupo"].astype(str).str.upper().str.strip()
-            df_asig_base = df_asig_base[df_asig_base["grupo"].str.contains("INSP-CALDAS|INSP-RIS", na=False)]
-    
-        # 3. Filtrado por Fecha de Operación
-        if "fecha_visita" in df_asig_base.columns:
-            todas_las_fechas = pd.to_datetime(df_asig_base["fecha_visita"], errors="coerce").dt.date.dropna().unique()
             opc_fechas_asig = sorted(list(todas_las_fechas), reverse=True)
             
             if opc_fechas_asig:
-                # Intentar pre-seleccionar la fecha de hoy si existe en la lista
                 hoy = datetime.datetime.now(TZ_CO).date() if isinstance(TZ_CO, datetime.tzinfo) else datetime.date.today()
                 idx_hoy = opc_fechas_asig.index(hoy) if hoy in opc_fechas_asig else 0
                 
@@ -1898,24 +1881,16 @@ with tab_operacion:
                     col_d = st.columns([1.5, 4])[0]
                     with col_d:
                         fecha_sel_asig = st.selectbox("📅 Seleccionar Fecha de Operación:", opc_fechas_asig, index=idx_hoy, key="tab5_fecha_sel")
-                    f_col1 = st.columns([1.5, 4])[0]
-                    fecha_sel_asig = f_col1.selectbox("📅 Seleccionar Fecha de Operación:", opc_fechas_asig, index=idx_hoy, key="tab5_fecha_sel")
                 
-                # Filtrar estrictamente por fecha de visita para evitar ver órdenes de otros días
                 df = df[pd.to_datetime(df["fecha_visita"]).dt.date == fecha_sel_asig].copy()
-                df_asig_base = df_asig_base[pd.to_datetime(df_asig_base["fecha_visita"]).dt.date == fecha_sel_asig].copy()
             else:
-                st.warning("⚠️ No se detectaron fechas de visita válidas en la bitácora.")
                 st.warning("⚠️ No se detectaron fechas de visita válidas en la bitácora para los grupos seleccionados.")
-                st.stop() # Stop if no valid dates after group filter
+                st.stop()
         else:
             st.error("❌ No se encontró la columna 'Fecha de Visita' necesaria para filtrar por día.")
-            st.stop() # Stop if critical column is missing
+            st.stop()
 
-        # ===================================================
-        # FILTRAR ÓRDENES EN PROCESO (Asignadas, En Camino, Iniciadas)
-        # ===================================================
-        estados_carga_regex = "Asignad|En Camino|Iniciada"
+        # 4. Definir df_asignadas y df_finalizados_base a partir del df filtrado
         df_asignadas = df[
             df["estado"]
             .astype(str)
@@ -1927,27 +1902,14 @@ with tab_operacion:
             st.info("✅ No hay órdenes ASIGNADAS pendientes para esta fecha y filtros iniciales.")
             st.stop()
 
-        # ===================================================
-        # VALIDAR COLUMNAS NECESARIAS
-        # ===================================================
+        # 5. VALIDAR COLUMNAS NECESARIAS
         columnas_requeridas = ["inspector", "estado", "prioridad", "grupo"]
         for col in columnas_requeridas:
-            if col not in df.columns:
             if col not in df.columns: # Check against the current df
                 st.error(f"❌ Falta la columna requerida: {col}")
                 st.stop() # Stop if critical column is missing
-        # ===================================================
-        # ================= FILTROS =================
-        # ===================================================
-        # 4. Crear subconjuntos de trabajo
-        df_asignadas = df_asig_base[df_asig_base["estado"].astype(str).str.contains(estados_carga_regex, case=False, na=False)].copy()
-        df_finalizados_base = df_asig_base.copy()
-
-        if df_asignadas.empty:
-            st.info("✅ No hay órdenes ASIGNADAS pendientes para esta fecha.")
-            st.stop()
-
-        # 5. Interfaz de Filtros
+        
+        # 6. Interfaz de Filtros
         st.markdown("### 🔎 Filtros")
     
         # -------- PANEL DE FILTROS TIPO "BOX" - LÓGICA ESTABLE --------
@@ -1970,10 +1932,9 @@ with tab_operacion:
                 ver_por = st.segmented_control("📈 Ver por:", ["Prioridad", "Estado"], default="Prioridad", key="tab5_ver_por_seg")
                 col_agrupar = ver_por.lower()
     
-        # Aplicar filtros
-        df_finalizados_base = df.copy() # Initialize df_finalizados_base from the date-filtered df
-        # 6. Aplicar filtros finales
-        # Aplicar filtros finales
+        # 7. Aplicar filtros finales
+        # df_finalizados_base ya está inicializado y es una copia de df filtrado por fecha y grupo
+        # Ahora aplicamos los filtros de la interfaz
         if grupos_sel:
             df_finalizados_base = df_finalizados_base[df_finalizados_base["grupo"].isin(grupos_sel)]
             df_asignadas = df_asignadas[df_asignadas["grupo"].isin(grupos_sel)]
@@ -1982,16 +1943,12 @@ with tab_operacion:
 
         if df_asignadas.empty:
             st.info("✅ No hay órdenes ASIGNADAS en la bitácora.")
-            st.stop() # Stop if no data after all filters
-        # Identificar inspectores que ya terminaron (Tienen 'Finalizada' y NO tienen carga activa)
-        # en los grupos seleccionados para identificar disponibilidad
-        # 7. Lógica de disponibilidad (Inspectores que terminaron obra)
+            st.stop()
+        
+        # 8. Lógica de disponibilidad (Inspectores que terminaron obra)
         insp_con_asig = set(df_finalizados_base[df_finalizados_base["estado"].astype(str).str.contains(estados_carga_regex, case=False, na=False)]["inspector"].unique())
         insp_con_fin = set(df_finalizados_base[df_finalizados_base["estado"].astype(str).str.contains("Finalizad", case=False, na=False)]["inspector"].unique())
         inspectores_finalizados = insp_con_fin - insp_con_asig
-    
-        if df_asignadas.empty:
-            st.warning("⚠️ No hay datos con los filtros seleccionados.")
     
         # ===================================================
         # AGRUPAR POR INSPECTOR Y DIMENSIÓN SELECCIONADA
