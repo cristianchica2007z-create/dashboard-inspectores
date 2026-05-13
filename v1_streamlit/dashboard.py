@@ -1996,9 +1996,6 @@ with tab_operacion:
             "TERMINÓ OBRA": "#28a745"      # 🟢 verde (disponible)
         }
     
-        # ===================================================
-        # GRÁFICA ACUMULADA
-        # ===================================================
         fig = px.bar(
             df_prio,
             y="inspector",
