@@ -47,7 +47,7 @@ CODIGOS_ADICIONALES = ["12163", "12164", "10793", "12170", "10842", "10772", "10
 
 # Mapeo maestro de inspectores a supervisores
 SUPERVISORES_DICT = {k.upper(): v for k, v in {
-    "ARIZA MARIN SERGIO": "ANDRES ARROYAVE", "ANDRES ARROYAVE": "ANDRES ARROYAVE", 
+    "ARIZA MARIN SERGIO": "ANDRES ARROYAVE", "ANDRES ARROYAVE": "ANDRES ARROYAVE",
     "BEDOYA DIEGO ALEJANDRO": "DANNY DE LA CRUZ", "DANNY DE LA CRUZ": "DANNY DE LA CRUZ",
     "CARVAJAL RESTREPO JUAN DAVID": "JANIER MARIN", "JANIER MARIN": "JANIER MARIN",
      "ECHEVERRY CARDONA JHON STIVEN": "JANIER MARIN", "GALLEGO CADAVID NORBEY": "DANNY DE LA CRUZ",
@@ -627,7 +627,7 @@ if st.session_state.usuario is not None:
     ahora = datetime.datetime.now()
     segundos_inactivo = (ahora - st.session_state.last_activity).total_seconds()
     
-    if segundos_inactivo > 28800:  # 28800 segundos = 8 horas (para unas 3 veces al día)
+    if segundos_inactivo > 1800:  # 1800 segundos = 30 minutos
         st.session_state.usuario = None
         st.session_state.rol = None
         st.warning("⚠️ Sesión cerrada por inactividad (30 minutos).")
