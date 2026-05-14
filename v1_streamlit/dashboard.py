@@ -47,7 +47,7 @@ CODIGOS_ADICIONALES = ["12163", "12164", "10793", "12170", "10842", "10772", "10
 
 # Mapeo maestro de inspectores a supervisores
 SUPERVISORES_DICT = {k.upper(): v for k, v in {
-    "ARIZA MARIN SERGIO": "ANDRES ARROYAVE", "ARROYAVE GALLEGO ANDRES FERNANDO": "ANDRES ARROYAVE",
+    "ARIZA MARIN SERGIO": "ANDRES ARROYAVE", "ANDRES ARROYAVE": "ANDRES ARROYAVE",
     "BEDOYA DIEGO ALEJANDRO": "DANNY DE LA CRUZ", "DANNY DE LA CRUZ": "DANNY DE LA CRUZ",
     "CARVAJAL RESTREPO JUAN DAVID": "JANIER MARIN", "JANIER MARIN": "JANIER MARIN",
      "ECHEVERRY CARDONA JHON STIVEN": "JANIER MARIN", "GALLEGO CADAVID NORBEY": "DANNY DE LA CRUZ",
@@ -69,7 +69,7 @@ SUPERVISORES_DICT = {k.upper(): v for k, v in {
     "AMAYA HINCAPIE JUAN CARLOS": "CRISTIAN CHICA", "BEDOYA SANCHEZ CRISTIAN DAVID": "ANDRES ARROYAVE",
     "RAMIREZ WILSON ENRIQUE": "CRISTIAN CHICA", "CANO MORALES JIMY ALFREDO": "ANDRES ARROYAVE",
     "CASTRO CASTAÑO JUAN DAVID": "CRISTIAN CHICA",   "VILLA LOAIZA JHEISON ESTIBEN": "CRISTIAN CHICA", "CÁRDENAS GALIANO HAROLD MAURICIO": "JANIER MARIN",
-    "VARGAS CORREA VICTOR ALFONSO": "DANNY DE LA CRUZ",  "DE LA CRUZ MORALES DANNY JOSE": "DANNY DE LA CRUZ", "VILLA MERA CHRISTIAN DAVID": "JANIER MARIN",
+    "VARGAS CORREA VICTOR ALFONSO": "DANNY DE LA CRUZ", "VILLA MERA CHRISTIAN DAVID": "JANIER MARIN",
     "AVENDAÑO GARCIA JUAN NEPOMUCENO": "ANDRES ARROYAVE", "PELAEZ TATIS GABRIEL ESTEBAN": "CRISTIAN CHICA",
     "CHICA RAMIREZ CRISTIAN ALBERTO": "CRISTIAN CHICA"
 }.items()}
@@ -304,8 +304,22 @@ if not token or not repo:
 # Variable global de tiempo para evitar NameErrors en los tabs
 ahora_colombia_global = datetime.datetime.now(TZ_CO).replace(tzinfo=None)
 
+@st.cache_data(ttl=10)
+def get_github_sha(repo, path, token, branch="main"):
+    """Obtiene el SHA (huella de versión) de un archivo en GitHub sin cachear largo tiempo."""
+    headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
+    url = f"https://api.github.com/repos/{repo}/contents/{path}?ref={branch}"
+    try:
+        r = requests.get(url, headers=headers, timeout=5)
+        if r.status_code == 200:
+            return r.json().get("sha")
+    except:
+        pass
+    return None
+
 def get_processed_agendas_data(repo, token):
-    df_raw, _ = fetch_github_excel(repo, "BITACORA.xlsx", token)
+    sha_b = get_github_sha(repo, "BITACORA.xlsx", token)
+    df_raw, _ = fetch_github_excel(repo, "BITACORA.xlsx", token, sha=sha_b)
     if df_raw.empty:
         return pd.DataFrame()
     
@@ -355,7 +369,11 @@ def get_processed_agendas_data(repo, token):
     return df
 
 @st.cache_data(ttl=300)
-def fetch_github_excel(repo, path, token, branch="main"):
+def fetch_github_excel(repo, path, token, branch="main", sha=None):
+    """
+    Carga Excel desde GitHub. 
+    El argumento 'sha' asegura que la caché se invalide cuando el archivo cambie en el servidor.
+    """
     headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
     url = f"https://api.github.com/repos/{repo}/contents/{path}"
     r = requests.get(url, headers=headers)
@@ -380,8 +398,9 @@ def fetch_github_excel(repo, path, token, branch="main"):
             return pd.DataFrame(), sha
     return pd.DataFrame(), None
 
-@st.cache_data(ttl=300)
-def fetch_github_json(repo, path, token):
+@st.cache_data(show_spinner=False)
+def fetch_github_json(repo, path, token, sha=None):
+    """Carga JSON desde GitHub. Invalidación automática mediante SHA."""
     headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
     url = f"https://api.github.com/repos/{repo}/contents/{path}"
     r = requests.get(url, headers=headers)
@@ -627,7 +646,7 @@ if st.session_state.usuario is not None:
     ahora = datetime.datetime.now()
     segundos_inactivo = (ahora - st.session_state.last_activity).total_seconds()
     
-    if segundos_inactivo > 1800:  # 1800 segundos = 30 minutos
+    if segundos_inactivo > 28800:  # 28800 segundos = 8 horas (para unas 3 veces al día)
         st.session_state.usuario = None
         st.session_state.rol = None
         st.warning("⚠️ Sesión cerrada por inactividad (30 minutos).")
@@ -874,8 +893,11 @@ token_meta = token
 repo_meta = repo
 
 # Leer info de ambos archivos desde GitHub
-info_bitacora_meta, _ = fetch_github_json(repo_meta, "BITACORA_INFO.json", token_meta)
-info_programacion_meta, _ = fetch_github_json(repo_meta, "PROGRAMACION_INFO.json", token_meta)
+sha_bi = get_github_sha(repo_meta, "BITACORA_INFO.json", token_meta)
+sha_pi = get_github_sha(repo_meta, "PROGRAMACION_INFO.json", token_meta)
+
+info_bitacora_meta, _ = fetch_github_json(repo_meta, "BITACORA_INFO.json", token_meta, sha=sha_bi)
+info_programacion_meta, _ = fetch_github_json(repo_meta, "PROGRAMACION_INFO.json", token_meta, sha=sha_pi)
 
 f_bit, u_bit = obtener_texto_meta(info_bitacora_meta)
 f_prog, u_prog = obtener_texto_meta(info_programacion_meta)
@@ -938,7 +960,7 @@ with top_header_container:
 inspectores_lista = sorted([
   
     "ARIZA MARIN SERGIO",
-    "ARROYAVE GALLEGO ANDRES FERNANDO",
+    "ANDRES ARROYAVE",
     "BEDOYA DIEGO ALEJANDRO",
     "DANNY DE LA CRUZ",
     "CARVAJAL RESTREPO JUAN DAVID",
@@ -1005,7 +1027,8 @@ with st.spinner("🔄 Sincronizando datos con el servidor... Un momento por favo
     
     # 1. Intentar cargar desde GitHub
     if token:
-        df_raw, _ = fetch_github_excel(repo, "BITACORA.xlsx", token)
+        sha_b = get_github_sha(repo, "BITACORA.xlsx", token)
+        df_raw, _ = fetch_github_excel(repo, "BITACORA.xlsx", token, sha=sha_b)
     
     # 2. Si falla GitHub, cargar el archivo local
     if df_raw.empty:
@@ -1269,7 +1292,8 @@ with tab_operacion:
         )
     
         # --- NUEVO: CÁLCULO DE EFECTIVIDAD POR ZONA (BLOQUE Y CARTERA) ---
-        df_prog_zona, _ = fetch_github_excel(repo, "PROGRAMACION.xlsx", token)
+        sha_pz = get_github_sha(repo, "PROGRAMACION.xlsx", token)
+        df_prog_zona, _ = fetch_github_excel(repo, "PROGRAMACION.xlsx", token, sha=sha_pz)
         df_efectividad_zona = pd.DataFrame()
         
         if not df_prog_zona.empty:
@@ -1929,8 +1953,11 @@ with tab_operacion:
                         if sha_info_p: payload_info_p["sha"] = sha_info_p
                         requests.put(url_info_p, headers=headers_ad, json=payload_info_p)
                         
-                        st.success("✅ Archivo guardado correctamente en la nube. Ahora todos los usuarios verán esta versión.")
+                        st.success("✅ Programación actualizada y sincronizada.")
+                        # Limpiar cachés para forzar recarga inmediata
+                        get_github_sha.clear()
                         fetch_github_excel.clear()
+                        fetch_github_json.clear()
                         process_adicionales_data.clear()
                         st.rerun()
                     else:
@@ -1939,7 +1966,8 @@ with tab_operacion:
                     st.warning("⚠️ Por favor selecciona un archivo antes de intentar guardar.")
     
         # --- CARGA DEL ARCHIVO DESDE GITHUB (Datos compartidos) ---
-        df_p, _ = fetch_github_excel(repo_ad, nombre_archivo_prog, token_ad, branch_ad)
+        sha_pad = get_github_sha(repo_ad, nombre_archivo_prog, token_ad, branch_ad)
+        df_p, _ = fetch_github_excel(repo_ad, nombre_archivo_prog, token_ad, branch=branch_ad, sha=sha_pad)
         
         # Procesamiento cacheado para mayor velocidad
         df_p = process_adicionales_data(df_p)
@@ -2234,8 +2262,10 @@ with tab_inv_v2:
     inv_repo  = st.secrets["github"]["repo"]
     inv_branch = st.secrets["github"].get("branch", "main")
 
-    movimientos, _ = fetch_github_json(inv_repo, "INVENTARIO_V2.json", inv_token)
-    catalogo, _    = fetch_github_json(inv_repo, "CATALOGO_V2.json", inv_token)
+    sha_inv = get_github_sha(inv_repo, "INVENTARIO_V2.json", inv_token, branch=inv_branch)
+    sha_cat = get_github_sha(inv_repo, "CATALOGO_V2.json", inv_token, branch=inv_branch)
+    movimientos, _ = fetch_github_json(inv_repo, "INVENTARIO_V2.json", inv_token, sha=sha_inv)
+    catalogo, _    = fetch_github_json(inv_repo, "CATALOGO_V2.json", inv_token, sha=sha_cat)
 
     if not isinstance(movimientos, list): movimientos = []
     if not isinstance(catalogo, dict) or not catalogo: catalogo = CATALOGO_DEFAULT.copy()
@@ -2538,11 +2568,10 @@ with tab_subir:
                         save_github_json(repo, "BITACORA_INFO.json", token, info_data, "Update BITACORA_INFO.json", branch)
                         
                         st.success("✅ Bitácora actualizada y sincronizada para todos los usuarios.")
+                        # Limpiar cachés para forzar recarga inmediata
+                        get_github_sha.clear()
                         fetch_github_excel.clear()
-                        # Solo limpiar si el atributo existe para evitar AttributeError
-                        if hasattr(load_local_bitacora, "clear"):
-                            load_local_bitacora.clear()
-                        
+                        fetch_github_json.clear()
                         extract_excel_links.clear()
                         st.rerun()
                     else:
