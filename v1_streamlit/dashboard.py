@@ -369,7 +369,7 @@ def get_processed_agendas_data(repo, token):
     return df
 
 @st.cache_data(ttl=300)
-def fetch_github_excel(repo, path, token, branch="main", sha=None):
+def fetch_github_excel(repo, path, token, branch="main", sha=None, refresh_trigger=0):
     """
     Carga Excel desde GitHub. 
     El argumento 'sha' asegura que la caché se invalide cuando el archivo cambie en el servidor.
@@ -637,6 +637,8 @@ def color_estado(val):
 if "usuario" not in st.session_state:
     st.session_state.usuario = None
     st.session_state.rol = None
+if "refresh_version" not in st.session_state:
+    st.session_state.refresh_version = 0
 
 # --- LÓGICA DE CIERRE DE SESIÓN POR INACTIVIDAD (5 MINUTOS) ---
 if "last_activity" not in st.session_state:
@@ -897,7 +899,7 @@ sha_bi = get_github_sha(repo_meta, "BITACORA_INFO.json", token_meta)
 sha_pi = get_github_sha(repo_meta, "PROGRAMACION_INFO.json", token_meta)
 
 info_bitacora_meta, _ = fetch_github_json(repo_meta, "BITACORA_INFO.json", token_meta, sha=sha_bi)
-info_programacion_meta, _ = fetch_github_json(repo_meta, "PROGRAMACION_INFO.json", token_meta, sha=sha_pi)
+info_programacion_meta, _ = fetch_github_json(repo_meta, "PROGRAMACION_INFO.json", token_meta, sha=sha_pi, refresh_trigger=st.session_state.refresh_version)
 
 f_bit, u_bit = obtener_texto_meta(info_bitacora_meta)
 f_prog, u_prog = obtener_texto_meta(info_programacion_meta)
@@ -905,6 +907,11 @@ f_prog, u_prog = obtener_texto_meta(info_programacion_meta)
 # ===================================================
 # CONTENEDOR SUPERIOR PEGAJOSO (STICKY)
 # ===================================================
+def force_refresh():
+    st.cache_data.clear()
+    st.session_state.refresh_version += 1
+    st.rerun()
+
 top_header_container = st.container()
 
 with top_header_container:
@@ -912,7 +919,7 @@ with top_header_container:
     st.markdown("<span id='sticky-header'></span>", unsafe_allow_html=True)
     
     # Crear layout superior (Metadata y Botón)
-    col_meta, col_logout = st.columns([7, 1])
+    col_meta, col_refresh, col_logout = st.columns([6.5, 1, 1])
     
     with col_meta:
         st.markdown(
@@ -929,6 +936,10 @@ with top_header_container:
             unsafe_allow_html=True
         )
     
+    with col_refresh:
+        if st.button("🔄 Sincronizar", use_container_width=True, help="Forzar recarga de datos desde el servidor"):
+            force_refresh()
+
     with col_logout:
         if st.button("🚪 Cerrar sesión", use_container_width=True):
             st.session_state.usuario = None
@@ -1028,7 +1039,7 @@ with st.spinner("🔄 Sincronizando datos con el servidor... Un momento por favo
     # 1. Intentar cargar desde GitHub
     if token:
         sha_b = get_github_sha(repo, "BITACORA.xlsx", token)
-        df_raw, _ = fetch_github_excel(repo, "BITACORA.xlsx", token, sha=sha_b)
+        df_raw, _ = fetch_github_excel(repo, "BITACORA.xlsx", token, sha=sha_b, refresh_trigger=st.session_state.refresh_version)
     
     # 2. Si falla GitHub, cargar el archivo local
     if df_raw.empty:
@@ -1124,7 +1135,7 @@ with tab_operacion:
             
             with col_f1:
                 fechas_validas = sorted(df_bitacora["fecha"].dropna().unique())
-                fecha_sel = st.selectbox("📅 Fecha de consulta:", fechas_validas)
+                fecha_sel = st.selectbox("📅 Fecha de consulta:", fechas_validas, key=f"ds_fecha_{st.session_state.refresh_version}")
                 # Datos base para la fecha seleccionada
                 df_base_fecha = df_bitacora[df_bitacora["fecha"] == fecha_sel].copy()
     
@@ -1580,7 +1591,7 @@ with tab_operacion:
                 else:
                     min_d = max_d = datetime.date.today()
                     
-                rango_fecha = st.date_input("📅 Seleccionar lapso de días:", value=(min_d, max_d), min_value=min_d, max_value=max_d)
+                rango_fecha = st.date_input("📅 Seleccionar lapso de días:", value=(min_d, max_d), min_value=min_d, max_value=max_d, key=f"ms_rango_{st.session_state.refresh_version}")
             
             if isinstance(rango_fecha, tuple) and len(rango_fecha) == 2:
                 start_date, end_date = rango_fecha
@@ -1953,8 +1964,10 @@ with tab_operacion:
                         if sha_info_p: payload_info_p["sha"] = sha_info_p
                         requests.put(url_info_p, headers=headers_ad, json=payload_info_p)
                         
-                        st.success("✅ Programación actualizada y sincronizada.")
+                        st.toast("✅ Programación actualizada correctamente.")
                         # Limpiar cachés para forzar recarga inmediata
+                        st.cache_data.clear()
+                        st.session_state.refresh_version += 1
                         get_github_sha.clear()
                         fetch_github_excel.clear()
                         fetch_github_json.clear()
