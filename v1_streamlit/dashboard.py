@@ -2582,6 +2582,8 @@ with tab_subir:
                         
                         st.success("✅ Bitácora actualizada y sincronizada para todos los usuarios.")
                         # Limpiar cachés para forzar recarga inmediata
+                        st.cache_data.clear()
+                        st.session_state.refresh_version += 1
                         get_github_sha.clear()
                         fetch_github_excel.clear()
                         fetch_github_json.clear()
