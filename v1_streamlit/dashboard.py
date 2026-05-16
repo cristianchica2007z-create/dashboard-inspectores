@@ -399,7 +399,7 @@ def fetch_github_excel(repo, path, token, branch="main", sha=None, refresh_trigg
     return pd.DataFrame(), None
 
 @st.cache_data(show_spinner=False)
-def fetch_github_json(repo, path, token, sha=None):
+def fetch_github_json(repo, path, token, sha=None, refresh_trigger=0):
     """Carga JSON desde GitHub. Invalidación automática mediante SHA."""
     headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
     url = f"https://api.github.com/repos/{repo}/contents/{path}"
