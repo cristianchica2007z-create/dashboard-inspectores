@@ -276,6 +276,13 @@ def preprocess_bitacora(df):
     if "hora final_parsed" in df.columns:
         df["fin_dec_tmp"] = df["hora final_parsed"].apply(to_dec)
             
+    # Búsqueda robusta de la fecha (maneja acentos y variaciones)
+    if "fecha" not in df.columns:
+        posibles_cols_fecha = ["ejecucion", "ejecución", "fecha", "visita"]
+        col_f = next((c for c in df.columns if any(p in c for p in posibles_cols_fecha)), None)
+        if col_f:
+            df["fecha"] = pd.to_datetime(df[col_f], errors="coerce").dt.date
+
     # Cálculo de puntualidad
     hora_oficial = datetime.time(7, 30)
     def calc_tarde(h):
@@ -317,8 +324,8 @@ def get_github_sha(repo, path, token, branch="main"):
         pass
     return None
 
-def get_processed_agendas_data(repo, token):
-    sha_b = get_github_sha(repo, "BITACORA.xlsx", token)
+def get_processed_agendas_data(repo, token, refresh_trigger=0):
+    sha_b = get_github_sha(repo, "BITACORA.xlsx", token, refresh_trigger=refresh_trigger)
     df_raw, _ = fetch_github_excel(repo, "BITACORA.xlsx", token, sha=sha_b)
     if df_raw.empty:
         return pd.DataFrame()
@@ -375,7 +382,7 @@ def fetch_github_excel(repo, path, token, branch="main", sha=None, refresh_trigg
     El argumento 'sha' asegura que la caché se invalide cuando el archivo cambie en el servidor.
     """
     headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
-    url = f"https://api.github.com/repos/{repo}/contents/{path}"
+    url = f"https://api.github.com/repos/{repo}/contents/{path}?ref={branch}&v={refresh_trigger}"
     r = requests.get(url, headers=headers)
     if r.status_code == 200:
         data = r.json()
@@ -402,7 +409,7 @@ def fetch_github_excel(repo, path, token, branch="main", sha=None, refresh_trigg
 def fetch_github_json(repo, path, token, sha=None, refresh_trigger=0):
     """Carga JSON desde GitHub. Invalidación automática mediante SHA."""
     headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
-    url = f"https://api.github.com/repos/{repo}/contents/{path}"
+    url = f"https://api.github.com/repos/{repo}/contents/{path}?v={refresh_trigger}"
     r = requests.get(url, headers=headers)
     if r.status_code == 200:
         try:
@@ -895,10 +902,10 @@ token_meta = token
 repo_meta = repo
 
 # Leer info de ambos archivos desde GitHub
-sha_bi = get_github_sha(repo_meta, "BITACORA_INFO.json", token_meta)
-sha_pi = get_github_sha(repo_meta, "PROGRAMACION_INFO.json", token_meta)
+sha_bi = get_github_sha(repo_meta, "BITACORA_INFO.json", token_meta, refresh_trigger=st.session_state.refresh_version)
+sha_pi = get_github_sha(repo_meta, "PROGRAMACION_INFO.json", token_meta, refresh_trigger=st.session_state.refresh_version)
 
-info_bitacora_meta, _ = fetch_github_json(repo_meta, "BITACORA_INFO.json", token_meta, sha=sha_bi)
+info_bitacora_meta, _ = fetch_github_json(repo_meta, "BITACORA_INFO.json", token_meta, sha=sha_bi, refresh_trigger=st.session_state.refresh_version)
 info_programacion_meta, _ = fetch_github_json(repo_meta, "PROGRAMACION_INFO.json", token_meta, sha=sha_pi, refresh_trigger=st.session_state.refresh_version)
 
 f_bit, u_bit = obtener_texto_meta(info_bitacora_meta)
@@ -1038,7 +1045,7 @@ with st.spinner("🔄 Sincronizando datos con el servidor... Un momento por favo
     
     # 1. Intentar cargar desde GitHub
     if token:
-        sha_b = get_github_sha(repo, "BITACORA.xlsx", token)
+        sha_b = get_github_sha(repo, "BITACORA.xlsx", token, refresh_trigger=st.session_state.refresh_version)
         df_raw, _ = fetch_github_excel(repo, "BITACORA.xlsx", token, sha=sha_b, refresh_trigger=st.session_state.refresh_version)
     
     # 2. Si falla GitHub, cargar el archivo local
@@ -1134,8 +1141,8 @@ with tab_operacion:
             col_f1, col_f2, col_f3 = st.columns([1, 1.2, 1.2])
             
             with col_f1:
-                fechas_validas = sorted(df_bitacora["fecha"].dropna().unique())
-                fecha_sel = st.selectbox("📅 Fecha de consulta:", fechas_validas, key=f"ds_fecha_{st.session_state.refresh_version}")
+                fechas_validas = sorted(df_bitacora["fecha"].dropna().unique(), reverse=True)
+                fecha_sel = st.selectbox("📅 Fecha de consulta:", fechas_validas, index=0, key=f"ds_fecha_{st.session_state.refresh_version}")
                 # Datos base para la fecha seleccionada
                 df_base_fecha = df_bitacora[df_bitacora["fecha"] == fecha_sel].copy()
     
@@ -1804,7 +1811,7 @@ with tab_operacion:
         # ======================================================
         # CARGAR Y PROCESAR DATOS (CON CACHÉ PARA VELOCIDAD)
         # ======================================================
-        df_age = get_processed_agendas_data(repo_meta, token_meta)
+        df_age = get_processed_agendas_data(repo_meta, token_meta, refresh_trigger=st.session_state.refresh_version)
         
         # Inicializar contadores para evitar NameError
         count_final = count_prox = count_alerta = 0
