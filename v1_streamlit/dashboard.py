@@ -326,7 +326,7 @@ def get_github_sha(repo, path, token, branch="main"):
 
 def get_processed_agendas_data(repo, token, refresh_trigger=0):
     sha_b = get_github_sha(repo, "BITACORA.xlsx", token, refresh_trigger=refresh_trigger)
-    df_raw, _ = fetch_github_excel(repo, "BITACORA.xlsx", token, sha=sha_b)
+    df_raw, _ = fetch_github_excel(repo, "BITACORA.xlsx", token, sha=sha_b, refresh_trigger=refresh_trigger)
     if df_raw.empty:
         return pd.DataFrame()
     
@@ -1986,8 +1986,8 @@ with tab_operacion:
                     st.warning("⚠️ Por favor selecciona un archivo antes de intentar guardar.")
     
         # --- CARGA DEL ARCHIVO DESDE GITHUB (Datos compartidos) ---
-        sha_pad = get_github_sha(repo_ad, nombre_archivo_prog, token_ad, branch_ad)
-        df_p, _ = fetch_github_excel(repo_ad, nombre_archivo_prog, token_ad, branch=branch_ad, sha=sha_pad)
+        sha_pad = get_github_sha(repo_ad, nombre_archivo_prog, token_ad, branch_ad, refresh_trigger=st.session_state.refresh_version)
+        df_p, _ = fetch_github_excel(repo_ad, nombre_archivo_prog, token_ad, branch=branch_ad, sha=sha_pad, refresh_trigger=st.session_state.refresh_version)
         
         # Procesamiento cacheado para mayor velocidad
         df_p = process_adicionales_data(df_p)
