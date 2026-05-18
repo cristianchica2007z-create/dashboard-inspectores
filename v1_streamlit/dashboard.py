@@ -312,7 +312,7 @@ if not token or not repo:
 ahora_colombia_global = datetime.datetime.now(TZ_CO).replace(tzinfo=None)
 
 @st.cache_data(ttl=10)
-def get_github_sha(repo, path, token, branch="main"):
+def get_github_sha(repo, path, token, branch="main", refresh_trigger=0):
     """Obtiene el SHA (huella de versión) de un archivo en GitHub sin cachear largo tiempo."""
     headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"}
     url = f"https://api.github.com/repos/{repo}/contents/{path}?ref={branch}"
